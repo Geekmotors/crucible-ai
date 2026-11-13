@@ -2,8 +2,12 @@ import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { RunScope } from './state.js';
 import { Capture } from './test/capture.util.js';
+import { FactAwareAdapter } from './test/fact-aware-adapter.fake.js';
 import { JudgeHarness } from './test/judge-harness.util.js';
+import { RunCount } from './test/run-count.enum.js';
 import { ScriptedAdapter } from './test/scripted-adapter.fake.js';
+import { StateFact } from './test/state-fact.enum.js';
+import { StateIsolationHarness } from './test/state-isolation-harness.util.js';
 
 describe('Judge', () => {
   it('resolves true when the judge reply says the response is coherent', async () => {
@@ -123,5 +127,46 @@ describe('Judge', () => {
         seq: 0,
       },
     ]);
+  });
+
+  it('judges against the state loaded in the run', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(new FactAwareAdapter(StateFact.Casino), scope);
+    const verdict = await scope.enterRun(() => {
+      scope.appendState([StateFact.Casino, StateFact.Home]);
+      return judge.judgeCoherent('the response', 'the claim');
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it('judges a stateless run against the response alone', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(new FactAwareAdapter(StateFact.Casino), scope);
+    const verdict = await scope.enterRun(() => judge.judgeCoherent('the response', 'the claim'));
+    expect(verdict).toBe(false);
+  });
+
+  it('state appended after an act reaches later judgments, never earlier ones', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(new FactAwareAdapter(StateFact.Letter), scope);
+    const outcome = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      const before = await judge.judgeCoherent('the response', 'the claim');
+      scope.appendState(StateFact.Letter);
+      const after = await judge.judgeCoherent('the response', 'the claim');
+      return { before, after, verdicts: scope.context().verdicts.map((record) => record.verdict) };
+    });
+    expect(outcome).toEqual({ before: false, after: true, verdicts: [false, true] });
+  });
+
+  it('interleaved runs are each judged against only their own state', async () => {
+    const scope = new RunScope();
+    const facts = StateIsolationHarness.facts(RunCount.Gated);
+    const recognised = facts[0] as string;
+    const judge = JudgeHarness.judge(new FactAwareAdapter(recognised), scope);
+    const verdicts = await StateIsolationHarness.interleave(scope, facts, () =>
+      judge.judgeCoherent('the response', 'the claim'),
+    );
+    expect(verdicts).toEqual(facts.map((fact) => fact === recognised));
   });
 });

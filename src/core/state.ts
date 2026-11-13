@@ -38,6 +38,13 @@ class RunScope {
     return this.store().context;
   }
 
+  appendState(entries: unknown): void {
+    const store = this.store();
+    for (const entry of this.stateEntries(entries)) {
+      store.context.state.push(entry);
+    }
+  }
+
   recordVerdict(verdict: Omit<VerdictRecord, 'seq'>): VerdictRecord {
     const store = this.store();
     const record = { ...verdict, seq: this.takeSeq(store) };
@@ -50,6 +57,17 @@ class RunScope {
     const record = { ...error, seq: this.takeSeq(store) };
     store.context.errors.push(record);
     return record;
+  }
+
+  private stateEntries(entries: unknown): string[] {
+    const candidates = Array.isArray(entries) ? (entries as unknown[]) : [entries];
+    if (!candidates.every((entry) => typeof entry === 'string')) {
+      throw new CrucibleError(
+        'usage',
+        'crucible.load and crucible.append take a string or an array of strings.',
+      );
+    }
+    return candidates as string[];
   }
 
   private takeSeq(store: RunStore): number {

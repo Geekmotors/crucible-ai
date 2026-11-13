@@ -51,8 +51,11 @@ const crucible = Object.freeze({
   coherent(response: string, claim: string): Promise<boolean> {
     return compositionRoot.coherentJudge().judgeCoherent(response, claim);
   },
-  load(): never {
-    throw new CrucibleError('usage', 'crucible.load is not implemented yet — coming in Story 2.2.');
+  load(state: string | string[]): void {
+    runScope.appendState(state);
+  },
+  append(state: string | string[]): void {
+    runScope.appendState(state);
   },
 });
 
