@@ -38,16 +38,29 @@ describe('ChatCompletionsAdapter completion', () => {
   });
 });
 
-describe('ChatCompletionsAdapter without a key variable', () => {
-  it('calls the endpoint without credentials, whatever keys the environment holds', async () => {
-    const boundary = FakeFetchBoundary.servingWithoutCredentials(
-      EndpointUrl.Local,
-      RAW_JUDGE_REPLY,
-    );
+describe('ChatCompletionsAdapter with an optional key', () => {
+  it.each([{}, { [KeyEnv.Gateway]: ApiKey.Blank }, { [KeyEnv.Default]: ApiKey.Valid }])(
+    'calls the endpoint without credentials when its key variable is unset or blank (%p)',
+    async (variables) => {
+      const boundary = FakeFetchBoundary.servingWithoutCredentials(
+        EndpointUrl.Local,
+        RAW_JUDGE_REPLY,
+      );
+      const adapter = ChatAdapterHarness.adapter(
+        boundary,
+        new FakeEnvironment(variables),
+        ChatAdapterHarness.optionalKeyEndpoint,
+      );
+      await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(RAW_JUDGE_REPLY);
+    },
+  );
+
+  it('sends the key when its variable is set', async () => {
+    const boundary = FakeFetchBoundary.serving(EndpointUrl.Local, ApiKey.Valid, RAW_JUDGE_REPLY);
     const adapter = ChatAdapterHarness.adapter(
       boundary,
       ChatAdapterHarness.keyedEnvironment(),
-      ChatAdapterHarness.keylessEndpoint,
+      ChatAdapterHarness.optionalKeyEndpoint,
     );
     await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(RAW_JUDGE_REPLY);
   });
@@ -65,12 +78,26 @@ describe('ChatCompletionsAdapter missing API key', () => {
     ).toBe('config');
   });
 
+  it.each([ApiKey.WithLineBreak, ApiKey.WithControlCharacter, ApiKey.NonAscii])(
+    'fails as config when the key holds a character no API key can carry (%p)',
+    async (key) => {
+      const boundary = FakeFetchBoundary.respondingWith(
+        200,
+        FakeFetchBoundary.successEnvelope(RAW_JUDGE_REPLY),
+      );
+      const environment = new FakeEnvironment({ [KeyEnv.Gateway]: key });
+      expect(
+        await ChatAdapterHarness.failureKind(ChatAdapterHarness.adapter(boundary, environment)),
+      ).toBe('config');
+    },
+  );
+
   it('ignores keys held under other variables', async () => {
     const boundary = FakeFetchBoundary.respondingWith(
       200,
       FakeFetchBoundary.successEnvelope(RAW_JUDGE_REPLY),
     );
-    const environment = new FakeEnvironment({ [KeyEnv.OpenRouter]: ApiKey.Valid });
+    const environment = new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid });
     expect(
       await ChatAdapterHarness.failureKind(ChatAdapterHarness.adapter(boundary, environment)),
     ).toBe('config');

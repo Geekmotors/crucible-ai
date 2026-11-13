@@ -87,9 +87,10 @@ make conformance CONFORMANCE_CONFIG=path/to/your/crucible.config.json
 - Needs Docker. The harness reads `provider`, `model`, `meta`, `baseUrl` and
   `apiKeyEnv` from the config you point it at (default:
   `e2e/crucible.config.json`, OpenRouter) and passes the key into the
-  container by the variable's name: `OPENROUTER_API_KEY` for `openrouter`,
-  `OPENAI_API_KEY` for `openai`, the `apiKeyEnv` variable for
-  `openai-compatible` (none when `apiKeyEnv` is absent). Export it first.
+  container by the variable's name: `CRUCIBLE_JUDGE_KEY`, or the variable
+  `apiKeyEnv` names. Export it first. `openai-compatible` without `apiKeyEnv`
+  runs keyless when `CRUCIBLE_JUDGE_KEY` is unset, and the harness warns when
+  a key would go over plain `http://` to a non-loopback host.
 - `CONFORMANCE_REPS` (default 3) repeats each case; `CONFORMANCE_SUITES`
   (`coherent`, `extract`, default both) picks the suites. It makes real,
   usually paid, judge calls: about `cases × reps` of them.

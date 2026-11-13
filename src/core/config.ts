@@ -8,6 +8,7 @@ import { RunOptionsValidator } from './run-options-validator.util.js';
 import type { RunOptions } from './run-options.js';
 import { VERBOSITY_LEVELS } from './verbosity.js';
 import type { Verbosity } from './verbosity.js';
+import { DEFAULT_JUDGE_KEY_ENV } from '../providers/judge-key.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import type { ProviderAdapter, ProviderSettings } from '../providers/types.js';
 
@@ -124,7 +125,7 @@ class ConfigStore {
         : undefined;
     return envVar !== undefined
       ? `the ${envVar} environment variable`
-      : 'an environment variable holding the key (named in "apiKeyEnv" where the provider takes it)';
+      : `${DEFAULT_JUDGE_KEY_ENV} (or the variable "apiKeyEnv" names) to the key`;
   }
 
   private requireProviderSettings(root: Record<string, unknown>): ProviderSettings {

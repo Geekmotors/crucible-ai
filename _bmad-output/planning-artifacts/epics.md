@@ -459,3 +459,34 @@ So that I can use Crucible without an OpenRouter account.
 **And** `make conformance` and the e2e suites can run against any OpenAI-compatible endpoint; the live tests use OpenRouter's OpenAI-compatible endpoint through `openai-compatible`
 **And** the docs (configuration, getting started, judge models, README, gotchas) cover both providers, including Azure OpenAI and Ollama examples and that judge quality must be checked per model with the conformance harness
 
+
+### Story 5.2: Choose where the judge key comes from
+
+As a developer whose judge key lives in a secret manager, CI secret or vault under its own name,
+I want one default key variable for every provider and the option to name my own,
+So that I set the judge key once, the same way, whichever provider I judge with.
+
+**Acceptance Criteria:**
+
+**Given** any provider (`openrouter`, `openai`, `openai-compatible`)
+**When** `crucible.config.json` declares `apiKeyEnv`
+**Then** the judge key is read from that variable (same name validation as today; a pasted key is never echoed in an error)
+
+**Given** `apiKeyEnv` is absent
+**When** a judge call is made
+**Then** the key is read from `CRUCIBLE_JUDGE_KEY`; `OPENROUTER_API_KEY` and `OPENAI_API_KEY` are no longer read (breaking, pre-1.0)
+
+**Given** `openrouter` or `openai`
+**When** the resolved key variable is unset or blank
+**Then** the judge call fails with a `config` error naming the variable
+
+**Given** `openai-compatible`
+**When** `apiKeyEnv` is absent and `CRUCIBLE_JUDGE_KEY` is unset or blank
+**Then** no Authorization header is sent (local servers such as Ollama)
+**And** when `apiKeyEnv` is declared and that variable is unset or blank, the judge call fails with a `config` error naming it
+
+**Given** an `openai-compatible` `baseUrl` that is plain `http://` to a host other than loopback (`localhost`, `127.0.0.0/8`, `[::1]`)
+**When** a key will be sent
+**Then** Crucible warns once per process that the key travels unencrypted, without ever including the key; the call is not rejected
+
+**And** e2e, the conformance harness (`make conformance`), the Makefile, CI workflows (the `CRUCIBLE_JUDGE_KEY` repo secret), README and docs use `CRUCIBLE_JUDGE_KEY` and describe `apiKeyEnv` for every provider

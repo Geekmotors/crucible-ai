@@ -225,37 +225,29 @@
   evidence: `docs/api.md`, `docs/getting-started.md`, `docs/gotchas.md`, `docs/instruction-schema.md`, `src/core/judge.ts`.
 
 - source_spec: 5-1-openai-compatible-provider.md
-  summary: The architecture spine still describes a single OpenRouter adapter: AD-8/AD-9 name `OPENROUTER_API_KEY` as the only key variable and `config.get().provider` as "the resolved adapter singleton", the directory map lists `providers/openrouter.ts` as "MVP adapter", and AD-12 permits only `OPENROUTER_API_KEY` as a CI secret. Amend for provider factories (`ProviderRegistry.create(name, settings)`), the shared `ChatCompletionsAdapter`, `baseUrl`/`apiKeyEnv`, and the `openai`/`openai-compatible` providers.
+  summary: The architecture spine still describes a single OpenRouter adapter: AD-8/AD-9 name `OPENROUTER_API_KEY` as the only key variable (Story 5.2 replaced it with `CRUCIBLE_JUDGE_KEY` / `apiKeyEnv` for every provider, contradicting AD-9's "provider-native var" and "`CRUCIBLE_` reserved" wording, and added a stderr warning outside the reporter, contradicting AD-10) and `config.get().provider` as "the resolved adapter singleton", the directory map lists `providers/openrouter.ts` as "MVP adapter", and AD-12 permits only `OPENROUTER_API_KEY` as a CI secret (now `CRUCIBLE_JUDGE_KEY`). Amend for provider factories (`ProviderRegistry.create(name, settings)`), the shared `ChatCompletionsAdapter`, `baseUrl`/`apiKeyEnv`, and the `openai`/`openai-compatible` providers.
   evidence: `_bmad-output/planning-artifacts/architecture/architecture-crucible-ai-2026-08-10/ARCHITECTURE-SPINE.md`.
 
 - source_spec: 5-1-openai-compatible-provider.md
-  summary: Live verification pending — `make e2e-ext` (new `e2e/ext/openai-compatible.test.ts`) and `make conformance CONFORMANCE_CONFIG=e2e/ext/fixtures/projects/openai-compatible/crucible.config.json` were written but not run (no `OPENROUTER_API_KEY` in the dev shell). Azure OpenAI, Ollama and LiteLLM remain untested against live services, as the docs say.
+  summary: Live verification pending — `make e2e-ext` (new `e2e/ext/openai-compatible.test.ts`) and `make conformance CONFORMANCE_CONFIG=e2e/ext/fixtures/projects/openai-compatible/crucible.config.json` were written but not run (no key in the dev shell; the key variable is now `CRUCIBLE_JUDGE_KEY`). Azure OpenAI, Ollama and LiteLLM remain untested against live services, as the docs say.
   evidence: `e2e/ext/openai-compatible.test.ts`, `Makefile` `conformance`.
 
 ## Deferred from: code review of 5-1-openai-compatible-provider.md (2026-11-14)
 
 - source_spec: 5-1-openai-compatible-provider.md
-  summary: A key made only of letters, digits and underscores passes the `apiKeyEnv` name check and is then named in the missing-key error. Inherent to the format; docs now warn. Consider a heuristic (length/entropy, known prefixes like `gsk_`).
+  summary: A key made only of letters, digits and underscores passes the `apiKeyEnv` name check and is then named in the missing-key error. Inherent to the format; docs now warn. Since Story 5.2 this applies to every provider, not only `openai-compatible`. Consider a heuristic (length/entropy, known prefixes like `gsk_`).
   evidence: `src/core/config.ts` `requireApiKeyEnv`.
-
-- source_spec: 5-1-openai-compatible-provider.md
-  summary: A bearer key can be sent over plain `http://` to a non-loopback host. Decide whether to reject or warn when `apiKeyEnv` is set with a non-loopback `http` `baseUrl` (core and conformance harness).
-  evidence: `src/core/config.ts` `parsePlainWebUrl`, `e2e/ext/conformance/conformance.sh`.
 
 - source_spec: 5-1-openai-compatible-provider.md
   summary: A `baseUrl` that already ends in `/chat/completions` (copied from provider docs) is accepted and fails as a fatal 404. Consider rejecting it at config load.
   evidence: `src/core/config.ts` `requireBaseUrl`.
 
 - source_spec: 5-1-openai-compatible-provider.md
-  summary: A key with an interior CR/LF makes `fetch` throw a TypeError on the header, classified retryable (burns retries). Pre-existing for OpenRouter; consider a `config` error.
-  evidence: `src/providers/chat-completions-adapter.ts` `requireApiKey`/`classifyFailure`.
-
-- source_spec: 5-1-openai-compatible-provider.md
-  summary: Design/test nits: `ProviderRegistry.tryCreate` swallows every error (narrow to config `CrucibleError`); `OpenAiCompatibleProvider.create` duplicates the registry's `baseUrl` required check; format errors on `baseUrl`/`apiKeyEnv` precede the provider-applicability error; `openai-compatible` HTTP errors don't name the endpoint; `ChatEndpoint` type exported from the class file; bare literals `11434`/`42`/`'fake'`/`'test-endpoint'`; identity `.toBe(adapter)` in registry tests; provider happy paths tested at three layers; the "wrong key" adapter test mostly exercises the fake's 401; e2e `JestProcess.revealsApiKey` hard-codes `OPENROUTER_API_KEY`.
+  summary: Design/test nits: `ProviderRegistry.tryCreate` swallows every error (narrow to config `CrucibleError`); `OpenAiCompatibleProvider.create` duplicates the registry's `baseUrl` required check; format errors on `baseUrl`/`apiKeyEnv` precede the provider-applicability error; `openai-compatible` HTTP errors don't name the endpoint; `ChatEndpoint` type exported from the class file; bare literals `11434`/`42`/`'fake'`/`'test-endpoint'`; identity `.toBe(adapter)` in registry tests; provider happy paths tested at three layers; the "wrong key" adapter test mostly exercises the fake's 401; e2e `JestProcess.revealsApiKey` hard-codes the key variable (now `CRUCIBLE_JUDGE_KEY`).
   evidence: `src/providers/registry.ts`, `src/providers/openai-compatible.ts`, `src/core/config.ts`, `src/providers/chat-completions-adapter.ts`, `src/core/config.test.ts`, `src/providers/registry.test.ts`, `e2e/test/jest-process.util.ts`.
 
 - source_spec: 5-1-openai-compatible-provider.md
-  summary: Makefile `conformance`: `$(abspath $(CONFORMANCE_CONFIG))` breaks on paths with spaces; `key-env` costs an extra `docker run`; a whitespace-only key passes the host guard (the container then rejects it with exit 2).
+  summary: Makefile `conformance`: `$(abspath $(CONFORMANCE_CONFIG))` breaks on paths with spaces; `key-env` costs an extra `docker run`.
   evidence: `Makefile` `conformance`.
 
 - source_spec: 5-1-openai-compatible-provider.md
@@ -265,3 +257,25 @@
 - source_spec: 5-1-openai-compatible-provider.md
   summary: The docs TS-example compile check (examples against `dist`) was a scratchpad script; commit it as a script or CI step so it is reproducible.
   evidence: `docs/*.md`.
+
+## Deferred from: code review of 5-2-judge-key-source.md (2026-11-14)
+
+- source_spec: 5-2-judge-key-source.md
+  summary: The plain-http warning is once per factory instance; Jest loads the module afresh per test file, so it prints once per test file, not once per process as AC5 says (docs now say "per test file"). True once-per-process needs state that survives Jest's module reset (e.g. a `globalThis` key behind an injected boundary). Decide whether per-file is acceptable.
+  evidence: `src/providers/registry.ts` `providerRegistry`, `src/providers/openai-compatible.ts`.
+
+- source_spec: 5-2-judge-key-source.md
+  summary: Upgraders from 0.2 with only `OPENROUTER_API_KEY` / `OPENAI_API_KEY` set get "Set the CRUCIBLE_JUDGE_KEY…" with no hint the old variable was dropped; `openai-compatible` users without `apiKeyEnv` silently go keyless (401). Decide whether to add a migration hint (naming the legacy variable only, never its value) or rely on a changelog.
+  evidence: `src/providers/chat-completions-adapter.ts` `rejectMissingKey`.
+
+- source_spec: 5-2-judge-key-source.md
+  summary: The plain-http warning prints the full `baseUrl`, path included; a gateway that embeds a tenant token in the path would have it written to stderr/CI logs. Consider printing only the origin (core and conformance).
+  evidence: `src/providers/openai-compatible.ts` `warnPlainHttp`, `e2e/ext/conformance/conformance.sh` `warn_plain_http`.
+
+- source_spec: 5-2-judge-key-source.md
+  summary: Conformance loopback detection matches the raw host, so `[0:0:0:0:0:0:0:1]`, `127.1`, `2130706433`, `0x7f.0.0.1` and `127.0.0.1.` warn in the harness but not in core (WHATWG URL normalises them). False positives only (safe direction). Also `[::ffff:127.0.0.1]`, `localhost.` and `*.localhost` warn in both. Conformance also accepts malformed `127...1` as loopback (curl then fails). Its key check rejects only `"`, `\` and control characters, while core now rejects anything outside visible ASCII.
+  evidence: `e2e/ext/conformance/conformance.sh` `plain_http_host`, `require_key`.
+
+- source_spec: 5-2-judge-key-source.md
+  summary: `TransportSecurity.exposesKey` calls `new URL(baseUrl)` in `create()`; a direct registry/factory call with an unparseable `baseUrl` throws a raw `TypeError` (ConfigStore validates first, so normal use is unaffected). A throwing warning sink would likewise surface as an unclassified error.
+  evidence: `src/providers/transport-security.util.ts`, `src/providers/openai-compatible.ts`.

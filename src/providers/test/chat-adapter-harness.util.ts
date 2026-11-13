@@ -19,12 +19,15 @@ class ChatAdapterHarness {
     name: 'test-endpoint',
     baseUrl: BaseUrl.Gateway,
     keyEnvVar: KeyEnv.Gateway,
+    keyRequired: true,
     keyOwner: 'test endpoint',
   };
 
-  static keylessEndpoint: ChatEndpoint = {
+  static optionalKeyEndpoint: ChatEndpoint = {
     name: 'test-endpoint',
     baseUrl: BaseUrl.Local,
+    keyEnvVar: KeyEnv.Gateway,
+    keyRequired: false,
     keyOwner: 'test endpoint',
   };
 

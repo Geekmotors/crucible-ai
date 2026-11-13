@@ -1,7 +1,6 @@
 {
   "provider": "openai-compatible",
   "baseUrl": "https://openrouter.ai/api/v1",
-  "apiKeyEnv": "OPENROUTER_API_KEY",
   "model": "deepseek/deepseek-v4-flash-0731",
   "meta": {
     "reasoning": {

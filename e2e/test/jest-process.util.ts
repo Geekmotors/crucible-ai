@@ -43,7 +43,7 @@ class JestProcess {
   }
 
   static revealsApiKey(output: string): boolean {
-    const key = process.env.OPENROUTER_API_KEY?.trim();
+    const key = process.env.CRUCIBLE_JUDGE_KEY?.trim();
     return key !== undefined && key !== '' && output.includes(key);
   }
 
