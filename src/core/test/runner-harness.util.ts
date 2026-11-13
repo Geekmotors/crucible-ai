@@ -1,20 +1,41 @@
 import type { ProviderAdapter } from '../../providers/types.js';
 import { CrucibleError } from '../errors.js';
+import { Reporter } from '../reporter.util.js';
 import { Runner } from '../runner.js';
 import type { RunOptions } from '../run-options.js';
 import { RunScope } from '../state.js';
 import type { VerdictRecord } from '../state.js';
 import { Capture } from './capture.util.js';
 import { JudgeHarness } from './judge-harness.util.js';
+import { ManualTimer } from './manual-timer.fake.js';
 import { ProviderFault } from './provider-fault.enum.js';
 import { StartGate } from './start-gate.util.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
 
 class RunnerHarness {
+  static runner(
+    scope: RunScope = new RunScope(),
+    timer: ManualTimer = new ManualTimer(),
+    defaults: RunOptions = {},
+  ): Runner {
+    return new Runner(scope, new Reporter(), () => defaults, timer.arm);
+  }
+
+  static failingDefaultsRunner(cause: unknown): Runner {
+    return new Runner(
+      new RunScope(),
+      new Reporter(),
+      () => {
+        throw cause;
+      },
+      new ManualTimer().arm,
+    );
+  }
+
   static async rejection(body: (scope: RunScope) => Promise<never>): Promise<unknown> {
     const scope = new RunScope();
-    return Capture.rejection(new Runner(scope).execute(() => body(scope)));
+    return Capture.rejection(RunnerHarness.runner(scope).execute(() => body(scope)));
   }
 
   static async falseVerdictRejection(cause: unknown): Promise<unknown> {
@@ -25,6 +46,15 @@ class RunnerHarness {
   }
 
   static execute(behaviors: RunBehavior[], threshold: number): Promise<void> {
+    return RunnerHarness.executeWith(behaviors, { runs: behaviors.length, threshold });
+  }
+
+  static executeWith(
+    behaviors: RunBehavior[],
+    opts: RunOptions,
+    defaults: RunOptions = {},
+    timer: ManualTimer = new ManualTimer(),
+  ): Promise<void> {
     const scope = new RunScope();
     let next = 0;
     const body = (): Promise<void> => {
@@ -32,7 +62,7 @@ class RunnerHarness {
       next += 1;
       return behavior!(scope);
     };
-    return new Runner(scope).execute(body, { runs: behaviors.length, threshold });
+    return RunnerHarness.runner(scope, timer, defaults).execute(body, opts);
   }
 
   static async executionRejection(behaviors: RunBehavior[], threshold: number): Promise<unknown> {
@@ -90,7 +120,9 @@ class RunnerHarness {
     const scope = new RunScope();
     const judge = JudgeHarness.judge(adapter, scope);
     return Capture.rejection(
-      new Runner(scope).execute(() => judge.judgeCoherent('the response', 'the claim'), { runs }),
+      RunnerHarness.runner(scope).execute(() => judge.judgeCoherent('the response', 'the claim'), {
+        runs,
+      }),
     );
   }
 
@@ -111,11 +143,21 @@ class RunnerHarness {
     };
   }
 
-  static async executions(opts: RunOptions): Promise<number> {
+  static async executions(opts: RunOptions, defaults: RunOptions = {}): Promise<number> {
     let executed = 0;
-    await new Runner(new RunScope()).execute(() => {
+    await RunnerHarness.runner(new RunScope(), new ManualTimer(), defaults).execute(() => {
       executed += 1;
     }, opts);
+    return executed;
+  }
+
+  static async executionsBeforeRejection(runner: Runner): Promise<number> {
+    let executed = 0;
+    await Capture.rejection(
+      runner.execute(() => {
+        executed += 1;
+      }),
+    );
     return executed;
   }
 

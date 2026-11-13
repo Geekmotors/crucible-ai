@@ -2,11 +2,13 @@ import { CrucibleError } from './errors.js';
 import { CONFIG_FILE_NAME } from './config-boundary.js';
 import type { ConfigBoundary, ConfigFileRead } from './config-boundary.js';
 import { FileSystemConfigBoundary } from './file-system-config-boundary.js';
+import { RunOptionsValidator } from './run-options-validator.util.js';
+import type { RunOptions } from './run-options.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import type { ProviderAdapter } from '../providers/types.js';
 
 const VERBOSITY_LEVELS = ['default', 'full', 'debug'] as const;
-const KNOWN_FIELDS = ['provider', 'model', 'meta', 'verbosity'] as const;
+const KNOWN_FIELDS = ['provider', 'model', 'meta', 'verbosity', 'testDefaults'] as const;
 const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authorization'] as const;
 
 type Verbosity = (typeof VERBOSITY_LEVELS)[number];
@@ -16,10 +18,12 @@ type CrucibleConfig = {
   readonly model: string;
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly effectiveVerbosity: Verbosity;
+  readonly testDefaults: RunOptions;
 };
 
 class ConfigStore {
   private cached?: CrucibleConfig;
+  private readonly validator = new RunOptionsValidator();
 
   constructor(
     private readonly boundary: ConfigBoundary,
@@ -40,6 +44,7 @@ class ConfigStore {
       model: this.requireName(root.model, 'model'),
       meta: this.requireMetaShape(root.meta),
       effectiveVerbosity: this.resolveEffectiveVerbosity(root.verbosity),
+      testDefaults: this.requireTestDefaults(root.testDefaults),
     });
   }
 
@@ -122,6 +127,17 @@ class ConfigStore {
       throw this.failure(`"meta" in ${CONFIG_FILE_NAME} must be an object when present.`);
     }
     return value;
+  }
+
+  private requireTestDefaults(value: unknown): RunOptions {
+    if (value === undefined) {
+      return Object.freeze({});
+    }
+    const violation = this.validator.violation(value, `"testDefaults" in ${CONFIG_FILE_NAME}`);
+    if (violation !== undefined) {
+      throw this.failure(violation);
+    }
+    return Object.freeze({ ...(value as RunOptions) });
   }
 
   private resolveEffectiveVerbosity(configured: unknown): Verbosity {

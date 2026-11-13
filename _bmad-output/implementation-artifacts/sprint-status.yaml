@@ -63,7 +63,7 @@ development_status:
   2-2-arrange-state-per-run: done
   2-3-fail-fast-without-burning-spend: done
   2-4-choose-runs-and-threshold-with-eyes-open: done
-  2-5-project-wide-run-defaults: backlog
+  2-5-project-wide-run-defaults: review
   epic-2-retrospective: optional
 
   # Epic 3: Diagnose, document & ship

@@ -5,6 +5,9 @@ import { FakeConfigBoundary } from './test/config-boundary.fake.js';
 import { providerRegistry } from '../providers/registry.js';
 import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
+import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
+import { RunCount } from './test/run-count.enum.js';
+import { Threshold } from './test/threshold.enum.js';
 
 describe('ConfigStore with a valid config', () => {
   it('resolves the registered adapter, model, meta, and verbosity', () => {
@@ -66,7 +69,7 @@ describe('ConfigStore rejects invalid configs as config failures', () => {
     ['whitespace model', { provider: 'fake', model: '   ' }],
     ['non-string model', { provider: 'fake', model: 42 }],
     ['non-object meta', { provider: 'fake', model: TestModel.Generic, meta: 'nope' }],
-    ['unknown field', { provider: 'fake', model: TestModel.Generic, testDefaults: {} }],
+    ['unknown field', { provider: 'fake', model: TestModel.Generic, defaults: {} }],
     ['invalid verbosity', { provider: 'fake', model: TestModel.Generic, verbosity: 'quiet' }],
     ['malformed JSON', '{ not json !!!'],
     ['non-object root', '["array"]'],
@@ -123,6 +126,49 @@ describe('ConfigStore verbosity override', () => {
     expect(
       ConfigHarness.errorKind(
         ConfigHarness.store({ provider: 'fake', model: TestModel.Generic }, 'loud'),
+      ),
+    ).toBe('config');
+  });
+});
+
+describe('ConfigStore testDefaults', () => {
+  it('resolves configured runs and threshold', () => {
+    const testDefaults = { runs: RunCount.Gated, threshold: Threshold.Strict };
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
+    expect(store.get().testDefaults).toEqual(testDefaults);
+  });
+
+  it('accepts a single configured field, leaving the other unset', () => {
+    const store = ConfigHarness.store({
+      provider: 'fake',
+      model: TestModel.Generic,
+      testDefaults: { threshold: Threshold.Strict },
+    });
+    expect(store.get().testDefaults).toEqual({ threshold: Threshold.Strict });
+  });
+
+  it('resolves to no defaults when testDefaults is absent', () => {
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
+    expect(store.get().testDefaults).toEqual({});
+  });
+
+  it.each([
+    ['zero threshold', { threshold: InvalidTestDefault.Zero }],
+    ['threshold above one', { threshold: InvalidTestDefault.AboveOne }],
+    ['negative threshold', { threshold: InvalidTestDefault.Negative }],
+    ['string threshold', { threshold: String(Threshold.Strict) }],
+    ['zero runs', { runs: InvalidTestDefault.Zero }],
+    ['negative runs', { runs: InvalidTestDefault.Negative }],
+    ['fractional runs', { runs: InvalidTestDefault.Fractional }],
+    ['string runs', { runs: String(RunCount.Gated) }],
+    ['unknown key', { run: RunCount.Gated }],
+    ['null', null],
+    ['array', [RunCount.Gated]],
+    ['number', RunCount.Gated],
+  ])('rejects %s as a config failure at load', (_label, testDefaults) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults }),
       ),
     ).toBe('config');
   });

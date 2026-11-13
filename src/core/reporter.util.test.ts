@@ -3,6 +3,7 @@ import { CrucibleError } from './errors.js';
 import { Reporter } from './reporter.util.js';
 import { ProviderFault } from './test/provider-fault.enum.js';
 import { Threshold } from './test/threshold.enum.js';
+import { TimeoutBudget } from './test/timeout-budget.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
 
 const EXCERPT_LIMIT = 500;
@@ -238,5 +239,23 @@ describe('Reporter', () => {
     );
     expect(message).toMatch(/discarded/i);
     expect(message).not.toMatch(/Run failed/);
+  });
+
+  it('headlines an expired test with its deadline, never as a pass-rate failure', () => {
+    const message = ReportHarness.renderedExpiry(
+      [ReportHarness.run('passed'), ReportHarness.run('discarded')],
+      TimeoutBudget.SmokeMs,
+    );
+    expect(message).toContain(String(TimeoutBudget.SmokeMs));
+    expect(message).not.toMatch(/Pass rate below threshold/);
+  });
+
+  it('renders runs cut off by the deadline as discarded and keeps settled runs', () => {
+    const message = ReportHarness.renderedExpiry(
+      [ReportHarness.run('failed', new Error('settled miss')), ReportHarness.run('discarded')],
+      TimeoutBudget.SmokeMs,
+    );
+    expect(message).toContain('Run #1 (failed)');
+    expect(message).toMatch(/discarded.*Run #2/i);
   });
 });

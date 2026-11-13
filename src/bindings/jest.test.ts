@@ -1,9 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
-import { Runner } from '../core/runner.js';
+import { CrucibleError } from '../core/errors.js';
 import type { RunOptions } from '../core/run-options.js';
 import { RunScope } from '../core/state.js';
 import { Capture } from '../core/test/capture.util.js';
+import { ProjectDefaults } from '../core/test/project-defaults.util.js';
 import { RunCount } from '../core/test/run-count.enum.js';
+import { RunnerHarness } from '../core/test/runner-harness.util.js';
 import { Threshold } from '../core/test/threshold.enum.js';
 import { TimeoutBudget } from '../core/test/timeout-budget.enum.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
@@ -13,24 +15,61 @@ import { JestBindingHarness } from './test/jest-harness.util.js';
 import { RegistrarFake } from './test/registrar.fake.js';
 
 describe('JestBinding', () => {
-  it('registers exactly one test per declaration, with the 30 second smoke budget', () => {
+  it('registers exactly one test per declaration', () => {
     const registrar = new RegistrarFake();
     JestBindingHarness.binding(registrar).register('checks coherence', async () => {});
     expect(registrar.registrations).toHaveLength(1);
     expect(registrar.registrations[0]?.name).toBe('checks coherence');
-    expect(registrar.registrations[0]?.timeout).toBe(TimeoutBudget.SmokeMs);
   });
 
-  it('registers with the runner budget for the declared run count', () => {
+  it('a declaration omitting runs gets a Jest timeout a configured run count cannot undercut', () => {
+    const registrar = new RegistrarFake();
+    JestBindingHarness.binding(registrar).register('defaults', async () => {});
+    expect(registrar.registrations[0]?.timeout).toBeGreaterThan(
+      JestBindingHarness.runnerBudget(RunCount.Hundred),
+    );
+  });
+
+  it.each<[RunOptions]>([[{}], [{ runs: RunCount.BeyondTimerMax }]])(
+    'never registers a Jest timeout beyond the timer maximum for %j',
+    (opts) => {
+      const registrar = new RegistrarFake();
+      JestBindingHarness.binding(registrar).register('bounded', opts, async () => {});
+      expect(registrar.registrations[0]?.timeout).toBeLessThanOrEqual(TimeoutBudget.TimerMaxMs);
+    },
+  );
+
+  it('declared runs get a Jest timeout above the runner deadline, so the runner verdict wins', () => {
     const registrar = new RegistrarFake();
     JestBindingHarness.binding(registrar).register(
       'gated',
       { runs: RunCount.Gated, threshold: Threshold.Strict },
       async () => {},
     );
-    expect(registrar.registrations[0]?.timeout).toBe(
-      new Runner(new RunScope()).timeoutFor(RunCount.Gated),
+    expect(registrar.registrations[0]?.timeout).toBeGreaterThan(
+      JestBindingHarness.runnerBudget(RunCount.Gated),
     );
+  });
+
+  it('registration never reads the project defaults', () => {
+    const registrar = new RegistrarFake();
+    const runner = RunnerHarness.failingDefaultsRunner(new CrucibleError('config', 'bad'));
+    expect(() =>
+      JestBindingHarness.over(runner, registrar).register('inert', async () => {}),
+    ).not.toThrow();
+  });
+
+  it('a test omitting runs executes the configured run count', async () => {
+    const registrar = new RegistrarFake();
+    let executed = 0;
+    JestBindingHarness.binding(registrar, new RunScope(), ProjectDefaults.strictGate).register(
+      'defaults',
+      async () => {
+        executed += 1;
+      },
+    );
+    await registrar.registrations[0]?.fn();
+    expect(executed).toBe(RunCount.Gated);
   });
 
   it('inert registration — body must not run until the framework invokes the test', () => {

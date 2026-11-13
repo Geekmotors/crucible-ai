@@ -8,7 +8,8 @@ green. This page documents exactly how `crucible.it()` decides, and how to
 pick `runs`/`threshold` so that a red build means something.
 
 - [`crucible.it()` reference](#crucibleit-reference) — signature, options,
-  run statuses, the three-zone verdict, timeouts, the re-entrancy contract
+  project-wide defaults, run statuses, the three-zone verdict, timeouts, the
+  re-entrancy contract
 - [A threshold is a sampled estimate](#a-threshold-is-a-sampled-estimate) —
   why a true-0.95 system fails a 0.95 gate about a quarter of the time
 - [False-red table](#false-red-table)
@@ -35,11 +36,12 @@ test.
 
 | Option | Default | Valid values | Meaning |
 | --- | --- | --- | --- |
-| `runs` | `1` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
-| `threshold` | `1.0` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
+| `runs` | `testDefaults.runs`, else `1` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
+| `threshold` | `testDefaults.threshold`, else `1.0` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
 
-With both omitted the test is a plain single-shot test ("smoke mode"): one
-run, and it must pass.
+With both omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
+the test is a plain single-shot test ("smoke mode"): one run, and it must
+pass.
 
 Options are validated when the test is registered (while Jest collects the
 file), not when it runs. Each of the following throws a `CrucibleError` of
@@ -51,6 +53,51 @@ kind `usage`:
 - any option key other than `runs` and `threshold`
 - options that are not an object (including `null` or an array), a missing
   body, or two bodies
+
+### Project-wide defaults: `testDefaults`
+
+To apply one reliability bar to every inference test, set `testDefaults` in
+`crucible.config.json`:
+
+```json
+{
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "testDefaults": { "runs": 20, "threshold": 0.85 }
+}
+```
+
+Each option is resolved **per field**, in this order:
+
+1. the value passed to `crucible.it()`
+2. the value in `testDefaults`
+3. the built-in default (`runs: 1`, `threshold: 1.0`)
+
+So with the config above:
+
+| Declaration | Runs | Threshold |
+| --- | --- | --- |
+| `crucible.it(name, body)` | 20 | 0.85 |
+| `crucible.it(name, { runs: 5 }, body)` | 5 | 0.85 |
+| `crucible.it(name, { runs: 5, threshold: 1 }, body)` | 5 | 1.0 |
+
+Both fields are optional; `"testDefaults": {}` or no `testDefaults` at all
+means the built-ins apply.
+
+`testDefaults` is validated when the config is loaded, with the same rules as
+the `crucible.it()` options. Any of the following throws a `CrucibleError` of
+kind `config`, failing the test before any run starts or any judge call is
+made:
+
+- `runs` that is not an integer ≥ 1, or `threshold` that is not a number in
+  (0, 1]
+- any key other than `runs` and `threshold` inside `testDefaults`
+- `testDefaults` that is not an object (`null`, an array, a number)
+
+Defaults are resolved when a test **executes**, not when Jest collects the
+file: registering tests never reads the config, so a broken config fails the
+tests that run, not suite collection. Validation of the options you pass to
+`crucible.it()` itself still happens at registration.
 
 ### What a run is, and how it is classified
 
@@ -67,7 +114,7 @@ exactly one status:
 If your own code catches an infrastructure error and carries on, the run is
 classified by how the body ends, like any other caught exception.
 
-Two outcomes stop the whole test immediately instead of being counted:
+Three outcomes stop the whole test immediately instead of being counted:
 
 - **A fatal provider error** — a non-retryable infrastructure error such as an
   invalid API key or an unknown model. Every other run's in-flight judge call
@@ -77,6 +124,8 @@ Two outcomes stop the whole test immediately instead of being counted:
 - **A `config` or `usage` `CrucibleError`** (or a `CrucibleVerdictError`
   thrown from inside a body) — siblings are aborted the same way and the
   original error is rethrown unchanged.
+- **The test deadline passing** — see [Timeout](#timeout). In-flight runs are
+  cancelled and discarded, and the test fails as *errored*.
 
 Without such a halt, Crucible waits for **every** run to settle before
 judging, even when enough runs have already passed.
@@ -125,20 +174,39 @@ discarded runs.
 
 ### Timeout
 
-Crucible sets the Jest timeout of each `crucible.it()` test itself, so Jest's
-`testTimeout` setting does not apply to it:
+Each `crucible.it()` test has a deadline computed from its **resolved** run
+count — the value from `crucible.it()`, `testDefaults`, or the built-in:
 
 ```text
-timeout = 30 000 ms + 1 000 ms × (runs − 1)
+deadline = 30 000 ms + 1 000 ms × (runs − 1)
 ```
 
 That is 30 s in smoke mode, 49 s for `runs: 20`, 79 s for `runs: 50`. It
 covers the whole test — your arrange and act steps as well as the judge — and
-is not configurable in v1. Separately, each judge reply attempt — including
-the provider retries inside it — has its own 30 s deadline; when that expires
-the run is *errored*, not failed. If your system under test is slow, or the judge keeps
-retrying, Jest's timeout can fire first, in which case Jest reports an
-ordinary timeout failure rather than a Crucible verdict.
+is not configurable in v1. Jest's `testTimeout` setting does not apply.
+
+Crucible enforces the deadline itself. When it passes:
+
+- every run still in flight is aborted — their in-flight judge calls are
+  cancelled, so no further judge spend happens;
+- runs that already settled keep their status, and unfinished runs become
+  *discarded*;
+- the test fails with a `CrucibleVerdictError` whose `outcome` is
+  `'errored'` — an infrastructure problem, never a semantic failure — and the
+  message names the deadline and lists the settled and discarded runs.
+
+Your own code inside a discarded run (for example, a call to your system
+under test) is not cancelled; its result is simply ignored.
+
+Jest still gets a timeout as a backstop that never fires before Crucible's
+deadline: 5 s above the deadline when `runs` is passed to `crucible.it()`,
+and the largest timeout Jest supports (about 24.8 days) when it is not —
+at registration Crucible cannot know the run count `testDefaults` will supply
+without loading the config, so the backstop must not undercut any of them.
+
+Separately, each judge reply attempt — including the provider retries inside
+it — has its own 30 s deadline; when that expires the run is *errored*, not
+failed, and the other runs carry on.
 
 ### Re-entrancy contract
 
@@ -273,7 +341,7 @@ resolution with runs. `{ runs: 50, threshold: 0.85 }` (need 43):
 | 0.80 | 58.9% | 81.0% |
 | 0.70 | 89.3% | 99.3% |
 
-The price is 2.5× the judge calls and a longer test (79 s timeout instead of
+The price is 2.5× the judge calls and a longer test (79 s deadline instead of
 49 s).
 
 ### 4. Headroom is relative to the true rate, not your estimate
@@ -302,7 +370,7 @@ judge calls = coherent() assertions per run × runs   (plus any retries)
 ```
 
 - Every run executes in full, even after `need` passes have been reached —
-  only a fatal error stops a test early.
+  only a fatal error or the test deadline stops a test early.
 - Retries add calls on top: a failing provider call is attempted up to 3 times
   with backoff, and a reply that is not valid verdict JSON is asked for once
   more.

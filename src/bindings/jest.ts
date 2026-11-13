@@ -29,11 +29,7 @@ class JestBinding {
 
   register(name: string, optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): void {
     const { opts, body } = this.normalize(optsOrBody, maybeBody);
-    this.registrar(
-      name,
-      () => this.runner.execute(body, opts),
-      this.runner.timeoutFor(this.resolver.resolve(opts).runs),
-    );
+    this.registrar(name, () => this.runner.execute(body, opts), this.runner.ceilingFor(opts));
   }
 
   private normalize(optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): Declaration {
