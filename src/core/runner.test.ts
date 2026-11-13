@@ -96,6 +96,12 @@ describe('Runner', () => {
     expect(RunnerHarness.runner().timeoutFor(RunCount.Single)).toBe(TimeoutBudget.SmokeMs);
   });
 
+  it('never sizes the test deadline beyond what a timer can hold', () => {
+    expect(RunnerHarness.runner().timeoutFor(RunCount.BeyondTimerMax)).toBeLessThanOrEqual(
+      TimeoutBudget.TimerMaxMs,
+    );
+  });
+
   it('never shrinks the per-test budget as the run count grows', () => {
     const runner = RunnerHarness.runner();
     const budgets = Array.from({ length: RunCount.Gated }, (_, index) =>
@@ -292,6 +298,16 @@ describe('Runner', () => {
     void RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, {}, timer).catch(() => {});
     timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Gated));
     await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('expires at the deadline of the configured run count', async () => {
+    const timer = new ManualTimer();
+    const behaviors = Array.from({ length: RunCount.Gated }, () => RunnerHarness.never);
+    const pending = Capture.rejection(
+      RunnerHarness.executeWith(behaviors, {}, ProjectDefaults.strictGate, timer),
+    );
+    timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Gated));
+    expect((await pending) as CrucibleVerdictError).toBeInstanceOf(CrucibleVerdictError);
   });
 
   it('sizes the deadline from the configured run count, not the single-run budget', async () => {

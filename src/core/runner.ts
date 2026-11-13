@@ -53,7 +53,10 @@ class Runner {
   ) {}
 
   timeoutFor(runs: number): number {
-    return Runner.RUN_BUDGET_MS + (runs - 1) * Runner.PER_EXTRA_RUN_MS;
+    return Math.min(
+      Runner.TIMER_MAX_MS,
+      Runner.RUN_BUDGET_MS + (runs - 1) * Runner.PER_EXTRA_RUN_MS,
+    );
   }
 
   ceilingFor(declared: RunOptions): number {

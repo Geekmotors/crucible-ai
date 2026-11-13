@@ -84,6 +84,12 @@ So with the config above:
 Both fields are optional; `"testDefaults": {}` or no `testDefaults` at all
 means the built-ins apply.
 
+Because the fields resolve independently, a project threshold tuned for its
+own run count also applies to a smaller declared `runs`. In the second row,
+0.85 of 5 runs needs all 5 to pass, so the test is in effect a strict gate.
+When you lower `runs`, check the [headroom](#headroom-patterns) and pass
+`threshold` as well if needed.
+
 `testDefaults` is validated when the config is loaded, with the same rules as
 the `crucible.it()` options. Any of the following throws a `CrucibleError` of
 kind `config`, failing the test before any run starts or any judge call is
@@ -98,6 +104,11 @@ Defaults are resolved when a test **executes**, not when Jest collects the
 file: registering tests never reads the config, so a broken config fails the
 tests that run, not suite collection. Validation of the options you pass to
 `crucible.it()` itself still happens at registration.
+
+Every `crucible.it()` test loads the config when it executes, even a test
+that passes both options or makes no `coherent()` call. A missing or invalid
+`crucible.config.json` therefore fails every `crucible.it()` test as kind
+`config`.
 
 ### What a run is, and how it is classified
 

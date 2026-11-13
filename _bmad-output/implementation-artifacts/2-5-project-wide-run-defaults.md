@@ -4,7 +4,7 @@ baseline_commit: a5602ffe4f080318c737759f2ec4c38a510be314
 
 # Story 2.5: Project-wide run defaults
 
-Status: review
+Status: done
 
 ## Story
 
@@ -145,3 +145,37 @@ Modified:
 ### Change Log
 
 - 2026-11-13: Story 2.5 implemented. Adds config `testDefaults` (validated at load as `config`; shared validator with `crucible.it` options), per-field precedence resolved at execution, a runner-owned per-test deadline from the resolved run count (abort, discard, errored verdict), a Jest timeout ceiling that never undercuts the runner, and updated docs.
+
+### Review Triage Log
+
+Code review 2026-11-13 (bmad-code-review: Blind Hunter, Edge Case Hunter, Acceptance Auditor), diff `story-2-4-choose-runs-and-threshold...HEAD`. Run unattended: decisions recorded here.
+
+**Fixed (test-first)**
+- [x] [Review][Patch] (medium) The runner deadline was not clamped. `timeoutFor` > 2147483647 for resolved runs ≥ ~2.12M, so Node overflowed the real `setTimeout` to ~1 ms and the test expired immediately. `timeoutFor` now clamps to the timer max (red: `never sizes the test deadline beyond what a timer can hold`). [src/core/runner.ts timeoutFor]
+- [x] [Review][Patch] (low) The test for a deadline from configured runs only proved there was no early expiry, so a missing deadline would also pass. Added `expires at the deadline of the configured run count`, and checked that it goes red under a mis-sized deadline. [src/core/runner.test.ts]
+- [x] [Review][Patch] (low) Docs: added a note that every `crucible.it()` test now needs a valid config, including judge-free tests and tests that declare both options (AD-9 behaviour change, accepted in completion notes). [docs/runs-and-threshold.md]
+- [x] [Review][Patch] (low) Docs: added a warning that per-field resolution can turn a project threshold into a strict gate at a smaller declared `runs` (0.85 × 5 → need 5). [docs/runs-and-threshold.md]
+
+**Deferred**
+- [x] [Review][Defer] (medium) Jest fake timers in a user's test file. With `jest.useFakeTimers()`, the runner deadline (and the pre-existing judge-call deadline) use the faked global `setTimeout`. For an omitted-`runs` declaration the Jest backstop is now ~24.8 days rather than 30 s, so a hung body can hang the suite. Capturing the real timers at module load is only partial: it fails under `fakeTimers.enableGlobally`, and it cannot be unit-tested without real timers. → deferred-work.md (Story 3.6 docs gotchas / timer boundary).
+
+**Rejected**
+- No upper bound on `runs` (raw RangeError for absurd counts): already deferred from the 2.1 review. The timer-overflow part is now fixed.
+- Execute reads config even when both options are declared: an explicit spec decision (AD-9, completion notes). Now documented.
+- Late expiry after a `none` settle / deadline-vs-last-run race: `disarm()` runs in `finally` on the microtask continuation. A timer macrotask cannot interleave, and a second `resolve` is a no-op.
+- Disarm on settle untested: it has no observable outcome besides an open handle. `--detectOpenHandles` is clean.
+- Deadline armed after the synchronous body prologues: negligible, and the 5 s ceiling margin explicitly absorbs it (completion notes).
+- The 5 s margin can lose to a loaded event loop: a spec design decision. The margin covers config load and the prologues.
+- Expiry cause `retryable: true`: consistent with c13e0d7 / AD-4. Deadline expiry is retryable infra.
+- Smoke deadline equals the judge-call deadline: both paths yield an `errored` verdict. Same race as the pre-2.5 Jest timeout (deferred in 2.1).
+- The "no further judge spend" wording: accurate. The docs already state that user code in discarded runs is not cancelled.
+- Broken config re-read per test: pre-existing `ConfigStore` caching. Each test gets the same `config` error.
+- Validator message wording change: cosmetic. The text is not part of the contract (kind is).
+- ManualTimer re-entrant arming during `advance`: no test arms from inside `onExpire`.
+- No composition-root wiring test: needs real config/fs. Belongs to e2e (Story 3.3).
+- Magic literals `1` / `'miss'` / `'bad'`: non-load-bearing fixture values, matching existing harness precedent.
+- Execution counters: the run count executed is the outcome under test (2.1 precedent).
+- Omitted-runs ceiling test is weak, and the options are validated twice: an exact ceiling equality would be implementation testing. The double validation is harmless.
+- File List names sprint-status.yaml as not in the diff: false positive. It is in the diff.
+
+Final: 266 tests green; lint, format, typecheck, build green; no `console.` in src; no open handles.
