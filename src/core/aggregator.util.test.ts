@@ -72,6 +72,7 @@ describe('Aggregator', () => {
     [RunCount.Gated, Threshold.Lenient, RunCount.LenientNeed],
     [RunCount.Gated, Threshold.Strict, RunCount.StrictNeed],
     [RunCount.Single, Threshold.Certain, RunCount.Single],
+    [RunCount.Hundred, Threshold.FloatBump, RunCount.LenientNeed],
   ])('%i runs at threshold %p need exactly %i passes', (runs, threshold, need) => {
     expect(new Aggregator().tally(StatusMix.of(runs, 0, 0), { runs, threshold }).need).toBe(need);
   });

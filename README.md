@@ -33,6 +33,8 @@ crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
 
 `crucible.it()` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
 
+A threshold is a sampled estimate: a system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time. Before picking your numbers, read [docs/runs-and-threshold.md](docs/runs-and-threshold.md) — the `crucible.it()` reference, the three-zone verdict, and headroom guidance with worked examples.
+
 The same shape ports to each ecosystem's idiomatic form (roadmap — v1 is TypeScript/Jest):
 
 <details>
