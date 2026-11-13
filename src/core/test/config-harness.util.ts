@@ -5,13 +5,16 @@ import { Capture } from './capture.util.js';
 import { FakeConfigBoundary } from './config-boundary.fake.js';
 import { ProviderRegistry } from '../../providers/registry.js';
 import { FakeAdapter } from '../../providers/test/adapter.fake.js';
+import { FakeEnvironment } from '../../providers/test/environment.fake.js';
+import { FakeFetchBoundary } from '../../providers/test/fetch-boundary.fake.js';
+import { FakeProviderFactory } from '../../providers/test/provider-factory.fake.js';
 
 class ConfigHarness {
   static fakeAdapter = new FakeAdapter('fake');
 
   static registryWithFake(): ProviderRegistry {
     const registry = new ProviderRegistry();
-    registry.register('fake', ConfigHarness.fakeAdapter);
+    registry.register(new FakeProviderFactory('fake', undefined, ConfigHarness.fakeAdapter));
     return registry;
   }
 
@@ -23,10 +26,27 @@ class ConfigHarness {
     );
   }
 
+  static builtInStore(
+    configValue: unknown,
+    boundary: FakeFetchBoundary = FakeFetchBoundary.respondingWith(200, {}),
+    environment: FakeEnvironment = new FakeEnvironment(),
+  ): ConfigStore {
+    return new ConfigStore(
+      new FakeConfigBoundary({ found: true, raw: JSON.stringify(configValue) }),
+      ProviderRegistry.builtIn(boundary.fetchLike, environment.read),
+    );
+  }
+
   static errorKind(store: ConfigStore): string {
     const error = Capture.thrown(() => store.get());
     expect(error).toBeInstanceOf(CrucibleError);
     return (error as CrucibleError).kind;
+  }
+
+  static revealsInError(store: ConfigStore, secret: string): boolean {
+    const error = Capture.thrown(() => store.get());
+    expect(error).toBeInstanceOf(CrucibleError);
+    return (error as CrucibleError).message.includes(secret);
   }
 }
 

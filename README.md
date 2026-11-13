@@ -30,14 +30,14 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 - **Reliability gates:** `{ runs, threshold }` runs the whole test body concurrently and passes on the pass rate.
 - **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
 - **Fail fast, spend less:** a fatal provider or config error stops the sibling runs.
-- **Any judge model** on [OpenRouter](https://openrouter.ai), chosen in a committed config file.
+- **Any judge model, your provider:** [OpenRouter](https://openrouter.ai), OpenAI, or any OpenAI-compatible endpoint (Azure OpenAI, a LiteLLM gateway, Ollama; only OpenRouter's compatible endpoint is tested live so far), chosen in a committed config file.
 - ESM and CommonJS builds, bundled TypeScript types, published with npm provenance.
 
 ## Requirements
 
 - Node.js 22 or later
 - Jest 30 (peer dependency), with the default `injectGlobals: true`
-- An OpenRouter API key with credit. Judge calls are paid model calls, typically a fraction of a cent each.
+- Access to a judge model: an OpenRouter API key with credit (the default), an OpenAI API key, or an OpenAI-compatible endpoint. Hosted judge calls are paid model calls, typically a fraction of a cent each.
 
 ## Installation
 
@@ -57,10 +57,12 @@ npm install --save-dev crucible-ai
 }
 ```
 
+To judge with OpenAI instead, use `{ "provider": "openai", "model": "gpt-5-mini" }`. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"` and, if the endpoint needs a key, an `"apiKeyEnv"` naming the variable that holds it. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
+
 **2. Set your API key** in the environment. Never put it in the config file.
 
 ```sh
-export OPENROUTER_API_KEY=...
+export OPENROUTER_API_KEY=...   # or OPENAI_API_KEY, or the variable apiKeyEnv names
 ```
 
 **3. Write a test.** With no options it runs once, like a normal Jest test:
@@ -187,10 +189,10 @@ Assert `toBe(true)` on claims that describe the behaviour you want. To check tha
 - [API reference](https://github.com/Geekmotors/crucible-ai/blob/main/docs/api.md): every function, option, error and exported type
 - [Getting started](https://github.com/Geekmotors/crucible-ai/blob/main/docs/getting-started.md): from install to a CI gate you can trust
 - [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
-- [Configuration and OpenRouter](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md): every config field, environment variable and CI secret
+- [Configuration and providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md): every config field, provider, environment variable and CI secret
 - [Gotchas](https://github.com/Geekmotors/crucible-ai/blob/main/docs/gotchas.md): read before your first real suite
 - [The instruction schema](https://github.com/Geekmotors/crucible-ai/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
-- [Judge models](https://github.com/Geekmotors/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model
+- [Judge models](https://github.com/Geekmotors/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model, and how to check yours
 - [All documentation](https://github.com/Geekmotors/crucible-ai/blob/main/docs/README.md)
 
 ## License

@@ -9,7 +9,6 @@ JUDGE_CONFIG=${CONFORMANCE_JUDGE_CONFIG:-$HARNESS_DIR/judge.config.json}
 REPS=${CONFORMANCE_REPS:-3}
 EXTRA_CA_FILE=${CONFORMANCE_EXTRA_CA:-/etc/conformance/extra-ca.pem}
 SYSTEM_CA_FILE=/etc/ssl/certs/ca-certificates.crt
-ENDPOINT=https://openrouter.ai/api/v1/chat/completions
 CALL_TIMEOUT_SECONDS=120
 EXIT_MISMATCH=1
 EXIT_USAGE=2
@@ -51,10 +50,85 @@ print_payloads() {
   done
 }
 
+usage_error() {
+  echo "conformance: $1" >&2
+  exit "$EXIT_USAGE"
+}
+
+judge_setting() {
+  jq -r --arg field "$1" '.[$field] // empty | strings' "$JUDGE_CONFIG"
+}
+
+judge_has() {
+  jq -e --arg field "$1" 'has($field)' "$JUDGE_CONFIG" >/dev/null
+}
+
+reject_setting() {
+  if judge_has "$1"; then
+    usage_error "provider '$PROVIDER' does not take \"$1\" (only openai-compatible does)"
+  fi
+}
+
+resolve_compatible_endpoint() {
+  BASE_URL=$(judge_setting baseUrl | sed 's:/*$::')
+  case "$BASE_URL" in
+    *[?#@]* | *[[:space:]]*) usage_error "openai-compatible \"baseUrl\" must carry no credentials, query or fragment" ;;
+    http://?* | https://?*) ;;
+    *) usage_error "openai-compatible needs an http or https \"baseUrl\" in the judge config" ;;
+  esac
+  KEY_ENV=
+  if judge_has apiKeyEnv; then
+    KEY_ENV=$(judge_setting apiKeyEnv)
+    case "$KEY_ENV" in
+      '' | [0-9]* | *[!A-Za-z0-9_]*) usage_error "\"apiKeyEnv\" in the judge config must name an environment variable" ;;
+    esac
+  fi
+}
+
+resolve_endpoint() {
+  jq -e 'type == "object"' "$JUDGE_CONFIG" >/dev/null 2>&1 ||
+    usage_error "judge config $JUDGE_CONFIG is unreadable or not a JSON object"
+  PROVIDER=$(judge_setting provider)
+  case "$PROVIDER" in
+    openrouter)
+      reject_setting baseUrl
+      reject_setting apiKeyEnv
+      BASE_URL=https://openrouter.ai/api/v1
+      KEY_ENV=OPENROUTER_API_KEY
+      ;;
+    openai)
+      reject_setting baseUrl
+      reject_setting apiKeyEnv
+      BASE_URL=https://api.openai.com/v1
+      KEY_ENV=OPENAI_API_KEY
+      ;;
+    openai-compatible)
+      resolve_compatible_endpoint
+      ;;
+    *)
+      usage_error "unknown provider '$PROVIDER' in the judge config (known: openrouter openai openai-compatible)"
+      ;;
+  esac
+  ENDPOINT=$BASE_URL/chat/completions
+}
+
 require_key() {
-  if [ -z "${OPENROUTER_API_KEY:-}" ]; then
-    echo "conformance: OPENROUTER_API_KEY is not set. Pass it at runtime: docker run --env OPENROUTER_API_KEY ..." >&2
-    exit "$EXIT_USAGE"
+  KEY_VALUE=
+  if [ -z "$KEY_ENV" ]; then
+    return
+  fi
+  KEY_VALUE=$(printenv "$KEY_ENV" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' || true)
+  if [ -z "$KEY_VALUE" ]; then
+    usage_error "$KEY_ENV is not set. Pass it at runtime: docker run --env $KEY_ENV ..."
+  fi
+  case "$KEY_VALUE" in
+    *[\"\\[:cntrl:]]*) usage_error "$KEY_ENV holds characters that cannot appear in an API key" ;;
+  esac
+}
+
+auth_config() {
+  if [ -n "$KEY_VALUE" ]; then
+    printf 'header = "Authorization: Bearer %s"\n' "$KEY_VALUE"
   fi
 }
 
@@ -86,7 +160,7 @@ if ${1}_strict_reply(\$matrix[0].cases[\$index]) then ${1}_outcome else error(\"
 }
 
 call_judge() {
-  printf 'header = "Authorization: Bearer %s"\n' "$OPENROUTER_API_KEY" |
+  auth_config |
     curl --config - \
       --silent --show-error \
       --max-time "$CALL_TIMEOUT_SECONDS" \
@@ -100,7 +174,7 @@ call_judge() {
 
 run_matrix() {
   model=$(jq -r '.model' "$JUDGE_CONFIG")
-  echo "conformance: suites [$SUITES] x $REPS reps against $model"
+  echo "conformance: suites [$SUITES] x $REPS reps against $model via $PROVIDER ($ENDPOINT)"
   calls=0
   failures=0
   total_cost=0
@@ -184,7 +258,12 @@ case "${1:-run}" in
   payloads)
     print_payloads
     ;;
+  key-env)
+    resolve_endpoint
+    printf '%s\n' "$KEY_ENV"
+    ;;
   run)
+    resolve_endpoint
     require_key
     WORK_DIR=$(mktemp -d)
     trap 'rm -rf "$WORK_DIR"' EXIT
@@ -192,7 +271,7 @@ case "${1:-run}" in
     run_matrix
     ;;
   *)
-    echo "usage: conformance.sh [run|payloads]" >&2
+    echo "usage: conformance.sh [run|payloads|key-env]" >&2
     exit "$EXIT_USAGE"
     ;;
 esac

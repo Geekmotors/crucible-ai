@@ -223,3 +223,45 @@
   - a few lines in getting-started.md, gotchas.md and instruction-schema.md break the hard-wrap style;
   - internal `Judge` names (`response`, `claim`) still differ from the public `(actual, expectation)`.
   evidence: `docs/api.md`, `docs/getting-started.md`, `docs/gotchas.md`, `docs/instruction-schema.md`, `src/core/judge.ts`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: The architecture spine still describes a single OpenRouter adapter: AD-8/AD-9 name `OPENROUTER_API_KEY` as the only key variable and `config.get().provider` as "the resolved adapter singleton", the directory map lists `providers/openrouter.ts` as "MVP adapter", and AD-12 permits only `OPENROUTER_API_KEY` as a CI secret. Amend for provider factories (`ProviderRegistry.create(name, settings)`), the shared `ChatCompletionsAdapter`, `baseUrl`/`apiKeyEnv`, and the `openai`/`openai-compatible` providers.
+  evidence: `_bmad-output/planning-artifacts/architecture/architecture-crucible-ai-2026-08-10/ARCHITECTURE-SPINE.md`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: Live verification pending — `make e2e-ext` (new `e2e/ext/openai-compatible.test.ts`) and `make conformance CONFORMANCE_CONFIG=e2e/ext/fixtures/projects/openai-compatible/crucible.config.json` were written but not run (no `OPENROUTER_API_KEY` in the dev shell). Azure OpenAI, Ollama and LiteLLM remain untested against live services, as the docs say.
+  evidence: `e2e/ext/openai-compatible.test.ts`, `Makefile` `conformance`.
+
+## Deferred from: code review of 5-1-openai-compatible-provider.md (2026-11-14)
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: A key made only of letters, digits and underscores passes the `apiKeyEnv` name check and is then named in the missing-key error. Inherent to the format; docs now warn. Consider a heuristic (length/entropy, known prefixes like `gsk_`).
+  evidence: `src/core/config.ts` `requireApiKeyEnv`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: A bearer key can be sent over plain `http://` to a non-loopback host. Decide whether to reject or warn when `apiKeyEnv` is set with a non-loopback `http` `baseUrl` (core and conformance harness).
+  evidence: `src/core/config.ts` `parsePlainWebUrl`, `e2e/ext/conformance/conformance.sh`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: A `baseUrl` that already ends in `/chat/completions` (copied from provider docs) is accepted and fails as a fatal 404. Consider rejecting it at config load.
+  evidence: `src/core/config.ts` `requireBaseUrl`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: A key with an interior CR/LF makes `fetch` throw a TypeError on the header, classified retryable (burns retries). Pre-existing for OpenRouter; consider a `config` error.
+  evidence: `src/providers/chat-completions-adapter.ts` `requireApiKey`/`classifyFailure`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: Design/test nits: `ProviderRegistry.tryCreate` swallows every error (narrow to config `CrucibleError`); `OpenAiCompatibleProvider.create` duplicates the registry's `baseUrl` required check; format errors on `baseUrl`/`apiKeyEnv` precede the provider-applicability error; `openai-compatible` HTTP errors don't name the endpoint; `ChatEndpoint` type exported from the class file; bare literals `11434`/`42`/`'fake'`/`'test-endpoint'`; identity `.toBe(adapter)` in registry tests; provider happy paths tested at three layers; the "wrong key" adapter test mostly exercises the fake's 401; e2e `JestProcess.revealsApiKey` hard-codes `OPENROUTER_API_KEY`.
+  evidence: `src/providers/registry.ts`, `src/providers/openai-compatible.ts`, `src/core/config.ts`, `src/providers/chat-completions-adapter.ts`, `src/core/config.test.ts`, `src/providers/registry.test.ts`, `e2e/test/jest-process.util.ts`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: Makefile `conformance`: `$(abspath $(CONFORMANCE_CONFIG))` breaks on paths with spaces; `key-env` costs an extra `docker run`; a whitespace-only key passes the host guard (the container then rejects it with exit 2).
+  evidence: `Makefile` `conformance`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: OpenRouter users see renamed error classes and messages in traces and report causes (`ProviderHttpError`, `Provider "openrouter" responded with HTTP …`, missing-key wording) although the wire request is unchanged. Note in the changelog.
+  evidence: `src/providers/provider-http-error.ts`, `src/providers/provider-envelope-error.ts`.
+
+- source_spec: 5-1-openai-compatible-provider.md
+  summary: The docs TS-example compile check (examples against `dist`) was a scratchpad script; commit it as a script or CI step so it is reproducible.
+  evidence: `docs/*.md`.

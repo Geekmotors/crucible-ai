@@ -231,7 +231,10 @@ globally), or switch to fake timers only inside a plain Jest test.
 `token`, …) so the file stays safe to commit. `meta` is passed to the
 provider unmodified and is **never inspected** — a key placed inside it is
 committed with the file and sent in every request body. Keys belong only in
-`OPENROUTER_API_KEY`. See [`meta`](configuration.md#meta).
+the environment — `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or the variable
+`apiKeyEnv` names. `apiKeyEnv` itself takes a variable *name*: a value with
+punctuation, like `sk-…`, is rejected, but a key made only of letters, digits
+and underscores passes as a name, so check what you put there. See [`meta`](configuration.md#meta).
 
 ## Reports print your errors and responses as they are
 
@@ -241,8 +244,8 @@ cause of errored runs (`Cause:`), the response excerpt, your claims and
 extraction descriptions and, at
 `debug`, the assembled state. In CI that output lands in build logs.
 
-Crucible never prints your API key or `meta` values, and the bundled
-OpenRouter adapter never puts the key in an error message. But if your own
+Crucible never prints your API key or `meta` values, and its bundled
+provider adapter never puts the key in an error message. But if your own
 system under test throws errors, or produces responses, that contain secrets
 or personal data, they are printed. Keep secrets out of test fixtures and
 error messages.
@@ -250,16 +253,19 @@ error messages.
 ## Everything you judge leaves your machine
 
 Each `coherent()` call sends the run's state, the response and the claim to
-OpenRouter (each `extract()` call the state, the text and the description), which forwards them to the model provider serving your chosen
-model. Treat everything you `load`, `append` and judge as data shared with
-those services: use synthetic fixtures, not production data, and check the
-provider's data policy (OpenRouter's provider routing settings can restrict
-where requests go, through `meta`).
+your judge provider (each `extract()` call the state, the text and the
+description). OpenRouter and gateways such as LiteLLM forward them to the
+model provider serving your chosen model. Treat everything you `load`,
+`append` and judge as data shared with those services: use synthetic
+fixtures, not production data, and check the provider's data policy
+(OpenRouter's provider routing settings can restrict where requests go,
+through `meta`). Only a local server such as Ollama keeps it on your machine.
 
 ## Runs spend in parallel
 
 All runs start together, so a `runs: 50` test can have 50 judge calls in
-flight — check your OpenRouter rate limits and credit. Every run executes in
+flight — check your provider's rate limits and credit. A local model server
+may process them one at a time, so large gates can hit the inference timeout. Every run executes in
 full even after enough runs have passed. When a test stops early (a fatal
 provider error or the deadline), Crucible cancels its own in-flight judge
 calls, but calls your system under test makes in discarded runs keep running
@@ -284,7 +290,7 @@ See [Where and when the file is read](configuration.md#where-and-when-the-file-i
 ## Behind a TLS-intercepting proxy, judge calls error
 
 Corporate proxies that re-sign TLS traffic make Node's built-in `fetch` reject
-OpenRouter's certificate (`SELF_SIGNED_CERT_IN_CHAIN`). Crucible retries,
+your provider's certificate (`SELF_SIGNED_CERT_IN_CHAIN`). Crucible retries,
 then reports every run as *errored*. Tell Node to trust the operating
 system's certificates:
 

@@ -234,7 +234,7 @@ Failing claims (first failure of each of the 5 failed runs):
   1 run(s): coherent "Jane does not know about the contract"
 
 [ERRORED] Run #5 (infrastructure, not a semantic failure)
-  Cause: CrucibleError: OpenRouter returned 503 after 3 attempts
+  Cause: CrucibleError: Provider "openrouter" kept failing after 3 attempts.
   Judge attempts: 3
 ```
 
@@ -335,7 +335,7 @@ each line inside a run names it):
 [crucible:debug] test started: 5 run(s) at threshold 0.8, deadline 34000 ms
 [crucible:debug] run #2 provider request attempt 1 to "openrouter": model "openai/gpt-5", system prompt 4210 chars, meta keys [temperature]
     prompt (312 chars): STATE …
-[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 412 ms): OpenRouterHttpError: OpenRouter responded with HTTP 503.
+[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 412 ms): ProviderHttpError: Provider "openrouter" responded with HTTP 503.
 [crucible:debug] run #2 provider request attempt 2 to "openrouter": model "openai/gpt-5", system prompt 4210 chars, meta keys [temperature]
     prompt (312 chars): STATE …
 [crucible:debug] run #2 provider response attempt 2
@@ -350,8 +350,8 @@ What the trace never shows:
 
 - **Your API key.** The trace is taken at crucible's provider interface, above
   the HTTP layer, so request headers never reach it. Error messages are shown
-  as the provider adapter wrote them, and the OpenRouter adapter (the only
-  provider in v1) never puts the key in one. Errors and responses from your
+  as the provider adapter wrote them, and Crucible's adapters (OpenRouter,
+  OpenAI and OpenAI-compatible share one) never put the key in one. Errors and responses from your
   own code are printed as they are — see
   [gotchas](gotchas.md#reports-print-your-errors-and-responses-as-they-are).
 - **`meta` values.** Only `meta` key names are shown, because values can hold

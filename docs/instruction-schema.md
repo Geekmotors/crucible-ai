@@ -256,7 +256,7 @@ enough for a non-TypeScript implementation to assemble the same payloads and
 get the same verdicts and values:
 
 ```sh
-make conformance   # needs Docker and OPENROUTER_API_KEY; makes real judge calls
+make conformance   # needs Docker and the judge provider's key; makes real judge calls
 ```
 
 `make conformance CONFORMANCE_SUITES=extract` (or `coherent`) runs one suite. Its fixtures

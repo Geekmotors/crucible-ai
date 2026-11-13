@@ -6,7 +6,7 @@ can trust in CI. It assumes a Node project that already runs Jest tests.
 1. [Install](#1-install)
 2. [Choose the right assertion first](#2-choose-the-right-assertion-first)
 3. [Create `crucible.config.json`](#3-create-crucibleconfigjson)
-4. [Set `OPENROUTER_API_KEY`](#4-set-openrouter_api_key)
+4. [Set your API key](#4-set-your-api-key)
 5. [Write a first smoke test](#5-write-a-first-smoke-test)
 6. [Turn it into a multi-run gate](#6-turn-it-into-a-multi-run-gate)
 7. [Read a failure](#7-read-a-failure)
@@ -16,8 +16,11 @@ can trust in CI. It assumes a Node project that already runs Jest tests.
 ## 1. Install
 
 Requirements: Node.js 22 or newer, Jest 30 (a peer dependency — Crucible uses
-the Jest you already have), and an [OpenRouter](https://openrouter.ai) account
-with credit, because judge calls are paid model calls.
+the Jest you already have), and access to a judge model: an
+[OpenRouter](https://openrouter.ai) account with credit (the default), an
+OpenAI API key, or any OpenAI-compatible endpoint — Azure OpenAI, a LiteLLM
+gateway, a local server such as Ollama. Hosted judge calls are paid model
+calls.
 
 ```sh
 npm install --save-dev crucible-ai
@@ -80,27 +83,55 @@ your project root):
 }
 ```
 
-- `provider` — the judge provider. v1 supports `openrouter` only.
-- `model` — any OpenRouter model id. The value above is the
-  [recommended default judge](judge-models.md#recommendation-feeds-oq-6).
-- `meta` — optional; passed unmodified to OpenRouter as extra request
+- `provider` — the judge provider: `openrouter`, `openai` or
+  `openai-compatible` (see below).
+- `model` — a model id your provider serves. The value above is the
+  [recommended default judge](judge-models.md#recommendation-feeds-oq-6) on
+  OpenRouter.
+- `meta` — optional; passed unmodified to the provider as extra request
   parameters. Low reasoning effort keeps that model accurate and well inside
   Crucible's per-test deadline ([why](judge-models.md#reasoning-effort-and-the-per-test-deadline-story-33-e2e)).
+
+Choose the provider you already have access to:
+
+| You have | Config |
+| --- | --- |
+| An OpenRouter account (recommended; one key, every model) | `"provider": "openrouter"` as above |
+| An OpenAI API key | `{ "provider": "openai", "model": "gpt-5-mini" }` |
+| Azure OpenAI, a LiteLLM or company gateway, Ollama or another OpenAI-compatible server | `"provider": "openai-compatible"` plus `"baseUrl"` and, if it needs a key, `"apiKeyEnv"` |
+
+For example, a local Ollama needs no key:
+
+```json
+{
+  "provider": "openai-compatible",
+  "baseUrl": "http://localhost:11434/v1",
+  "model": "qwen3:8b"
+}
+```
+
+More examples (Azure OpenAI, LiteLLM) are in
+[Providers](configuration.md#providers). The recommended judge was measured on
+OpenRouter; if you pick another model, check it with the conformance harness
+before trusting its verdicts ([how](judge-models.md#using-another-provider-or-model)).
 
 The file is meant to be committed. **Never put an API key in it — including
 inside `meta`.** Every field and validation rule is in the
 [configuration reference](configuration.md).
 
-## 4. Set `OPENROUTER_API_KEY`
+## 4. Set your API key
 
-The key comes only from the environment:
+The key comes only from the environment, in the variable your provider reads:
 
 ```sh
-export OPENROUTER_API_KEY=...   # your OpenRouter key
+export OPENROUTER_API_KEY=...   # provider "openrouter"
+export OPENAI_API_KEY=...       # provider "openai"
+export MY_GATEWAY_KEY=...       # provider "openai-compatible" with "apiKeyEnv": "MY_GATEWAY_KEY"
 ```
 
-The key is read when a judge call is made, so tests that never call
-`coherent()` do not need it. In CI, store it as a repository secret — see
+An `openai-compatible` endpoint without `apiKeyEnv` gets no key. The key is
+read when a judge call is made, so tests that never call `coherent()` or
+`extract()` do not need it. In CI, store it as a repository secret — see
 [CI secrets](configuration.md#ci-secrets).
 
 ## 5. Write a first smoke test
@@ -255,7 +286,7 @@ your API key or `meta` values. Details: [Verbosity](runs-and-threshold.md#verbos
 ## Next steps
 
 - [Configuration reference](configuration.md) — every field, validation
-  rules, errors, OpenRouter behaviour, CI secrets.
+  rules, errors, providers, CI secrets.
 - [API reference](api.md) — `crucible.it`, `coherent`, `load`, `append`, the
   error classes.
 - [Gotchas](gotchas.md) — the mistakes that cost the most time.
