@@ -7,6 +7,8 @@ import { RunScope } from '../state.js';
 import { Capture } from './capture.util.js';
 import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { SleepRecorder } from './sleep-recorder.fake.js';
+import { ClaimText } from './claim-text.enum.js';
+import { TraceHarness } from './trace-harness.util.js';
 
 class JudgeHarness {
   static judge(adapter: ProviderAdapter, scope: RunScope, deadline?: Deadline): Judge {
@@ -17,6 +19,28 @@ class JudgeHarness {
       scope,
       deadline,
     );
+  }
+
+  static async tracedOutput(replies: string[], traced: TraceHarness): Promise<string> {
+    const trace = traced.trace();
+    const judge = new Judge(
+      () => 'judge schema text',
+      new RetryingCompleter(new SleepRecorder().sleep, {}, trace),
+      () => ({
+        adapter: new ScriptedAdapter(
+          replies.map((reply) => ({ resolve: reply })),
+          'retryable',
+        ),
+        model: TestModel.Generic,
+      }),
+      traced.scope,
+      undefined,
+      trace,
+    );
+    await traced.scope
+      .enterRun(() => judge.judgeCoherent('the response', ClaimText.KeepsSecret))
+      .catch(() => undefined);
+    return traced.output.text;
   }
 
   static judgeReplies(replies: string[]): Promise<boolean> {

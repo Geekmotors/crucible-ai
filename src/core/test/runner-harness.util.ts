@@ -10,6 +10,11 @@ import { JudgeHarness } from './judge-harness.util.js';
 import { ManualTimer } from './manual-timer.fake.js';
 import { ProviderFault } from './provider-fault.enum.js';
 import { StartGate } from './start-gate.util.js';
+import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
+import { ReportHarness } from './report-harness.util.js';
+import { RunCount } from './run-count.enum.js';
+import { TraceHarness } from './trace-harness.util.js';
+import type { TraceReporter } from '../trace-reporter.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
 
@@ -20,6 +25,46 @@ class RunnerHarness {
     defaults: RunOptions = {},
   ): Runner {
     return new Runner(scope, new Reporter(), () => defaults, timer.arm);
+  }
+
+  static tracedRunner(traced: TraceHarness, timer: ManualTimer = new ManualTimer()): Runner {
+    return new Runner(
+      traced.scope,
+      ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, traced.verbosity),
+      () => ({}),
+      timer.arm,
+      traced.trace(),
+    );
+  }
+
+  static async tracedOutput(
+    traced: TraceHarness,
+    behaviors: RunBehavior[],
+    threshold: number,
+  ): Promise<string> {
+    const body = RunnerHarness.sequence(behaviors, traced.scope);
+    await RunnerHarness.tracedRunner(traced)
+      .execute(body, { runs: behaviors.length, threshold })
+      .catch(() => undefined);
+    return traced.output.text;
+  }
+
+  static async tracedExpiryOutput(traced: TraceHarness): Promise<string> {
+    const timer = new ManualTimer();
+    const runner = RunnerHarness.tracedRunner(traced, timer);
+    const pending = runner.execute(() => RunnerHarness.never(traced.scope)).catch(() => undefined);
+    timer.advance(runner.timeoutFor(RunCount.Single));
+    await pending;
+    return traced.output.text;
+  }
+
+  static sequence(behaviors: RunBehavior[], scope: RunScope): () => Promise<void> {
+    let next = 0;
+    return () => {
+      const behavior = behaviors[next];
+      next += 1;
+      return behavior!(scope);
+    };
   }
 
   static failingDefaultsRunner(cause: unknown): Runner {
@@ -56,13 +101,10 @@ class RunnerHarness {
     timer: ManualTimer = new ManualTimer(),
   ): Promise<void> {
     const scope = new RunScope();
-    let next = 0;
-    const body = (): Promise<void> => {
-      const behavior = behaviors[next];
-      next += 1;
-      return behavior!(scope);
-    };
-    return RunnerHarness.runner(scope, timer, defaults).execute(body, opts);
+    return RunnerHarness.runner(scope, timer, defaults).execute(
+      RunnerHarness.sequence(behaviors, scope),
+      opts,
+    );
   }
 
   static async executionRejection(behaviors: RunBehavior[], threshold: number): Promise<unknown> {
@@ -91,6 +133,12 @@ class RunnerHarness {
     const inner = new Error('inner', { cause: outer });
     outer.cause = inner;
     return outer;
+  }
+
+  static recording(trace: TraceReporter): RunBehavior {
+    return async (scope) => {
+      trace.judgeRecorded(scope.recordVerdict(RunnerHarness.verdict(true)));
+    };
   }
 
   static never: RunBehavior = () => new Promise<void>(() => {});

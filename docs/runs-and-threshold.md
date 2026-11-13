@@ -8,8 +8,8 @@ green. This page documents exactly how `crucible.it()` decides, and how to
 pick `runs`/`threshold` so that a red build means something.
 
 - [`crucible.it()` reference](#crucibleit-reference) — signature, options,
-  project-wide defaults, run statuses, the three-zone verdict, timeouts, the
-  re-entrancy contract
+  project-wide defaults, run statuses, the three-zone verdict, the failure
+  report and verbosity, timeouts, the re-entrancy contract
 - [A threshold is a sampled estimate](#a-threshold-is-a-sampled-estimate) —
   why a true-0.95 system fails a 0.95 gate about a quarter of the time
 - [False-red table](#false-red-table)
@@ -240,6 +240,80 @@ Failing claims (first failure of each of the 5 failed runs):
   Lengths are counted in UTF-16 code units, and the cut never splits an emoji
   or other surrogate pair, so the excerpt can differ from the limit by one;
   the header states the length actually shown.
+- **Need more?** The bound and the tally are the `default` verbosity. Turn the
+  volume up with [`full` or `debug`](#verbosity) to see every run.
+
+### Verbosity
+
+One suite gives terse CI output and deep local traces. There are three
+levels; each includes everything the level before it shows.
+
+| Level | What you get |
+| --- | --- |
+| `default` | The failure report above, only when a test fails. Nothing is printed while runs execute or when a test passes. |
+| `full` | Every run in the report, with all of its judge output: each `coherent` call in the order it was recorded (passing verdicts included), its claim, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
+| `debug` | `full`, plus a live trace while the test runs: engine start-up and the resolved config, test start (runs, threshold, deadline), each provider request and response, retry attempts and backoff, judge re-asks, each recorded verdict or judge error, how each run settled, and the verdict. |
+
+Set the level in `crucible.config.json` with `"verbosity"`, or for a single
+invocation with the `CRUCIBLE_VERBOSE` environment variable. The variable wins
+over the config file; an empty value is ignored:
+
+```sh
+CRUCIBLE_VERBOSE=debug npx jest checkout.test.ts
+```
+
+The level is resolved once, when the first test executes (registering tests
+never reads config). An invalid `"verbosity"` in the config file fails as a
+`CrucibleError` of kind `config`; an invalid `CRUCIBLE_VERBOSE` fails as kind
+`usage`. Both messages list the valid levels: `default`, `full`, `debug`.
+
+A run at `full` lists its judge calls like this:
+
+```text
+[PASSED] Run #1
+  Judge call 1 of 1: coherent verdict true
+    Claim: the reply never reveals the meeting location
+    Judge reasoning: The reply declines to say where they meet.
+    Response excerpt: I can't share that, but I can pass on a message.
+```
+
+A `debug` trace looks like this (lines from concurrent runs interleave, so
+each line inside a run names it):
+
+```text
+[crucible:debug] engine init: verbosity debug, trace written to stdout
+[crucible:debug] config resolved: provider "openrouter", model "openai/gpt-5", meta keys [temperature] (values not shown), testDefaults {"runs":5}, excerptChars 500
+[crucible:debug] test started: 5 run(s) at threshold 0.8, deadline 34000 ms
+[crucible:debug] run #2 provider request attempt 1 to "openrouter": model "openai/gpt-5", system prompt 4210 chars, meta keys [temperature]
+    prompt (312 chars): STATE …
+[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 412 ms): OpenRouterHttpError: …
+[crucible:debug] run #2 provider response attempt 2
+    reply (61 chars): {"verdict":true,"reasoning":"The reply declines to say."}
+[crucible:debug] run #2 judge verdict true for coherent "the reply never reveals the meeting location"
+    reasoning (27 chars): The reply declines to say.
+[crucible:debug] run #2 settled passed
+[crucible:debug] verdict pass: 5 passed, 0 failed, 0 errored of 5 (need 4)
+```
+
+What the trace never shows:
+
+- **Your API key.** The trace is taken at crucible's provider interface, above
+  the HTTP layer, so request headers never reach it.
+- **`meta` values.** Only `meta` key names are shown, because values can hold
+  secrets.
+- **Unbounded payloads.** Prompts and replies longer than 2000 characters are
+  cut, with their full length stated. The system prompt (the judge
+  instructions, the same on every call) is shown by length only.
+
+All output goes to standard output; crucible never writes files at any level.
+The trace is written straight to `process.stdout`, not through `console.log`:
+Jest buffers `console` output until a test finishes and wraps every call in a
+source-location block, which would hide the trace of a hung test. Because it
+bypasses Jest's capture, `--silent` does not mute it, and in an interactive
+terminal it can interleave with Jest's progress line; run with `--runInBand`
+or redirect to a file (`> trace.txt`) for a clean read. The engine-init and
+config lines are printed once per test file (Jest loads crucible afresh for
+each file).
 
 ### Timeout
 

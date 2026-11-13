@@ -507,3 +507,141 @@ describe('Reporter — many failing runs', () => {
     expect(message).toContain(`1 run(s): ${ReportText.JudgeErroredLabel}`);
   });
 });
+
+describe('Reporter — full verbosity', () => {
+  it('renders every failed run in full, beyond the default three-run bound', () => {
+    const message = ReportHarness.renderedVerdict(
+      ReportHarness.runs(RunCount.Smaller, 'failed', ClaimText.Default),
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(`${ReportText.FailedRun} Run #${RunCount.Smaller}`);
+    expect(message).not.toContain(ReportText.NotShownInFull);
+    expect(message).not.toContain(ReportText.TallyHeader);
+  });
+
+  it('renders every errored run in full, beyond the default three-run bound', () => {
+    const message = ReportHarness.renderedVerdict(
+      ReportHarness.runs(RunCount.Smaller, 'errored'),
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(`${ReportText.ErroredRun} Run #${RunCount.Smaller}`);
+    expect(message).not.toContain(ReportText.NotShownInFull);
+  });
+
+  it('renders passed runs with their passing verdicts, claim and judge reasoning', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run('passed', undefined, [
+          ReportHarness.trueVerdict({
+            claim: ClaimText.KeepsSecret,
+            reasoning: 'the reply never mentions the secret',
+          }),
+        ]),
+        ReportHarness.run('failed', new Error('miss'), [ReportHarness.falseVerdict()]),
+      ],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(`${ReportText.PassedRun} Run #1`);
+    expect(message).toContain(ClaimText.KeepsSecret);
+    expect(message).toContain('the reply never mentions the secret');
+  });
+
+  it('lists every judge record of a run in the order it was recorded', () => {
+    const judgeError = { cause: new Error(ProviderFault.InvalidKey), attempts: 3, seq: 1 };
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run(
+          'failed',
+          new Error('miss'),
+          [
+            ReportHarness.falseVerdict({ claim: ClaimText.NamesPrice, seq: 2 }),
+            ReportHarness.trueVerdict({ claim: ClaimText.KeepsSecret, seq: 0 }),
+          ],
+          [judgeError],
+        ),
+      ],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    const passing = message.lastIndexOf(ClaimText.KeepsSecret);
+    const errored = message.lastIndexOf(ProviderFault.InvalidKey);
+    const failing = message.lastIndexOf(ClaimText.NamesPrice);
+    expect(passing).toBeGreaterThan(-1);
+    expect(errored).toBeGreaterThan(passing);
+    expect(failing).toBeGreaterThan(errored);
+  });
+
+  it('states when a run recorded no judge calls', () => {
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.run('failed', new Error('thrown before judging'))],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(ReportText.NoJudgeCalls);
+  });
+
+  it('renders discarded runs one by one with the judge output they produced', () => {
+    const message = ReportHarness.renderedFullAbort([
+      ReportHarness.run('errored', new CrucibleError('infra', ProviderFault.InvalidKey)),
+      ReportHarness.run('discarded', undefined, [
+        ReportHarness.trueVerdict({ claim: ClaimText.KeepsSecret }),
+      ]),
+    ]);
+    expect(message).toContain(`${ReportText.DiscardedRun} Run #2`);
+    expect(message).toContain(ClaimText.KeepsSecret);
+  });
+
+  it('keeps the response excerpt bounded', () => {
+    const response = 'v'.repeat(ExcerptChars.Default + 1);
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.run('passed', undefined, [ReportHarness.trueVerdict({ response })])],
+      Threshold.Half,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).not.toContain(response);
+    expect(message).toContain('v'.repeat(ExcerptChars.Default) + '…');
+  });
+
+  it('default verbosity never renders passed runs or passing verdicts', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run('passed', undefined, [
+          ReportHarness.trueVerdict({ claim: ClaimText.KeepsSecret }),
+        ]),
+        ReportHarness.run('failed', new Error('miss'), [ReportHarness.falseVerdict()]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).not.toContain(ReportText.PassedRun);
+    expect(message).not.toContain(ClaimText.KeepsSecret);
+  });
+});
+
+describe('Reporter — passing report', () => {
+  it('headlines a passing gate with its pass rate against the threshold', () => {
+    const message = ReportHarness.renderedPass(
+      ReportHarness.runs(RunCount.Smaller, 'passed'),
+      Threshold.Half,
+    );
+    expect(message.split('\n')[0]).toContain(ReportText.Passed);
+    expect(message.split('\n')[0]).toContain(`${RunCount.Smaller}/${RunCount.Smaller} runs passed`);
+  });
+
+  it('headlines a passing smoke run without a pass-rate count', () => {
+    const message = ReportHarness.renderedPass(ReportHarness.runs(1, 'passed'), Threshold.Certain);
+    expect(message.split('\n')[0]).toContain(`${ReportText.Passed} ${ReportText.Smoke}`);
+    expect(message).not.toContain(ReportText.Counts);
+  });
+
+  it('renders every passed run with its judge output', () => {
+    const message = ReportHarness.renderedPass(
+      ReportHarness.claimedRuns('passed', [ClaimText.KeepsSecret, ClaimText.NamesPrice]),
+      Threshold.Certain,
+    );
+    expect(message).toContain(`${ReportText.PassedRun} Run #2`);
+    expect(message).toContain(ClaimText.NamesPrice);
+  });
+});

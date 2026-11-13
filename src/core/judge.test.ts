@@ -8,6 +8,10 @@ import { JudgeHarness } from './test/judge-harness.util.js';
 import { RunCount } from './test/run-count.enum.js';
 import { ScriptedAdapter } from './test/scripted-adapter.fake.js';
 import { StartGate } from './test/start-gate.util.js';
+import { ClaimText } from './test/claim-text.enum.js';
+import { TraceHarness } from './test/trace-harness.util.js';
+import { TraceText } from './test/trace-text.enum.js';
+import { VerbosityLevel } from './test/verbosity-level.enum.js';
 
 describe('Judge', () => {
   it('resolves true when the judge reply says the response is coherent', async () => {
@@ -154,5 +158,31 @@ describe('Judge', () => {
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('infra');
     expect((error as CrucibleError).retryable).toBe(true);
+  });
+});
+
+describe('Judge — debug trace', () => {
+  it('traces an unusable reply before the re-ask, then the verdict with its claim', async () => {
+    const output = await JudgeHarness.tracedOutput(
+      ['not json at all', TraceText.Reply],
+      new TraceHarness(),
+    );
+    expect(output).toContain('judge reply 1 unusable');
+    expect(output).toContain(`judge verdict true for coherent "${ClaimText.KeepsSecret}"`);
+  });
+
+  it('traces a judge call that errored', async () => {
+    const output = await JudgeHarness.tracedOutput(['still not json', 'nope'], new TraceHarness());
+    expect(output).toContain('judge reply 2 unusable');
+    expect(output).toContain('judge call errored');
+  });
+
+  it('writes nothing below debug verbosity', async () => {
+    await expect(
+      JudgeHarness.tracedOutput(
+        ['not json at all', TraceText.Reply],
+        new TraceHarness(VerbosityLevel.Full),
+      ),
+    ).resolves.toBe('');
   });
 });

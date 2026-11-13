@@ -124,12 +124,23 @@ describe('ConfigStore verbosity override', () => {
     expect(store.get().effectiveVerbosity).toBe('full');
   });
 
-  it('an invalid override is a config failure', () => {
+  it('an invalid override is a usage failure, since the invocation set it, not the config file', () => {
     expect(
       ConfigHarness.errorKind(
         ConfigHarness.store({ provider: 'fake', model: TestModel.Generic }, 'loud'),
       ),
-    ).toBe('config');
+    ).toBe('usage');
+  });
+
+  it('an invalid override fails even when the configured verbosity is valid', () => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store(
+          { provider: 'fake', model: TestModel.Generic, verbosity: 'full' },
+          'loud',
+        ),
+      ),
+    ).toBe('usage');
   });
 });
 

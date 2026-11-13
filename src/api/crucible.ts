@@ -8,6 +8,8 @@ import { RetryingCompleter } from '../core/retry.js';
 import { Reporter } from '../core/reporter.util.js';
 import type { ReportSettings } from '../core/report-settings.js';
 import { Runner } from '../core/runner.js';
+import { TraceReporter } from '../core/trace-reporter.js';
+import type { TraceSettings } from '../core/trace-reporter.js';
 import type { RunOptions } from '../core/run-options.js';
 import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';
@@ -16,13 +18,16 @@ import { CrucibleVerdictError } from '../core/verdict-error.js';
 class CompositionRoot {
   private judge?: Judge;
   private binding?: JestBinding;
+  private readonly trace = new TraceReporter(CompositionRoot.traceSettings, runScope);
 
   coherentJudge(): Judge {
     this.judge ??= new Judge(
       CompositionRoot.coherentSchemaSupplier(),
-      new RetryingCompleter(),
+      new RetryingCompleter(undefined, {}, this.trace),
       CompositionRoot.completionTarget,
       runScope,
+      undefined,
+      this.trace,
     );
     return this.judge;
   }
@@ -33,9 +38,23 @@ class CompositionRoot {
         runScope,
         new Reporter(CompositionRoot.reportSettings),
         CompositionRoot.testDefaults,
+        undefined,
+        this.trace,
       ),
     );
     return this.binding;
+  }
+
+  private static traceSettings(): TraceSettings {
+    const { provider, model, meta, effectiveVerbosity, testDefaults, excerptChars } = config.get();
+    return {
+      verbosity: effectiveVerbosity,
+      provider: provider.name,
+      model,
+      meta,
+      testDefaults,
+      excerptChars,
+    };
   }
 
   private static coherentSchemaSupplier(): () => string {
@@ -48,7 +67,8 @@ class CompositionRoot {
   }
 
   private static reportSettings(): ReportSettings {
-    return { excerptChars: config.get().excerptChars };
+    const { excerptChars, effectiveVerbosity } = config.get();
+    return { excerptChars, verbosity: effectiveVerbosity };
   }
 
   private static completionTarget(): CompletionTarget {

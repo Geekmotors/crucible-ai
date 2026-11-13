@@ -7,6 +7,7 @@ import type { ResolvedRunOptions, RunOptions } from './run-options.js';
 import type { RunResult } from './run-result.js';
 import { RunScope, runScope } from './state.js';
 import type { RunContext } from './state.js';
+import { TraceReporter } from './trace-reporter.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 
 type Rethrow = { readonly rethrow: unknown };
@@ -50,6 +51,7 @@ class Runner {
     private readonly reporter: Reporter = new Reporter(),
     private readonly testDefaults: TestDefaultsSupplier = Runner.noTestDefaults,
     private readonly timer: DeadlineTimer = Runner.startTimer,
+    private readonly trace: TraceReporter = new TraceReporter(),
   ) {}
 
   timeoutFor(runs: number): number {
@@ -69,6 +71,7 @@ class Runner {
   async execute(body: () => unknown, opts: RunOptions = {}): Promise<void> {
     const options = this.resolver.resolve(opts, this.testDefaults());
     const deadlineMs = this.timeoutFor(options.runs);
+    this.trace.testStarted(options, deadlineMs);
     const batch = await this.runBatch(body, options.runs, deadlineMs);
     if (batch.halt === 'rethrow') {
       throw batch.cause;
@@ -97,7 +100,9 @@ class Runner {
       results.map((result) => result.status),
       options,
     );
+    this.trace.verdictReached(tally, options);
     if (tally.zone === 'pass') {
+      this.trace.reportPassed(() => this.reporter.renderPassed({ results, tally, options }));
       return;
     }
     const outcome = tally.zone === 'fail' ? 'failed' : 'errored';
@@ -126,7 +131,9 @@ class Runner {
     resolve: (batch: Batch) => void,
   ): () => void {
     const controller = new AbortController();
-    const runs = Array.from({ length: count }, () => this.start(body, controller.signal));
+    const runs = Array.from({ length: count }, (_, index) =>
+      this.start(body, controller.signal, index + 1),
+    );
     const settled: (RunResult | undefined)[] = runs.map(() => undefined);
     let pending = count;
     const disarm = this.timer(deadlineMs, () => {
@@ -134,7 +141,9 @@ class Runner {
         return;
       }
       controller.abort();
-      resolve({ halt: 'expired', results: this.discardUnsettled(runs, settled) });
+      const results = this.discardUnsettled(runs, settled);
+      this.trace.testExpired(deadlineMs, results);
+      resolve({ halt: 'expired', results });
     });
     runs.forEach((run, index) => {
       void run.settled.then((outcome) => {
@@ -147,13 +156,12 @@ class Runner {
           return;
         }
         settled[index] = outcome;
+        this.trace.runSettled(index + 1, outcome);
         if (this.isFatal(outcome)) {
           controller.abort();
-          resolve({
-            halt: 'fatal',
-            cause: outcome.cause,
-            results: this.discardUnsettled(runs, settled),
-          });
+          const results = this.discardUnsettled(runs, settled);
+          this.trace.testAborted(outcome.cause, results);
+          resolve({ halt: 'fatal', cause: outcome.cause, results });
           return;
         }
         pending -= 1;
@@ -174,10 +182,11 @@ class Runner {
     );
   }
 
-  private start(body: () => unknown, signal: AbortSignal): InFlightRun {
+  private start(body: () => unknown, signal: AbortSignal, run: number): InFlightRun {
     return this.scope.enterRun(
       () => ({ context: this.scope.context(), settled: this.settle(body) }),
       signal,
+      run,
     );
   }
 

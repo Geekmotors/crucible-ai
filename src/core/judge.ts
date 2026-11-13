@@ -3,6 +3,7 @@ import { CrucibleError } from './errors.js';
 import { PayloadAssembler } from './payload-assembler.util.js';
 import { RetryingCompleter } from './retry.js';
 import { RunScope, runScope } from './state.js';
+import { TraceReporter } from './trace-reporter.js';
 
 const COHERENT_ASSERTION = 'coherent';
 const MAX_REPLY_ATTEMPTS = 2;
@@ -36,6 +37,7 @@ class Judge {
     private readonly target: CompletionTargetSupplier,
     private readonly scope: RunScope = runScope,
     private readonly deadline: Deadline = Judge.timeoutDeadline,
+    private readonly trace: TraceReporter = new TraceReporter(),
   ) {}
 
   async judgeCoherent(response: string, claim: string): Promise<boolean> {
@@ -61,16 +63,17 @@ class Judge {
     const runSignal = this.scope.abortSignal();
     try {
       const parsed = await this.judgedReply(counted, request, runSignal);
-      this.scope.recordVerdict({
+      const record = this.scope.recordVerdict({
         assertion: COHERENT_ASSERTION,
         claim,
         verdict: parsed.verdict,
         reasoning: parsed.reasoning,
         response,
       });
+      this.trace.judgeRecorded(record);
       return parsed.verdict;
     } catch (cause) {
-      this.scope.recordError({ cause, attempts });
+      this.trace.judgeRecorded(this.scope.recordError({ cause, attempts }));
       throw cause;
     }
   }
@@ -86,6 +89,7 @@ class Judge {
       try {
         return this.parseReply(reply);
       } catch (failure) {
+        this.trace.judgeReplyRejected(attempt, failure);
         lastFailure = failure as CrucibleError;
       }
     }

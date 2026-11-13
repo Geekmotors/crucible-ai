@@ -2,11 +2,13 @@ import { Aggregator } from '../aggregator.util.js';
 import { Reporter } from '../reporter.util.js';
 import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
 import type { ResolvedRunOptions } from '../run-options.js';
-import type { RunResult, RunStatus } from '../run-result.js';
+import type { RunResult, RunStatus, VerdictSummary } from '../run-result.js';
+import type { Verbosity } from '../verbosity.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
 import { ClaimText } from './claim-text.enum.js';
 import { Threshold } from './threshold.enum.js';
+import { VerbosityLevel } from './verbosity-level.enum.js';
 
 class ReportHarness {
   static context(verdicts: VerdictRecord[] = [], errors: ErrorRecord[] = []): RunContext {
@@ -25,8 +27,52 @@ class ReportHarness {
     };
   }
 
-  static reporter(excerptChars: number = DEFAULT_REPORT_SETTINGS.excerptChars): Reporter {
-    return new Reporter(() => ({ excerptChars }));
+  static reporter(
+    excerptChars: number = DEFAULT_REPORT_SETTINGS.excerptChars,
+    verbosity: Verbosity = DEFAULT_REPORT_SETTINGS.verbosity,
+  ): Reporter {
+    return new Reporter(() => ({ excerptChars, verbosity }));
+  }
+
+  static fullReporter(): Reporter {
+    return ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, VerbosityLevel.Full);
+  }
+
+  static trueVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
+    return ReportHarness.falseVerdict({ verdict: true, ...overrides });
+  }
+
+  static claimedRuns(status: RunStatus, claims: readonly string[]): RunResult[] {
+    return claims.map((claim) =>
+      ReportHarness.run(status, new Error(status), [
+        ReportHarness.falseVerdict({ claim, verdict: status === 'passed' }),
+      ]),
+    );
+  }
+
+  static renderedFullAbort(results: RunResult[]): string {
+    return ReportHarness.fullReporter().renderAborted({
+      results,
+      options: { runs: results.length, threshold: Threshold.Certain },
+      fatal: ReportHarness.firstErroredCause(results),
+    });
+  }
+
+  static renderedPass(
+    results: RunResult[],
+    threshold: number,
+    reporter: Reporter = ReportHarness.fullReporter(),
+  ): string {
+    return reporter.renderPassed(ReportHarness.summary(results, threshold));
+  }
+
+  static summary(results: RunResult[], threshold: number): VerdictSummary {
+    const options: ResolvedRunOptions = { runs: results.length, threshold };
+    const tally = new Aggregator().tally(
+      results.map((result) => result.status),
+      options,
+    );
+    return { results, tally, options };
   }
 
   static renderedFailure(
@@ -93,12 +139,7 @@ class ReportHarness {
     threshold: number,
     reporter: Reporter = ReportHarness.reporter(),
   ): string {
-    const options: ResolvedRunOptions = { runs: results.length, threshold };
-    const tally = new Aggregator().tally(
-      results.map((result) => result.status),
-      options,
-    );
-    return reporter.renderVerdict({ results, tally, options });
+    return reporter.renderVerdict(ReportHarness.summary(results, threshold));
   }
 }
 

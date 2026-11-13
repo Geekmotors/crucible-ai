@@ -69,7 +69,7 @@ development_status:
   # Epic 3: Diagnose, document & ship
   epic-3: in-progress
   3-1-read-a-failure-like-a-report: done
-  3-2-turn-up-the-volume-when-needed: backlog
+  3-2-turn-up-the-volume-when-needed: review
   3-3-prove-it-end-to-end-locally: backlog
   3-4-language-agnostic-judge-conformance-spike: backlog
   3-5-e2e-core-on-merge-to-main: backlog

@@ -9,6 +9,10 @@ import { Threshold } from './test/threshold.enum.js';
 import { RunnerHarness } from './test/runner-harness.util.js';
 import { StartGate } from './test/start-gate.util.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
+import { ReportText } from './test/report-text.enum.js';
+import { TraceHarness } from './test/trace-harness.util.js';
+import { TraceText } from './test/trace-text.enum.js';
+import { VerbosityLevel } from './test/verbosity-level.enum.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 import { Capture } from './test/capture.util.js';
 
@@ -318,5 +322,75 @@ describe('Runner', () => {
     timer.advance(TimeoutBudget.SmokeMs);
     void gate.arrive();
     await expect(pending).resolves.toBeUndefined();
+  });
+});
+
+describe('Runner — verbosity', () => {
+  it('writes nothing at default verbosity, pass or fail', async () => {
+    const traced = new TraceHarness(VerbosityLevel.Default);
+    await RunnerHarness.tracedOutput(traced, [RunnerHarness.pass], Threshold.Certain);
+    await RunnerHarness.tracedOutput(
+      traced,
+      [RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Certain,
+    );
+    expect(traced.output.text).toBe('');
+  });
+
+  it('writes the full report of a passing gate at full verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Full),
+      [RunnerHarness.pass, RunnerHarness.pass],
+      Threshold.Certain,
+    );
+    expect(output).toContain(ReportText.Passed);
+    expect(output).toContain(`${ReportText.PassedRun} Run #2`);
+  });
+
+  it('writes no passing report for a failing gate — the failure carries the report', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Full),
+      [RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Certain,
+    );
+    expect(output).toBe('');
+  });
+
+  it('traces the test start, how every run settled, and the verdict at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Debug),
+      [RunnerHarness.pass, RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Half,
+    );
+    expect(output).toContain(TraceText.TestStarted);
+    expect(output).toContain('run #1 settled passed');
+    expect(output).toContain('run #2 settled failed');
+    expect(output).toContain('verdict pass');
+  });
+
+  it('traces a fatal abort at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Debug),
+      [RunnerHarness.throwing(RunnerHarness.fatal)],
+      Threshold.Certain,
+    );
+    expect(output).toContain('test aborted');
+    expect(output).toContain(ProviderFault.InvalidKey);
+  });
+
+  it('traces a deadline expiry at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedExpiryOutput(new TraceHarness(VerbosityLevel.Debug));
+    expect(output).toContain('deadline');
+    expect(output).toContain('1 in-flight run(s) discarded');
+  });
+
+  it('tags work inside each run with its run number at debug verbosity', async () => {
+    const traced = new TraceHarness(VerbosityLevel.Debug);
+    const output = await RunnerHarness.tracedOutput(
+      traced,
+      [RunnerHarness.pass, RunnerHarness.recording(traced.trace())],
+      Threshold.Certain,
+    );
+    expect(output).toContain('run #2 judge verdict');
   });
 });

@@ -1,6 +1,10 @@
 enum ReportText {
   Failed = 'FAILED:',
   Errored = 'ERRORED, not failed:',
+  Passed = 'PASSED:',
+  PassedRun = '[PASSED]',
+  NoJudgeCalls = 'Judge calls: none recorded',
+  NotShownInFull = 'not shown in full',
   FailedRun = '[FAILED]',
   ErroredRun = '[ERRORED]',
   DiscardedRun = '[DISCARDED]',
