@@ -1,162 +1,184 @@
 # Crucible
 
+[![npm](https://img.shields.io/npm/v/crucible-ai)](https://www.npmjs.com/package/crucible-ai)
 [![ci](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
+[![license](https://img.shields.io/npm/l/crucible-ai)](https://github.com/jackula83/crucible-ai/blob/main/LICENSE)
 
-A semantic assertion library for stateful systems.
+Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
-Recently when I was working on one of my AI side projects (which I am calling Proscenium), I had trouble testing its inference capabilities.
-
-Most of what we live with today, i.e. Jest, xUnit, JUnit are deterministic testing. However inference is non-deterministic, and we need a way to test inference.
-
-Proscenium is a storytelling app, where it keeps a world log of events and use a memory management technique to prevent omniscience, which is the #1 killer to long form storytelling.
-
-Using Proscenium and Typescript as an example, the aim is:
+Crucible asks an AI judge whether your system's reply means what it should, given the state your system knew at the time. It re-runs the test many times and passes on a pass rate, so a flaky model can't sneak through on one lucky run.
 
 ```ts
-crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
-  // arrange
-  const story = await sut.createNewStory("The Long Weekend");
-  await sut.memory("Bob is at the casino");
-  await sut.memory("Jane is at home");
-  crucible.load(story.getLogs());
+crucible.it('keeps the meeting place secret', { runs: 10, threshold: 0.9 }, async () => {
+  const assistant = createAssistant();
+  await assistant.remember(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
+  crucible.load(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
 
-  // act
-  const response = await sut.input("Jane looks for Bob");
+  const reply = await assistant.ask('Bob asks: where is the meeting?');
 
-  // assert
-  expect(
-    await crucible.coherent(
-      response,
-      "Jane won't find Bob, because they aren't in the same place"
-    )
-  ).toBe(true);
+  expect(await crucible.coherent(reply, 'The reply does not reveal the meeting place to Bob')).toBe(true);
 });
 ```
 
-`crucible.it()` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
+Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspiration](https://github.com/jackula83/crucible-ai/blob/main/docs/inspiration.md).
 
-A threshold is a sampled estimate: a system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time. Before picking your numbers, read [docs/runs-and-threshold.md](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md) — the `crucible.it()` reference, the three-zone verdict, and headroom guidance with worked examples.
+## Features
 
-## Get started
+- **Semantic assertions:** `crucible.coherent(response, claim)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
+- **State-aware judging:** `crucible.load()` and `crucible.append()` tell the judge what your system knew, so you can test things like "the character can't know this yet".
+- **Reliability gates:** `{ runs, threshold }` runs the whole test body concurrently and passes on the pass rate.
+- **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
+- **Fail fast, spend less:** a fatal provider or config error stops the sibling runs.
+- **Any judge model** on [OpenRouter](https://openrouter.ai), chosen in a committed config file.
+- ESM and CommonJS builds, bundled TypeScript types, published with npm provenance.
+
+## Requirements
+
+- Node.js 22 or later
+- Jest 30 (peer dependency), with the default `injectGlobals: true`
+- An OpenRouter API key with credit. Judge calls are paid model calls, typically a fraction of a cent each.
+
+## Installation
 
 ```sh
 npm install --save-dev crucible-ai
 ```
 
-Crucible needs Node.js 22+, Jest 30, a committed `crucible.config.json` naming the judge model, and an `OPENROUTER_API_KEY` in the environment. [Getting started](https://github.com/jackula83/crucible-ai/blob/main/docs/getting-started.md) walks you from install to a CI gate you can trust; the [documentation index](https://github.com/jackula83/crucible-ai/blob/main/docs/README.md) lists every page — configuration and OpenRouter reference, API reference, gotchas, and how the instruction schema drives the judge.
+## Quick start
 
-The same shape ports to each ecosystem's idiomatic form (roadmap — v1 is TypeScript/Jest):
+**1. Add `crucible.config.json`** to the directory you run Jest from, and commit it:
 
-<details>
-<summary><b>C# (xUnit)</b></summary>
-
-```csharp
-[CrucibleFact(Runs = 20, Threshold = 0.95)]
-public async Task JaneLooksForBob()
+```json
 {
-    // arrange
-    var story = await sut.CreateNewStory("The Long Weekend");
-    await sut.Memory("Bob is at the casino");
-    await sut.Memory("Jane is at home");
-    Crucible.Load(story.GetLogs());
-
-    // act
-    var response = await sut.Input("Jane looks for Bob");
-
-    // assert
-    Assert.True(await Crucible.Coherent(
-        response,
-        "Jane won't find Bob, because they aren't in the same place"));
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "meta": { "reasoning": { "effort": "low" } }
 }
 ```
 
-</details>
+**2. Set your API key** in the environment. Never put it in the config file.
 
-<details>
-<summary><b>Java (JUnit 5)</b></summary>
+```sh
+export OPENROUTER_API_KEY=...
+```
 
-```java
-@CrucibleTest(runs = 20, threshold = 0.95)
-void janeLooksForBob() throws Exception {
-    // arrange
-    var story = sut.createNewStory("The Long Weekend");
-    sut.memory("Bob is at the casino");
-    sut.memory("Jane is at home");
-    Crucible.load(story.getLogs());
+**3. Write a test.** With no options it runs once, like a normal Jest test:
 
-    // act
-    var response = sut.input("Jane looks for Bob");
+```ts
+import { crucible } from 'crucible-ai';
+import { createAssistant } from '../src/assistant';
 
-    // assert
-    assertTrue(Crucible.coherent(
-        response,
-        "Jane won't find Bob, because they aren't in the same place"));
+crucible.it('declines to export on the free plan', async () => {
+  const assistant = createAssistant({ plan: 'free' });
+  crucible.load('Free-plan users cannot export reports.');
+
+  const reply = await assistant.ask('Export my report as PDF.');
+
+  expect(await crucible.coherent(reply, 'The reply declines the export')).toBe(true);
+});
+```
+
+**4. Run it** with your usual Jest command:
+
+```sh
+npx jest
+```
+
+## Usage
+
+### Gate on a pass rate
+
+Add `runs` and `threshold` to run the body several times concurrently. The test passes when at least `threshold` of the runs pass:
+
+```ts
+crucible.it('stays in character', { runs: 20, threshold: 0.9 }, async () => {
+  const reply = await createAssistant().ask('Who are you really?');
+  expect(await crucible.coherent(reply, 'The reply stays in the persona of a ship captain')).toBe(true);
+});
+```
+
+A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md) explains how to choose both.
+
+### Give the judge state
+
+Each run starts with empty state. Use `load` while arranging and `append` for facts that arise later. A `coherent()` call judges against the state as it stood when you called it:
+
+```ts
+crucible.it('remembers a change of venue', async () => {
+  const assistant = createAssistant();
+  await assistant.remember(['The meeting is in room B12.']);
+  crucible.load('The meeting is in room B12.');
+
+  await assistant.remember(['The meeting moved to room C3.']);
+  crucible.append('The meeting moved to room C3.');
+
+  const reply = await assistant.ask('Where is the meeting?');
+  expect(await crucible.coherent(reply, 'The reply says the meeting is in room C3')).toBe(true);
+});
+```
+
+### Set timeouts
+
+By default a whole test gets 30 s plus 1 s per extra run, and each judge request gets 30 s. Override them per test, Jest-style or by name:
+
+```ts
+crucible.it('summarises a long thread', async () => {
+  const reply = await createAssistant().ask('Summarise the thread.');
+  expect(await crucible.coherent(reply, 'The summary mentions the deadline')).toBe(true);
+}, 60000);
+
+crucible.it('plans a trip', { runs: 5, inferenceTimeout: 45000, testTimeout: 120000 }, async () => {
+  const reply = await createAssistant().ask('Plan a weekend in Kyoto.');
+  expect(await crucible.coherent(reply, 'The plan covers two days')).toBe(true);
+});
+```
+
+### Project-wide defaults
+
+Put defaults for every `crucible.it()` in the config. Values declared on a test win:
+
+```json
+{
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "testDefaults": { "runs": 10, "threshold": 0.9, "testTimeout": 90000 }
 }
 ```
 
-</details>
+### Read a failure
 
-<details>
-<summary><b>Python (pytest)</b></summary>
+A failed gate throws a report like this:
 
-```python
-@crucible.it(runs=20, threshold=0.95)
-async def test_jane_looks_for_bob():
-    # arrange
-    story = await sut.create_new_story("The Long Weekend")
-    await sut.memory("Bob is at the casino")
-    await sut.memory("Jane is at home")
-    crucible.load(story.get_logs())
+```text
+FAILED: 7/10 runs passed (pass rate 0.7) against threshold 0.9 (need 9).
+Runs: 7 passed, 3 failed, 0 errored, 0 discarded.
 
-    # act
-    response = await sut.input("Jane looks for Bob")
-
-    # assert
-    assert await crucible.coherent(
-        response, "Jane won't find Bob, because they aren't in the same place"
-    )
+[FAILED] Run #4
+  First failed assertion: coherent (assertion 1 of 1 judged in this run)
+  Claim: The reply does not reveal the meeting place to Bob
+  Judge reasoning: The reply tells Bob the meeting is at the Blue Door cafe.
+  Response excerpt: Sure, Bob. Jane is meeting you at the Blue Door.
+  Thrown: Error: expect(received).toBe(expected)
 ```
 
-</details>
+Set `CRUCIBLE_VERBOSE=full` to see every run, or `CRUCIBLE_VERBOSE=debug` to trace each judge call.
 
-## Judge validation
+### Write claims that should hold
 
-The `coherent` instruction schema — the language-agnostic core that judge
-models execute — was validated against real judge models over OpenRouter
-(4-case conformance matrix × 5 repetitions per model; schema as system
-prompt; details in [docs/judge-models.md](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-models.md)):
+Assert `toBe(true)` on claims that describe the behaviour you want. To check that something must not happen, put the negation in the claim ("does not reveal …") instead of asserting `toBe(false)`. And always `await` and assert a verdict: an unasserted `false` never fails a test.
 
-| Model | JSON compliance | Verdict accuracy | Median latency | Cost / call | Speed | Cost | Reliability |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `deepseek/deepseek-v4-flash-0731` | 20/20 | 20/20 | 4.8 s | ~$0.00004 | 3/5 | 5/5 | 5/5 |
-| `google/gemini-3.8-flash` | 20/20 | 20/20 | 3.2 s | ~$0.0014 | 4/5 | 4/5 | 5/5 |
-| `anthropic/claude-sonnet-5` | 20/20 | 20/20 | 2.4 s | ~$0.0025 | 5/5 | 3/5 | 5/5 |
+## Documentation
 
-Every model held the strict-JSON output contract for all 60 calls and
-returned the correct verdict on every case, including the knowledge-boundary
-(anti-omniscience) leak. Recommended default judge:
-`deepseek/deepseek-v4-flash-0731` — equal accuracy at a fraction of the
-cost, which dominates once multi-run reliability gates multiply call volume.
-Reliability was graded by comparing each model's verdicts and reasoning
-against a frontier model's independent interpretation of the same cases.
+- [Inspiration](https://github.com/jackula83/crucible-ai/blob/main/docs/inspiration.md): why Crucible exists, the design ideas, and how it compares with alternatives
+- [API reference](https://github.com/jackula83/crucible-ai/blob/main/docs/api.md): every function, option, error and exported type
+- [Getting started](https://github.com/jackula83/crucible-ai/blob/main/docs/getting-started.md): from install to a CI gate you can trust
+- [Runs and threshold](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
+- [Configuration and OpenRouter](https://github.com/jackula83/crucible-ai/blob/main/docs/configuration.md): every config field, environment variable and CI secret
+- [Gotchas](https://github.com/jackula83/crucible-ai/blob/main/docs/gotchas.md): read before your first real suite
+- [The instruction schema](https://github.com/jackula83/crucible-ai/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
+- [Judge models](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model
+- [All documentation](https://github.com/jackula83/crucible-ai/blob/main/docs/README.md)
 
-For trust and transparency, the verbatim inputs and unedited model replies
-from these runs are published in
-[docs/judge-validation-runs.md](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-validation-runs.md) — see for
-yourself that the concept works.
+## License
 
-## Alternatives
-
-**[promptfoo](https://www.promptfoo.dev)** is the closest neighbour and the difference is philosophical. Promptfoo is config-first: the test suite is a YAML file, the CLI is the primary surface, and the unit of work is an eval run across a matrix of prompts and providers. Crucible is code-first: the test is a function in an existing test suite, the system under test is the developer's own engine instantiated in-process, and the unit of work is a single assertion inside a red-green loop.
-
-The practical consequence is state. Promptfoo's model is prompt in, output out, assert on the output. State can be passed through template variables and a custom rubric prompt, and people do, but it is a workaround rather than a concept the framework has. Crucible treats state as a first-class input because that is the only way to express whether a character *should* know something.
-
-Worth noting that promptfoo was acquired by OpenAI in March 2026 and is being integrated into their Frontier platform. It remains open source and the team committed to continuity. Its roadmap is enterprise security and red teaming, which is a real need and not this one.
-
-**[DeepEval](https://deepeval.com)** has the strongest metric library going, and G-Eval is a genuinely good primitive. It shipped a TypeScript SDK in July 2026, so the old "Python-only" complaint is out of date. Parity is another matter: LLM-as-a-judge metrics and fully local evaluation still live in the Python package, and the team is refreshingly direct that TypeScript follows Python rather than standing alongside it. That is a reasonable call for them and a bad fit for anyone whose production system is not Python.
-
-**[vitest-evals](https://github.com/getsentry/vitest-evals)** (Sentry) and **[evalite](https://github.com/mattpocock/evalite)** are the closest ergonomic neighbours in TypeScript: evals that live in or next to the unit-test workflow, local-first and free. Both score a stateless input/output pair against a dataset or scorer; neither has a concept of state as an assertion input, nor of a reliability threshold across repeated runs.
-
-**[semantic-expect](https://github.com/agorischek/semantic-expect)** deserves a nod as prior art: LLM-judged matchers for Jest/Vitest with an N-run, pass-count configuration — the same probabilistic-assertion instinct. It is early, stateless, and tied to OpenAI.
-
-**[Braintrust](https://www.braintrust.dev)** and **[LangSmith](https://docs.langchain.com/langsmith)** are platform plays — datasets, experiments, traces, and dashboards, with test-runner integrations attached. Good fits for teams that want a hosted eval loop; Crucible is a library for teams that want assertions in a test suite.
+[MIT](https://github.com/jackula83/crucible-ai/blob/main/LICENSE)
