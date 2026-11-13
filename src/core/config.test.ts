@@ -249,20 +249,54 @@ describe('ConfigStore excerptChars', () => {
 describe('ConfigStore built-in providers', () => {
   const reply = ChatAdapterHarness.rawJudgeReply;
 
-  it('judges through openrouter with its key', async () => {
+  it.each([
+    [ProviderName.OpenRouter, EndpointUrl.OpenRouter],
+    [ProviderName.OpenAi, EndpointUrl.OpenAi],
+  ])('judges through %s with the key from CRUCIBLE_JUDGE_KEY', async (provider, endpoint) => {
     const store = ConfigHarness.builtInStore(
-      { provider: ProviderName.OpenRouter, model: TestModel.Gpt5 },
-      FakeFetchBoundary.serving(EndpointUrl.OpenRouter, ApiKey.Valid, reply),
-      new FakeEnvironment({ [KeyEnv.OpenRouter]: ApiKey.Valid }),
+      { provider, model: TestModel.Generic },
+      FakeFetchBoundary.serving(endpoint, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
     );
     await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
   });
 
-  it('judges through openai with its key', async () => {
+  it.each([
+    [ProviderName.OpenRouter, EndpointUrl.OpenRouter],
+    [ProviderName.OpenAi, EndpointUrl.OpenAi],
+  ])('judges through %s with the key from apiKeyEnv', async (provider, endpoint) => {
     const store = ConfigHarness.builtInStore(
-      { provider: ProviderName.OpenAi, model: TestModel.Generic },
-      FakeFetchBoundary.serving(EndpointUrl.OpenAi, ApiKey.Valid, reply),
-      new FakeEnvironment({ [KeyEnv.OpenAi]: ApiKey.Valid }),
+      { provider, model: TestModel.Generic, apiKeyEnv: KeyEnv.Gateway },
+      FakeFetchBoundary.serving(endpoint, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.Gateway]: ApiKey.Valid, [KeyEnv.Default]: ApiKey.Other }),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
+
+  it.each([ProviderName.OpenRouter, ProviderName.OpenAi])(
+    '%s no longer reads its provider-native key variable',
+    async (provider) => {
+      const store = ConfigHarness.builtInStore(
+        { provider, model: TestModel.Generic },
+        FakeFetchBoundary.respondingWith(200, FakeFetchBoundary.successEnvelope(reply)),
+        new FakeEnvironment({
+          [KeyEnv.LegacyOpenRouter]: ApiKey.Valid,
+          [KeyEnv.LegacyOpenAi]: ApiKey.Valid,
+        }),
+      );
+      expect(await ChatAdapterHarness.failureKind(store.get().provider)).toBe('config');
+    },
+  );
+
+  it('judges through an openai-compatible endpoint with the key from CRUCIBLE_JUDGE_KEY', async () => {
+    const store = ConfigHarness.builtInStore(
+      {
+        provider: ProviderName.OpenAiCompatible,
+        baseUrl: BaseUrl.Gateway,
+        model: TestModel.Generic,
+      },
+      FakeFetchBoundary.serving(EndpointUrl.Gateway, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
     );
     await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
   });
@@ -320,21 +354,23 @@ describe('ConfigStore rejects invalid provider settings as config failures', () 
     },
   );
 
-  it.each([...Object.values(InvalidKeyEnv), 42])(
-    'openai-compatible with apiKeyEnv %p',
-    (apiKeyEnv) => {
-      expect(
-        ConfigHarness.errorKind(
-          ConfigHarness.builtInStore({
-            provider: ProviderName.OpenAiCompatible,
-            model: TestModel.Generic,
-            baseUrl: BaseUrl.Gateway,
-            apiKeyEnv,
-          }),
-        ),
-      ).toBe('config');
-    },
-  );
+  it.each(
+    [ProviderName.OpenRouter, ProviderName.OpenAi, ProviderName.OpenAiCompatible].flatMap(
+      (provider) =>
+        [...Object.values(InvalidKeyEnv), 42].map((apiKeyEnv) => [provider, apiKeyEnv] as const),
+    ),
+  )('%s with apiKeyEnv %p', (provider, apiKeyEnv) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.builtInStore({
+          provider,
+          model: TestModel.Generic,
+          baseUrl: provider === ProviderName.OpenAiCompatible ? BaseUrl.Gateway : undefined,
+          apiKeyEnv,
+        }),
+      ),
+    ).toBe('config');
+  });
 
   it('openai-compatible without baseUrl', () => {
     expect(
@@ -349,9 +385,7 @@ describe('ConfigStore rejects invalid provider settings as config failures', () 
 
   it.each([
     [ProviderName.OpenRouter, { baseUrl: BaseUrl.Gateway }],
-    [ProviderName.OpenRouter, { apiKeyEnv: KeyEnv.Gateway }],
     [ProviderName.OpenAi, { baseUrl: BaseUrl.Gateway }],
-    [ProviderName.OpenAi, { apiKeyEnv: KeyEnv.OpenAi }],
   ])('%s with %p', (provider, settings) => {
     expect(
       ConfigHarness.errorKind(
@@ -360,14 +394,30 @@ describe('ConfigStore rejects invalid provider settings as config failures', () 
     ).toBe('config');
   });
 
-  it('never echoes a key pasted into apiKeyEnv when a key-like field is also present', () => {
-    const store = ConfigHarness.builtInStore({
-      provider: ProviderName.OpenAiCompatible,
-      model: TestModel.Generic,
-      baseUrl: BaseUrl.Gateway,
-      apiKeyEnv: InvalidKeyEnv.KeyValue,
-      token: InvalidKeyEnv.KeyValue,
-    });
-    expect(ConfigHarness.revealsInError(store, InvalidKeyEnv.KeyValue)).toBe(false);
-  });
+  it.each([ProviderName.OpenRouter, ProviderName.OpenAi, ProviderName.OpenAiCompatible])(
+    '%s never echoes a key pasted into apiKeyEnv when a key-like field is also present',
+    (provider) => {
+      const store = ConfigHarness.builtInStore({
+        provider,
+        model: TestModel.Generic,
+        baseUrl: provider === ProviderName.OpenAiCompatible ? BaseUrl.Gateway : undefined,
+        apiKeyEnv: InvalidKeyEnv.KeyValue,
+        token: InvalidKeyEnv.KeyValue,
+      });
+      expect(ConfigHarness.revealsInError(store, InvalidKeyEnv.KeyValue)).toBe(false);
+    },
+  );
+
+  it.each([ProviderName.OpenRouter, ProviderName.OpenAi, ProviderName.OpenAiCompatible])(
+    '%s never echoes a key pasted into apiKeyEnv',
+    (provider) => {
+      const store = ConfigHarness.builtInStore({
+        provider,
+        model: TestModel.Generic,
+        baseUrl: provider === ProviderName.OpenAiCompatible ? BaseUrl.Gateway : undefined,
+        apiKeyEnv: InvalidKeyEnv.KeyValue,
+      });
+      expect(ConfigHarness.revealsInError(store, InvalidKeyEnv.KeyValue)).toBe(false);
+    },
+  );
 });

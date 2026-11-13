@@ -76,9 +76,9 @@ describe('ProviderRegistry', () => {
 
 describe('built-in provider registry', () => {
   it('judges through openrouter', async () => {
-    const registry = ProviderRegistry.builtIn(
-      FakeFetchBoundary.serving(EndpointUrl.OpenRouter, ApiKey.Valid, REPLY).fetchLike,
-      new FakeEnvironment({ [KeyEnv.OpenRouter]: ApiKey.Valid }).read,
+    const registry = RegistryHarness.builtIn(
+      FakeFetchBoundary.serving(EndpointUrl.OpenRouter, ApiKey.Valid, REPLY),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
     );
     await expect(
       ChatAdapterHarness.complete(registry.create(ProviderName.OpenRouter, {})),
@@ -86,19 +86,32 @@ describe('built-in provider registry', () => {
   });
 
   it('judges through openai', async () => {
-    const registry = ProviderRegistry.builtIn(
-      FakeFetchBoundary.serving(EndpointUrl.OpenAi, ApiKey.Valid, REPLY).fetchLike,
-      new FakeEnvironment({ [KeyEnv.OpenAi]: ApiKey.Valid }).read,
+    const registry = RegistryHarness.builtIn(
+      FakeFetchBoundary.serving(EndpointUrl.OpenAi, ApiKey.Valid, REPLY),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
     );
     await expect(
       ChatAdapterHarness.complete(registry.create(ProviderName.OpenAi, {})),
     ).resolves.toBe(REPLY);
   });
 
+  it.each([
+    [ProviderName.OpenRouter, EndpointUrl.OpenRouter],
+    [ProviderName.OpenAi, EndpointUrl.OpenAi],
+  ])('judges through %s with the key from the variable apiKeyEnv names', async (name, url) => {
+    const registry = RegistryHarness.builtIn(
+      FakeFetchBoundary.serving(url, ApiKey.Valid, REPLY),
+      new FakeEnvironment({ [KeyEnv.Gateway]: ApiKey.Valid, [KeyEnv.Default]: ApiKey.Other }),
+    );
+    await expect(
+      ChatAdapterHarness.complete(registry.create(name, { apiKeyEnv: KeyEnv.Gateway })),
+    ).resolves.toBe(REPLY);
+  });
+
   it('judges through openai-compatible', async () => {
-    const registry = ProviderRegistry.builtIn(
-      FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, REPLY).fetchLike,
-      new FakeEnvironment().read,
+    const registry = RegistryHarness.builtIn(
+      FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, REPLY),
+      new FakeEnvironment(),
     );
     const adapter = registry.create(ProviderName.OpenAiCompatible, { baseUrl: BaseUrl.Local });
     await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(REPLY);
@@ -106,15 +119,13 @@ describe('built-in provider registry', () => {
 
   it.each([
     [ProviderName.OpenRouter, { baseUrl: BaseUrl.Gateway }],
-    [ProviderName.OpenRouter, { apiKeyEnv: KeyEnv.Gateway }],
     [ProviderName.OpenAi, { baseUrl: BaseUrl.Gateway }],
-    [ProviderName.OpenAi, { apiKeyEnv: KeyEnv.Gateway }],
     [ProviderName.OpenAiCompatible, {}],
     [ProviderName.OpenAiCompatible, { apiKeyEnv: KeyEnv.Gateway }],
   ])('rejects %s with settings %p as a config failure', (name, settings) => {
-    const registry = ProviderRegistry.builtIn(
-      FakeFetchBoundary.respondingWith(200, {}).fetchLike,
-      new FakeEnvironment().read,
+    const registry = RegistryHarness.builtIn(
+      FakeFetchBoundary.respondingWith(200, {}),
+      new FakeEnvironment(),
     );
     expect(RegistryHarness.errorKind(() => registry.create(name, settings))).toBe('config');
   });

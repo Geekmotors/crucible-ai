@@ -11,8 +11,8 @@ MACOS_CA_KEYCHAINS = /Library/Keychains/System.keychain /System/Library/Keychain
 E2E_JEST = cd e2e && NODE_OPTIONS="$(E2E_NODE_OPTIONS)" ../node_modules/.bin/jest --config jest.config.mjs --ci
 
 e2e-key:
-	@if [ -z "$$OPENROUTER_API_KEY" ]; then \
-		echo "e2e: OPENROUTER_API_KEY is not set. e2e runs judge calls against real OpenRouter." >&2; \
+	@if [ -z "$$(printf '%s' "$$CRUCIBLE_JUDGE_KEY" | tr -d '[:space:]')" ]; then \
+		echo "e2e: CRUCIBLE_JUDGE_KEY is not set. e2e runs judge calls against real OpenRouter; set it to your OpenRouter key." >&2; \
 		echo "     Export your key first, e.g.: set -a; . ./.env.dev.local; set +a" >&2; \
 		exit 2; \
 	fi
@@ -39,15 +39,15 @@ conformance: conformance-image
 		echo "conformance: judge config $(CONFORMANCE_CONFIG) not found. Set CONFORMANCE_CONFIG to a crucible.config.json." >&2; \
 		exit 2; \
 	fi
-	@key_env=$$($(CONFORMANCE_RUN) $(CONFORMANCE_IMAGE) key-env) || exit $$?; \
+	@key_line=$$($(CONFORMANCE_RUN) $(CONFORMANCE_IMAGE) key-env) || exit $$?; \
+	set -- $$key_line; key_env=$$1; key_need=$$2; \
 	key_flag=; \
-	if [ -n "$$key_env" ]; then \
-		if [ -z "$$(printenv "$$key_env")" ]; then \
-			echo "conformance: $$key_env is not set. The judge config $(CONFORMANCE_CONFIG) reads its key from it." >&2; \
-			echo "     Export your key first, e.g.: set -a; . ./.env.dev.local; set +a" >&2; \
-			exit 2; \
-		fi; \
+	if [ -n "$$(printenv "$$key_env" | tr -d '[:space:]')" ]; then \
 		key_flag="--env $$key_env"; \
+	elif [ "$$key_need" = required ]; then \
+		echo "conformance: $$key_env is not set. The judge config $(CONFORMANCE_CONFIG) reads its key from it." >&2; \
+		echo "     Export your key first, e.g.: set -a; . ./.env.dev.local; set +a" >&2; \
+		exit 2; \
 	fi; \
 	{ \
 		if [ -n "$(CONFORMANCE_CA_BUNDLE)" ]; then cat "$(CONFORMANCE_CA_BUNDLE)"; \

@@ -86,4 +86,5 @@ development_status:
   # Epic 5: Bring your own provider
   epic-5: in-progress
   5-1-openai-compatible-provider: done
+  5-2-judge-key-source: review
   epic-5-retrospective: optional

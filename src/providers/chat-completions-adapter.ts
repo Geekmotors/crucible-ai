@@ -7,16 +7,19 @@ import type { CompletionRequest, FailureClass, ProviderAdapter } from './types.j
 type ChatEndpoint = {
   readonly name: string;
   readonly baseUrl: string;
-  readonly keyEnvVar?: string;
+  readonly keyEnvVar: string;
+  readonly keyRequired: boolean;
   readonly keyOwner: string;
+  readonly onKeySent?: () => void;
 };
 
 class ChatCompletionsAdapter implements ProviderAdapter {
   private static readonly COMPLETIONS_PATH = '/chat/completions';
   private static readonly RETRYABLE_CLIENT_STATUSES: ReadonlySet<number> = new Set([408, 429]);
+  private static readonly KEY_CHARACTERS = /^[\x21-\x7e]+$/;
 
   readonly name: string;
-  readonly envVar?: string;
+  readonly envVar: string;
   private readonly url: string;
 
   constructor(
@@ -30,13 +33,9 @@ class ChatCompletionsAdapter implements ProviderAdapter {
   }
 
   async complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
+    const body = this.serializeRequestBody(request);
     const headers = { ...this.authorization(), 'Content-Type': 'application/json' };
-    const response = await this.fetchLike(this.url, {
-      method: 'POST',
-      headers,
-      body: this.serializeRequestBody(request),
-      signal,
-    });
+    const response = await this.fetchLike(this.url, { method: 'POST', headers, body, signal });
     if (!response.ok) {
       throw new ProviderHttpError(this.name, response.status);
     }
@@ -56,22 +55,34 @@ class ChatCompletionsAdapter implements ProviderAdapter {
   }
 
   private authorization(): Record<string, string> {
-    const envVar = this.endpoint.keyEnvVar;
-    if (envVar === undefined) {
+    const key = this.readEnv(this.endpoint.keyEnvVar)?.trim();
+    if (key === undefined || key === '') {
+      this.rejectMissingKey();
       return {};
     }
-    return { Authorization: `Bearer ${this.requireApiKey(envVar)}` };
+    this.rejectMalformedKey(key);
+    this.endpoint.onKeySent?.();
+    return { Authorization: `Bearer ${key}` };
   }
 
-  private requireApiKey(envVar: string): string {
-    const key = this.readEnv(envVar)?.trim();
-    if (key === undefined || key === '') {
+  private rejectMissingKey(): void {
+    if (this.endpoint.keyRequired) {
       throw new CrucibleError(
         'config',
-        `Set the ${envVar} environment variable to the API key for ${this.endpoint.keyOwner}.`,
+        `Set the ${this.endpoint.keyEnvVar} environment variable to the API key for ` +
+          `${this.endpoint.keyOwner}.`,
       );
     }
-    return key;
+  }
+
+  private rejectMalformedKey(key: string): void {
+    if (!ChatCompletionsAdapter.KEY_CHARACTERS.test(key)) {
+      throw new CrucibleError(
+        'config',
+        `The ${this.endpoint.keyEnvVar} environment variable holds characters that cannot ` +
+          `appear in an API key.`,
+      );
+    }
   }
 
   private serializeRequestBody(request: CompletionRequest): string {

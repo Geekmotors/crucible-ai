@@ -98,7 +98,7 @@ Choose the provider you already have access to:
 | --- | --- |
 | An OpenRouter account (recommended; one key, every model) | `"provider": "openrouter"` as above |
 | An OpenAI API key | `{ "provider": "openai", "model": "gpt-5-mini" }` |
-| Azure OpenAI, a LiteLLM or company gateway, Ollama or another OpenAI-compatible server | `"provider": "openai-compatible"` plus `"baseUrl"` and, if it needs a key, `"apiKeyEnv"` |
+| Azure OpenAI, a LiteLLM or company gateway, Ollama or another OpenAI-compatible server | `"provider": "openai-compatible"` plus `"baseUrl"` |
 
 For example, a local Ollama needs no key:
 
@@ -121,16 +121,19 @@ inside `meta`.** Every field and validation rule is in the
 
 ## 4. Set your API key
 
-The key comes only from the environment, in the variable your provider reads:
+The key comes only from the environment. Every provider reads it from
+`CRUCIBLE_JUDGE_KEY`:
 
 ```sh
-export OPENROUTER_API_KEY=...   # provider "openrouter"
-export OPENAI_API_KEY=...       # provider "openai"
-export MY_GATEWAY_KEY=...       # provider "openai-compatible" with "apiKeyEnv": "MY_GATEWAY_KEY"
+export CRUCIBLE_JUDGE_KEY=...   # your OpenRouter, OpenAI or gateway key
 ```
 
-An `openai-compatible` endpoint without `apiKeyEnv` gets no key. The key is
-read when a judge call is made, so tests that never call `coherent()` or
+To use a variable you already have instead, name it in the config:
+`"apiKeyEnv": "MY_GATEWAY_KEY"`
+([Judge key](configuration.md#judge-key)). An `openai-compatible` endpoint
+sends no key when `CRUCIBLE_JUDGE_KEY` is unset, so a local Ollama needs
+nothing here — but when it is set, that key goes to the endpoint, so unset it
+before pointing at a server that should not see it. The key is read when a judge call is made, so tests that never call `coherent()` or
 `extract()` do not need it. In CI, store it as a repository secret — see
 [CI secrets](configuration.md#ci-secrets).
 

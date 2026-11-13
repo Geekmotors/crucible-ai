@@ -8,6 +8,7 @@ import { FakeAdapter } from '../../providers/test/adapter.fake.js';
 import { FakeEnvironment } from '../../providers/test/environment.fake.js';
 import { FakeFetchBoundary } from '../../providers/test/fetch-boundary.fake.js';
 import { FakeProviderFactory } from '../../providers/test/provider-factory.fake.js';
+import { FakeWarningSink } from '../../providers/test/warning-sink.fake.js';
 
 class ConfigHarness {
   static fakeAdapter = new FakeAdapter('fake');
@@ -33,7 +34,7 @@ class ConfigHarness {
   ): ConfigStore {
     return new ConfigStore(
       new FakeConfigBoundary({ found: true, raw: JSON.stringify(configValue) }),
-      ProviderRegistry.builtIn(boundary.fetchLike, environment.read),
+      ProviderRegistry.builtIn(boundary.fetchLike, environment.read, new FakeWarningSink().write),
     );
   }
 

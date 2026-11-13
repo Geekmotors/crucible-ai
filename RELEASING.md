@@ -52,7 +52,7 @@ Check these before tagging, or the publish fails with an auth or provenance erro
 ## Every release
 
 1. Merge everything for the release into `main`. The README links to `blob/main/docs/...`, so the docs have to be on `main` before anyone reads the npm page.
-2. Run the full e2e suite locally against real OpenRouter. CI runs only `e2e-core`.
+2. Run the full e2e suite locally against real OpenRouter. CI runs only `e2e-core`. `.env.dev.local` must set `CRUCIBLE_JUDGE_KEY` to your OpenRouter key.
    ```sh
    set -a; . ./.env.dev.local; set +a
    make e2e
