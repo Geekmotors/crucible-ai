@@ -1,8 +1,12 @@
 {
-  "description": "Passing smoke scenario run with CRUCIBLE_VERBOSE=debug over a config that says default, so the trace shows env-over-config verbosity, the resolved config, and real provider traffic carrying the loaded run state.",
+  "description": "Passing smoke scenario run with CRUCIBLE_VERBOSE=debug over a config that says default, so the trace shows env-over-config verbosity, the resolved config, and real provider traffic carrying the loaded run state, plus one traced extraction.",
   "name": "traces a stateful judge call",
   "state": ["The library closes at 18:00 on weekdays."],
   "response": "Sorry, it's 19:30 on a Tuesday, so the library is already closed.",
   "claim": "The reply is consistent with the library's weekday opening hours.",
-  "expected": true
+  "expected": true,
+  "extract": {
+    "target": "the day of the week it is",
+    "expected": "Tuesday"
+  }
 }

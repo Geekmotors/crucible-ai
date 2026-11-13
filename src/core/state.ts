@@ -1,14 +1,24 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
+import type { ExtractedValue, ExtractType } from './extract-type.js';
 import { TimeBudget } from './time-budget.util.js';
 
-type VerdictRecord = {
+type JudgedRecord = {
   readonly assertion: string;
-  readonly claim: string;
-  readonly verdict: boolean;
   readonly reasoning: string;
   readonly response: string;
   readonly seq: number;
+};
+
+type VerdictRecord = JudgedRecord & {
+  readonly claim: string;
+  readonly verdict: boolean;
+};
+
+type ExtractionRecord = JudgedRecord & {
+  readonly description: string;
+  readonly type: ExtractType;
+  readonly value: ExtractedValue;
 };
 
 type ErrorRecord = {
@@ -20,6 +30,7 @@ type ErrorRecord = {
 type RunContext = {
   readonly state: string[];
   readonly verdicts: VerdictRecord[];
+  readonly extractions: ExtractionRecord[];
   readonly errors: ErrorRecord[];
 };
 
@@ -41,7 +52,13 @@ class RunScope {
     inferenceTimeout: number = TimeBudget.INFERENCE_MS,
   ): T {
     return this.storage.run(
-      { context: { state: [], verdicts: [], errors: [] }, signal, run, inferenceTimeout, seq: 0 },
+      {
+        context: { state: [], verdicts: [], extractions: [], errors: [] },
+        signal,
+        run,
+        inferenceTimeout,
+        seq: 0,
+      },
       body,
     );
   }
@@ -73,6 +90,13 @@ class RunScope {
     const store = this.store();
     const record = { ...verdict, seq: this.takeSeq(store) };
     store.context.verdicts.push(record);
+    return record;
+  }
+
+  recordExtraction(extraction: Omit<ExtractionRecord, 'seq'>): ExtractionRecord {
+    const store = this.store();
+    const record = { ...extraction, seq: this.takeSeq(store) };
+    store.context.extractions.push(record);
     return record;
   }
 
@@ -115,4 +139,4 @@ class RunScope {
 const runScope = new RunScope();
 
 export { RunScope, runScope };
-export type { ErrorRecord, RunContext, VerdictRecord };
+export type { ErrorRecord, ExtractionRecord, JudgedRecord, RunContext, VerdictRecord };

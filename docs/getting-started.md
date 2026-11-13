@@ -32,23 +32,36 @@ Jest's global `it`, so keep Jest's default `injectGlobals: true` (see
 ## 2. Choose the right assertion first
 
 Crucible's `coherent()` asks an AI judge whether a response is consistent with
-a claim. That judge is slower, costs money per call, and — like any model —
-can be wrong. Use the narrowest assertion that can express what you want to
+a claim, and `extract()` asks it for one value a response commits to. That
+judge is slower, costs money per call, and — like any model — can be wrong. Use the narrowest assertion that can express what you want to
 check:
 
 1. **Plain Jest assertions** when the value is programmatically accessible: a
    status code, a parsed field, a tool call name, the length of a list. These
    are deterministic and free. If your system returns structured data, assert
    on the structure.
-2. **`exact()` / `range()`** for a precise value or a number with a tolerance
-   that is embedded in prose ("the total is $42.50"). *These are planned, not
-   shipped in v1.* Until they exist, prefer extracting the value in your own
-   code and asserting it with Jest; use `coherent()` only if that is
-   impractical.
-3. **`coherent()`** only for claims that are inherently semantic: what prose
+2. **`extract()`** for one exact value stated in prose — a count, a name, a
+   yes/no answer ("you have two apples", "your room is booked"). The judge
+   pulls out the value the reply commits to, typed as you ask, and you assert
+   it with an ordinary Jest matcher:
+
+   ```ts
+   crucible.it('reports the apple count', async () => {
+     const reply = await createAssistant().ask('How many apples are left?');
+     expect(await crucible.extract(reply, 'the number of apples left', { as: 'number' })).toBe(2);
+   });
+   ```
+
+   Use it when the value is the point and the phrasing is not. It resolves to
+   `null` when the reply does not commit to a single value — it hedges
+   ("probably two"), only negates ("not two") or never answers — so `null` is
+   a finding, not a crash. For a tolerance, use a Jest matcher on the value
+   (`toBeCloseTo`, `toBeGreaterThan`).
+3. **`coherent()`** for claims that are inherently semantic: what prose
    means, whether reasoning holds, whether a response is consistent with the
    state the system was given, whether it reveals something it should not
-   know.
+   know. If you find yourself writing a claim like "the reply says there are
+   two apples", that is an `extract()` with `toBe(2)`.
 
 `coherent()` can technically express the narrower cases, but every rung you
 skip spends judge latency and money and adds judge error where none was
@@ -122,8 +135,9 @@ What happens:
 - `crucible.load()` adds **state** for this run — facts your system's
   behaviour should respect, as strings in any format you like (sentences,
   JSON text, log lines). The judge treats state as ground truth.
-- `crucible.coherent(response, claim)` sends the state, the response and the
-  claim to the judge and resolves to `true` or `false`.
+- `crucible.coherent(actual, expectation)` sends the state, your system's
+  output (`actual`) and the claim you expect to hold (`expectation`) to the
+  judge and resolves to `true` or `false`.
 - You assert the boolean with Jest. **Always `await` it and always assert
   it** — Crucible does not fail a test for a `false` verdict nobody asserted
   ([gotcha](gotchas.md#a-verdict-nobody-asserts-never-fails-a-test)).

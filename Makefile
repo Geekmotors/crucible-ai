@@ -3,6 +3,7 @@
 E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
 CONFORMANCE_IMAGE ?= crucible-ai-conformance
 CONFORMANCE_REPS ?= 3
+CONFORMANCE_SUITES ?= coherent extract
 CONFORMANCE_CA_BUNDLE ?=
 MACOS_CA_KEYCHAINS = /Library/Keychains/System.keychain /System/Library/Keychains/SystemRootCertificates.keychain
 
@@ -38,5 +39,6 @@ conformance: e2e-key conformance-image
 	} | docker run --rm --interactive \
 		--env OPENROUTER_API_KEY \
 		--env CONFORMANCE_REPS=$(CONFORMANCE_REPS) \
+		--env CONFORMANCE_SUITES="$(CONFORMANCE_SUITES)" \
 		--env CONFORMANCE_EXTRA_CA=/dev/stdin \
 		$(CONFORMANCE_IMAGE)

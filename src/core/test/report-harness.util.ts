@@ -4,15 +4,20 @@ import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
 import type { RunGate } from '../run-options.js';
 import type { RunResult, RunStatus, VerdictSummary } from '../run-result.js';
 import type { Verbosity } from '../verbosity.js';
-import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
+import type { ErrorRecord, ExtractionRecord, RunContext, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
 import { ClaimText } from './claim-text.enum.js';
+import { ExtractTarget } from './extract-target.enum.js';
 import { Threshold } from './threshold.enum.js';
 import { VerbosityLevel } from './verbosity-level.enum.js';
 
 class ReportHarness {
-  static context(verdicts: VerdictRecord[] = [], errors: ErrorRecord[] = []): RunContext {
-    return { state: [], verdicts, errors };
+  static context(
+    verdicts: VerdictRecord[] = [],
+    errors: ErrorRecord[] = [],
+    extractions: ExtractionRecord[] = [],
+  ): RunContext {
+    return { state: [], verdicts, extractions, errors };
   }
 
   static falseVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
@@ -24,6 +29,31 @@ class ReportHarness {
       response: 'the response',
       seq: 0,
       ...overrides,
+    };
+  }
+
+  static extraction(overrides: Partial<ExtractionRecord> = {}): ExtractionRecord {
+    return {
+      assertion: AssertionName.Extract,
+      description: ExtractTarget.Apples,
+      type: 'number',
+      value: null,
+      reasoning: 'the reasoning',
+      response: 'the response',
+      seq: 0,
+      ...overrides,
+    };
+  }
+
+  static extractingRun(
+    status: RunStatus,
+    extractions: ExtractionRecord[],
+    verdicts: VerdictRecord[] = [],
+  ): RunResult {
+    return {
+      status,
+      cause: status === 'passed' ? undefined : new Error(status),
+      context: ReportHarness.context(verdicts, [], extractions),
     };
   }
 

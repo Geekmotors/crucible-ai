@@ -8,6 +8,8 @@ protect you from.
 - [A verdict nobody asserts never fails a test](#a-verdict-nobody-asserts-never-fails-a-test)
 - [Assert true claims, not false ones](#assert-true-claims-not-false-ones)
 - [The judge can say false when the answer is true](#the-judge-can-say-false-when-the-answer-is-true)
+- [`extract()` returns `null` when there is no single committed value](#extract-returns-null-when-there-is-no-single-committed-value)
+- [`extract()` is async: always `await` it](#extract-is-async-always-await-it)
 
 **Runs and state**
 
@@ -98,6 +100,43 @@ structural:
 
 Judge *infrastructure* failures (timeouts, rate limits, provider errors) are
 different: they are never counted as `false`. The run is reported as errored.
+
+## `extract()` returns `null` when there is no single committed value
+
+`null` from `crucible.extract()` is an answer, not an error: the judge found no
+single value the text commits to. That is the case when the text
+
+- hedges, even about one value: "Probably two", "I think two", "around two";
+- offers alternatives: "Probably two, maybe three", "two or three";
+- only says what the value is not: "It's not two";
+- never answers: "I haven't counted yet".
+
+The judge does not pick the likeliest value or fall back on the state: a value
+only the state holds is `null` too. So `expect(...).toBe(2)` fails on a hedged
+reply, which is usually what you want — and the failure report lists the
+extraction with the judge's reasoning, so you can see it was a hedge, not a
+wrong number. If a hedged answer is acceptable, say so in the assertion
+(`expect([2, null]).toContain(value)`) rather than in the description.
+
+Two cases are not `null`: a revised answer extracts the *final* value ("I
+thought 3, but it's two" → `2`), and for `{ as: 'boolean' }` a committed
+"no" is `false`.
+
+A judge reply that is not `null` or the requested type (for example `"2"` for
+`'number'`) is never coerced: it is asked once more and then errors the run as
+`infra`.
+
+## `extract()` is async: always `await` it
+
+`crucible.extract()` returns a Promise, like `coherent()`:
+
+```ts
+expect(crucible.extract(reply, 'the number of apples', { as: 'number' })).toBe(2);       // a Promise is never 2: always fails
+expect(await crucible.extract(reply, 'the number of apples', { as: 'number' })).toBe(2); // right
+```
+
+Several extractions from one reply can run together with `Promise.all`; each
+one is a paid judge call.
 
 ## Bodies must be re-entrant
 
@@ -198,7 +237,8 @@ committed with the file and sent in every request body. Keys belong only in
 
 Failure reports and the `full`/`debug` output include, verbatim (bounded in
 length): the error your test body threw (`Thrown:`), the infrastructure
-cause of errored runs (`Cause:`), the response excerpt, your claims and, at
+cause of errored runs (`Cause:`), the response excerpt, your claims and
+extraction descriptions and, at
 `debug`, the assembled state. In CI that output lands in build logs.
 
 Crucible never prints your API key or `meta` values, and the bundled
@@ -210,7 +250,7 @@ error messages.
 ## Everything you judge leaves your machine
 
 Each `coherent()` call sends the run's state, the response and the claim to
-OpenRouter, which forwards them to the model provider serving your chosen
+OpenRouter (each `extract()` call the state, the text and the description), which forwards them to the model provider serving your chosen
 model. Treat everything you `load`, `append` and judge as data shared with
 those services: use synthetic fixtures, not production data, and check the
 provider's data policy (OpenRouter's provider routing settings can restrict

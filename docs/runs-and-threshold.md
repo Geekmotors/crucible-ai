@@ -47,7 +47,7 @@ test.
 | --- | --- | --- | --- |
 | `runs` | `testDefaults.runs`, else `1` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
 | `threshold` | `testDefaults.threshold`, else `1.0` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
-| `inferenceTimeout` | `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` judge reply attempt may take, provider retries included |
+| `inferenceTimeout` | `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
 | `testTimeout` | the trailing `timeout` argument, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
 
 With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
@@ -131,7 +131,7 @@ tests that run, not suite collection. Validation of the options you pass to
 `crucible.it()` itself still happens at registration.
 
 Every `crucible.it()` test loads the config when it executes, even a test
-that passes every option or makes no `coherent()` call. A missing or invalid
+that passes every option or makes no `coherent()` or `extract()` call. A missing or invalid
 `crucible.config.json` therefore fails every `crucible.it()` test as kind
 `config`.
 
@@ -249,6 +249,23 @@ Failing claims (first failure of each of the 5 failed runs):
   run's judged assertions it was, the claim, the judge's reasoning, a bounded
   excerpt of the judged response, and the error your test threw. If a judge
   call errored before any false verdict, that error is shown instead.
+- **Extractions in a failed run.** After those fields, every
+  [`crucible.extract()`](api.md#crucibleextract) the run made is listed in
+  call order — description, requested type, the value the judge returned
+  (`null` included), its reasoning and a bounded response excerpt — so a
+  failing `expect(...).toBe(2)` shows what the judge extracted and why:
+
+  ```text
+  [FAILED] Run #1
+    First failure: no assertion returned false; the body threw
+    Thrown: Error: expect(received).toBe(expected)
+    Extraction 1 of 1: "the number of apples" as number → null
+      Judge reasoning: The reply hedges between two and three ("Probably two, maybe three").
+      Response excerpt: Probably two apples, maybe three.
+  ```
+
+  An extraction never counts as a failed assertion: the *first failed
+  assertion* is still the lowest-sequence false `coherent` verdict.
 - **Per errored run** (`[ERRORED]`): the infrastructure cause and the judge
   attempts made.
 - **Discarded runs** (`[DISCARDED]`): one line of run numbers; counted in no
@@ -276,8 +293,8 @@ levels; each includes everything the level before it shows.
 | Level | What you get |
 | --- | --- |
 | `default` | The failure report above, only when a test fails. Nothing is printed while runs execute or when a test passes. |
-| `full` | Every run in the report, with all of its judge output: each `coherent` call in the order it was recorded (passing verdicts included), its claim, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
-| `debug` | `full`, plus a live trace while the test runs: engine start-up and the resolved config, test start (runs, threshold, deadline), each provider request and response, retry attempts and backoff, judge re-asks, each recorded verdict or judge error, how each run settled, and the verdict. |
+| `full` | Every run in the report, with all of its judge output: each `coherent` and `extract` call in the order it was recorded (passing verdicts included), its claim or extracted value, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
+| `debug` | `full`, plus a live trace while the test runs: engine start-up and the resolved config, test start (runs, threshold, deadline), each provider request and response, retry attempts and backoff, judge re-asks, each recorded verdict, extracted value or judge error, how each run settled, and the verdict. |
 
 Set the level in `crucible.config.json` with `"verbosity"`, or for a single
 invocation with the `CRUCIBLE_VERBOSE` environment variable. The variable wins
@@ -301,6 +318,13 @@ A run at `full` lists its judge calls like this:
     Judge reasoning: The reply declines to say where they meet.
     Response excerpt: I can't share that, but I can pass on a message.
 ```
+
+An extraction is listed among the judge calls as
+`Judge call 2 of 2: extract "the number of apples" as number → 2`, followed by
+its judge reasoning and response excerpt; at `full` the `Extraction` lines of
+a failed run are not repeated. In a `debug` trace it appears as
+`judge value 2 for extract "the number of apples" as number`, followed by
+the reasoning.
 
 A `debug` trace looks like this (lines from concurrent runs interleave, so
 each line inside a run names it):
@@ -355,7 +379,7 @@ Crucible has two time budgets, both in milliseconds:
 | Budget | Covers | Built-in default |
 | --- | --- | --- |
 | `testTimeout` | the whole test: every run, including your arrange and act steps as well as the judge | `30000 + 1000 × (runs − 1)`, at most 2147483647 |
-| `inferenceTimeout` | each `crucible.coherent()` judge reply attempt, including the provider retries inside it | `30000` |
+| `inferenceTimeout` | each `crucible.coherent()` or `crucible.extract()` judge reply attempt, including the provider retries inside it | `30000` |
 
 The built-in test timeout uses the **resolved** run count — the value from
 `crucible.it()`, `testDefaults`, or the built-in: 30 s in smoke mode, 49 s for
@@ -571,13 +595,13 @@ gate did its job.
 Judge calls are metered spend. For one execution of one `crucible.it()` test:
 
 ```text
-judge calls = coherent() assertions per run × runs   (plus any retries)
+judge calls = (coherent() + extract() calls) per run × runs   (plus any retries)
 ```
 
 - Every run executes in full, even after `need` passes have been reached —
   only a fatal error or the test deadline stops a test early.
 - Retries add calls on top: a failing provider call is attempted up to 3 times
-  with backoff, and a reply that is not valid verdict JSON is asked for once
+  with backoff, and a reply that is not the expected judge JSON is asked for once
   more.
 - All runs start together, so a test can have up to `runs` judge calls in
   flight at once — mind your provider's rate limits.

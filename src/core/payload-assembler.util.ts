@@ -1,15 +1,19 @@
 const FENCE_OPEN = '<<<';
 const FENCE_CLOSE = '>>>';
+const STATE_HEADER = 'STATE';
+
+type PayloadSection = {
+  readonly header: string;
+  readonly content: string;
+};
 
 class PayloadAssembler {
-  assemble(state: string[], response: string, claim: string): string {
-    const sections: string[] = [];
-    if (state.length > 0) {
-      sections.push(this.section('STATE', state.join('\n')));
-    }
-    sections.push(this.section('RESPONSE', response));
-    sections.push(this.section('CLAIM', claim));
-    return sections.join('\n\n');
+  assemble(state: readonly string[], sections: readonly PayloadSection[]): string {
+    const ordered =
+      state.length > 0
+        ? [{ header: STATE_HEADER, content: state.join('\n') }, ...sections]
+        : sections;
+    return ordered.map(({ header, content }) => this.section(header, content)).join('\n\n');
   }
 
   private section(header: string, content: string): string {
@@ -25,3 +29,4 @@ class PayloadAssembler {
 }
 
 export { PayloadAssembler };
+export type { PayloadSection };

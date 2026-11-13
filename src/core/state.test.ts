@@ -6,6 +6,7 @@ import { RunCount } from './test/run-count.enum.js';
 import { StateFact } from './test/state-fact.enum.js';
 import { StateHarness } from './test/state-harness.util.js';
 import { StateIsolationHarness } from './test/state-isolation-harness.util.js';
+import { ExtractTarget } from './test/extract-target.enum.js';
 
 describe('RunScope', () => {
   it('gives every run a fresh context — concurrent runs never see each other', async () => {
@@ -63,6 +64,28 @@ describe('RunScope', () => {
     });
     expect(context.verdicts[0]?.seq).toBe(0);
     expect(context.errors[0]?.seq).toBe(1);
+  });
+
+  it('extractions are readable within the run, sharing the sequence with verdicts and errors', async () => {
+    const scope = new RunScope();
+    const context = await scope.enterRun(async () => {
+      scope.recordVerdict(StateHarness.verdict('claim'));
+      scope.recordExtraction(StateHarness.extraction(ExtractTarget.Apples));
+      scope.recordError({ cause: new Error('boom'), attempts: 1 });
+      return scope.context();
+    });
+    expect(
+      context.extractions.map((record) => ({ description: record.description, seq: record.seq })),
+    ).toEqual([{ description: ExtractTarget.Apples, seq: 1 }]);
+    expect(context.errors[0]?.seq).toBe(2);
+  });
+
+  it('recording an extraction outside a run scope is a usage error', () => {
+    const error = Capture.thrown(() =>
+      new RunScope().recordExtraction(StateHarness.extraction(ExtractTarget.Apples)),
+    );
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
   });
 
   it('appends a single string verbatim to the run state', async () => {

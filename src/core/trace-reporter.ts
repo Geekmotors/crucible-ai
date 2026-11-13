@@ -3,7 +3,7 @@ import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
 import type { RunGate, RunOptions } from './run-options.js';
 import type { RunResult, RunTally } from './run-result.js';
 import { RunScope, runScope } from './state.js';
-import type { ErrorRecord, VerdictRecord } from './state.js';
+import type { ErrorRecord, ExtractionRecord, VerdictRecord } from './state.js';
 import { TextFormat } from './text-format.util.js';
 import type { Verbosity } from './verbosity.js';
 
@@ -143,8 +143,16 @@ class TraceReporter {
     }
   }
 
-  judgeRecorded(record: VerdictRecord | ErrorRecord): void {
+  judgeRecorded(record: VerdictRecord | ExtractionRecord | ErrorRecord): void {
     if (!this.tracing()) {
+      return;
+    }
+    if ('description' in record) {
+      this.emit(
+        `judge value ${JSON.stringify(record.value)} for ${record.assertion} ` +
+          `"${record.description}" as ${record.type}`,
+        this.payload('reasoning', record.reasoning),
+      );
       return;
     }
     if ('verdict' in record) {

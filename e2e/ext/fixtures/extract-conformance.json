@@ -1,0 +1,93 @@
+{
+  "description": "Conformance matrix for schemas/extract.md. Each case supplies state/response/target/type and the expected value (null when the response commits to no single value). Language-agnostic: any shell assembling the documented payload must reproduce these values.",
+  "cases": [
+    {
+      "id": "revision-final-answer",
+      "state": [],
+      "response": "At first I thought there were 3 apples in the basket, but after counting again the answer is two.",
+      "target": "the number of apples in the basket",
+      "type": "number",
+      "expected": 2
+    },
+    {
+      "id": "number-word",
+      "state": [],
+      "response": "There are seven apples left in the bowl.",
+      "target": "the number of apples in the bowl",
+      "type": "number",
+      "expected": 7
+    },
+    {
+      "id": "negation",
+      "state": [],
+      "response": "It's not two apples, I can tell you that much.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "single-hedge",
+      "state": [],
+      "response": "Probably two apples.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "alternatives-hedge",
+      "state": [],
+      "response": "Probably two apples, maybe three.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "no-answer",
+      "state": [],
+      "response": "I haven't had a chance to count the apples yet.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "boolean-yes",
+      "state": [],
+      "response": "Yes, your room is booked for Friday night.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": true
+    },
+    {
+      "id": "boolean-no",
+      "state": [],
+      "response": "No, the room isn't booked yet; it's still available.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": false
+    },
+    {
+      "id": "string-value",
+      "state": [],
+      "response": "I moved to Paris last spring and I've lived there ever since.",
+      "target": "the city the user lives in",
+      "type": "string",
+      "expected": "Paris"
+    },
+    {
+      "id": "state-resolves-reference",
+      "state": ["Room 4 is the blue room."],
+      "response": "Done! I've booked you into the blue room.",
+      "target": "the number of the room that was booked",
+      "type": "number",
+      "expected": 4
+    },
+    {
+      "id": "state-only-value",
+      "state": ["The meeting is in room 12."],
+      "response": "See you at the meeting!",
+      "target": "the meeting room number",
+      "type": "number",
+      "expected": null
+    }
+  ]
+}

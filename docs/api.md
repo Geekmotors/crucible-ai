@@ -4,12 +4,21 @@ Everything is exported from the package root:
 
 ```ts
 import { crucible, CrucibleError, CrucibleVerdictError } from 'crucible-ai';
-import type { CrucibleErrorKind, RunOptions, TestBody, VerdictOutcome } from 'crucible-ai';
+import type {
+  CrucibleErrorKind,
+  ExtractedValue,
+  ExtractOptions,
+  ExtractType,
+  RunOptions,
+  TestBody,
+  VerdictOutcome,
+} from 'crucible-ai';
 ```
 
-`crucible` is a frozen object with four functions: [`it`](#crucibleit),
-[`coherent`](#cruciblecoherent), [`load`](#crucibleload-and-crucibleappend)
-and [`append`](#crucibleload-and-crucibleappend). There are no `crucible.it.only`,
+`crucible` is a frozen object with five functions: [`it`](#crucibleit),
+[`coherent`](#cruciblecoherent), [`extract`](#crucibleextract),
+[`load`](#crucibleload-and-crucibleappend) and
+[`append`](#crucibleload-and-crucibleappend). There are no `crucible.it.only`,
 `.skip` or `.each` variants; to skip inference tests, wrap them in Jest's
 `describe.skip`.
 
@@ -33,7 +42,8 @@ Two time budgets, in milliseconds (integers from 1 to 2147483647):
   `testDefaults.testTimeout`, then `30000 + 1000 × (runs − 1)` (at most 2147483647). A trailing
   `timeout` number sets it the way Jest's `it(name, fn, timeout)` does;
   passing both a trailing number and `testTimeout` is a `usage` error.
-- `inferenceTimeout` — each `crucible.coherent()` judge reply attempt.
+- `inferenceTimeout` — each `crucible.coherent()` or `crucible.extract()`
+  judge reply attempt.
   Defaults to `testDefaults.inferenceTimeout`, then `30000`.
 
 `testTimeout` caps everything: an `inferenceTimeout` above it is in effect
@@ -54,12 +64,16 @@ re-entrancy contract — is in
 ## `crucible.coherent()`
 
 ```ts
-crucible.coherent(response: string, claim: string): Promise<boolean>
+crucible.coherent(actual: string, expectation: string): Promise<boolean>
 ```
 
-Asks the judge whether `response` is semantically consistent with `claim`,
-given the state the current run has loaded so far. Resolves to the verdict;
-it does not throw on a `false` verdict. Assert it with Jest:
+Asks the judge whether `actual` — your system's output — is semantically
+consistent with `expectation`, a natural-language claim about it, given the
+state the current run has loaded so far. The order is Jest's: actual first.
+`actual` is sent to the judge as the `RESPONSE` section and `expectation` as
+the `CLAIM` ([what the judge receives](instruction-schema.md#what-the-judge-receives)).
+Resolves to the verdict; it does not throw on a `false` verdict. Assert it
+with Jest:
 
 ```ts
 expect(await crucible.coherent(reply, 'The reply declines to share the meeting place')).toBe(true);
@@ -97,7 +111,7 @@ expect(await crucible.coherent(reply, 'The reply declines to share the meeting p
   [test deadline](runs-and-threshold.md#timeout): sequential awaits cost one
   judge round trip each.
 - **Without state** the claim is judged against the response alone.
-- **Errors.** A non-string `response` or `claim` throws a `usage` error;
+- **Errors.** A non-string `actual` or `expectation` throws a `usage` error;
   calling it outside a running `crucible.it()` body throws a `usage` error. A
   missing `OPENROUTER_API_KEY` throws a `config` error. Provider failures
   surface as `infra` errors after retries, which make the run *errored* rather
@@ -105,6 +119,66 @@ expect(await crucible.coherent(reply, 'The reply declines to share the meeting p
 - **Cost.** Each call is one paid judge request (more if retried).
 
 How the judge decides is defined by the [instruction schema](instruction-schema.md).
+
+## `crucible.extract()`
+
+```ts
+crucible.extract(text: string, description: string): Promise<string | null>
+crucible.extract(text: string, description: string, { as: 'string' }): Promise<string | null>
+crucible.extract(text: string, description: string, { as: 'number' }): Promise<number | null>
+crucible.extract(text: string, description: string, { as: 'boolean' }): Promise<boolean | null>
+```
+
+Asks the judge for the single value `text` commits to for `description`,
+typed as `as` asks (default `'string'`), so you can check an exact value in
+prose with ordinary Jest matchers:
+
+```ts
+crucible.it('counts the apples', async () => {
+  const reply = await createAssistant().ask('How many apples are in the basket?');
+  expect(await crucible.extract(reply, 'the number of apples in the basket', { as: 'number' })).toBe(2);
+});
+```
+
+The TypeScript result type follows `as`: `number | null` for `'number'`,
+`boolean | null` for `'boolean'`, and `string | null` when `as` is omitted.
+(The declaration is one generic signature over the options,
+`extract<O extends ExtractOptions | undefined = undefined>(text, description, options?: O)`,
+which types the four forms above. When `as` is a widened `ExtractType` or
+may be absent, the result widens to every type it could be.)
+
+- **The final committed answer.** When the text revises itself ("At first I
+  thought 3, but the answer is two"), the final answer is extracted: `2`.
+- **Normalised to the type.** Number words become numbers ("two" → `2`); a
+  committed yes or no becomes `true` or `false` for `'boolean'`; a string is
+  the value as stated.
+- **`null` means "no single committed value".** Negation ("It's not two"),
+  any hedging ("Probably two", "Probably two, maybe three") and no answer at
+  all resolve to `null`. The judge never guesses. A `boolean` "no" is a value
+  (`false`), not a negation.
+- **State is context, not a source.** The run's state is sent with the call,
+  as for `coherent()`, and is read when you call it. It can resolve what the
+  text refers to (state "Room 4 is the blue room", text "I booked the blue
+  room" → `4`), but a value that only the state holds, which the text does not
+  commit to, is `null`.
+- **It does not fail the test.** `extract()` resolves to a value; your Jest
+  matcher decides. Always `await` it — a pending Promise is never `2`.
+- **Recorded for the report.** Each extraction (description, type, value,
+  judge reasoning, response) is recorded for the run. When a run fails, the
+  report lists the run's extractions, so a failing `toBe(2)` shows that the
+  judge returned `null` and why
+  ([failure report](runs-and-threshold.md#reading-the-failure-report)).
+- **Errors.** A non-string `text` or `description`, options that are not an
+  object, or an `as` other than `'string'`, `'number'` or `'boolean'` throws
+  a `usage` error; so does calling it outside a running `crucible.it()` body.
+  A judge reply whose value is not `null` or of the requested type (a number
+  must be finite) is asked once more, then becomes a retryable `infra` error —
+  the run is *errored*, not *failed*. Provider failures behave as for
+  `coherent()`.
+- **Cost.** Each call is one paid judge request (more if retried).
+
+How the judge extracts is defined by the
+[extract schema](instruction-schema.md#the-extract-schema).
 
 ## `crucible.load()` and `crucible.append()`
 
@@ -123,8 +197,8 @@ ground truth.
   that arise after an act. Calling `load` twice keeps both sets of entries —
   nothing is ever replaced or removed within a run.
 - **Per run.** Each run starts with empty state. What one run adds is visible
-  only to that run's later `coherent()` calls, even though runs execute
-  concurrently.
+  only to that run's later `coherent()` and `extract()` calls, even though
+  runs execute concurrently.
 - **Only inside the body.** Calling either outside a running `crucible.it()`
   body — at module scope, in `beforeEach`, in a plain Jest `it` — throws a
   `usage` error. A non-string entry throws a `usage` error.
@@ -165,5 +239,8 @@ Thrown by a `crucible.it()` test that did not pass. Its `message` is the
 | --- | --- |
 | `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number }` |
 | `TestBody` | `() => unknown` — the body passed to `crucible.it()`, usually `async` |
+| `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
+| `ExtractOptions` | `{ as?: ExtractType }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |
+| `ExtractedValue` | `string \| number \| boolean \| null` — any value `crucible.extract()` can resolve to |
 | `CrucibleErrorKind` | `'config' \| 'usage' \| 'infra'` |
 | `VerdictOutcome` | `'failed' \| 'errored'` |

@@ -11,7 +11,7 @@ import type {
   VerdictSummary,
 } from './run-result.js';
 import type { RunGate } from './run-options.js';
-import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
+import type { ErrorRecord, ExtractionRecord, RunContext, VerdictRecord } from './state.js';
 
 type FirstFailure =
   | {
@@ -25,6 +25,7 @@ type FirstFailure =
 
 type JudgeCall =
   | { readonly kind: 'verdict'; readonly record: VerdictRecord }
+  | { readonly kind: 'extraction'; readonly record: ExtractionRecord }
   | { readonly kind: 'error'; readonly record: ErrorRecord };
 
 type NumberedRun = {
@@ -191,6 +192,7 @@ class Reporter {
   private judgeCalls(context: RunContext): JudgeCall[] {
     return [
       ...context.verdicts.map((record) => ({ kind: 'verdict' as const, record })),
+      ...context.extractions.map((record) => ({ kind: 'extraction' as const, record })),
       ...context.errors.map((record) => ({ kind: 'error' as const, record })),
     ].sort((left, right) => left.record.seq - right.record.seq);
   }
@@ -202,6 +204,13 @@ class Reporter {
         this.field(heading, `errored after ${call.record.attempts} attempt(s)`),
         this.field('Judge error', this.text.describe(call.record.cause), Reporter.NESTED_INDENT),
       ].join('\n');
+    }
+    if (call.kind === 'extraction') {
+      return this.extractionLines(
+        heading,
+        `${call.record.assertion} ${this.extracted(call.record)}`,
+        call.record,
+      );
     }
     const { record } = call;
     return [
@@ -267,7 +276,34 @@ class Reporter {
   }
 
   private failedSection({ result, number }: NumberedRun): string {
-    return [`[FAILED] Run #${number}`, ...this.failureFields(result)].join('\n');
+    return [
+      `[FAILED] Run #${number}`,
+      ...this.failureFields(result),
+      ...(this.isFull() ? [] : this.extractionFields(result.context)),
+    ].join('\n');
+  }
+
+  private extractionFields(context: RunContext): string[] {
+    const extractions = [...context.extractions].sort((left, right) => left.seq - right.seq);
+    return extractions.map((record, index) =>
+      this.extractionLines(
+        `Extraction ${index + 1} of ${extractions.length}`,
+        this.extracted(record),
+        record,
+      ),
+    );
+  }
+
+  private extractionLines(heading: string, summary: string, record: ExtractionRecord): string {
+    return [
+      this.field(heading, summary),
+      this.field('Judge reasoning', record.reasoning, Reporter.NESTED_INDENT),
+      this.excerptField(record.response, Reporter.NESTED_INDENT),
+    ].join('\n');
+  }
+
+  private extracted(record: ExtractionRecord): string {
+    return `"${record.description}" as ${record.type} → ${JSON.stringify(record.value)}`;
   }
 
   private failureFields(result: RunResult): string[] {
