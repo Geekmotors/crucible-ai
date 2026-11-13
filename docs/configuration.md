@@ -22,7 +22,7 @@ environment variables for anything secret or per-invocation.
   test file. Jest loads Crucible afresh for each test file, so each file reads
   it once.
 - **Who needs it:** every `crucible.it()` test, even one that passes every
-  option or makes no `coherent()` call. A missing or invalid
+  option or makes no `coherent()` or `extract()` call. A missing or invalid
   file fails each `crucible.it()` test that runs; plain Jest `it()` tests are
   unaffected.
 
@@ -104,7 +104,7 @@ is tolerated.
 
 | Variable | Read by | Meaning |
 | --- | --- | --- |
-| `OPENROUTER_API_KEY` | the OpenRouter adapter, on every judge call | Your OpenRouter API key. Surrounding whitespace is trimmed. Required only for tests that call `coherent()`. |
+| `OPENROUTER_API_KEY` | the OpenRouter adapter, on every judge call | Your OpenRouter API key. Surrounding whitespace is trimmed. Required only for tests that call `coherent()` or `extract()`. |
 | `CRUCIBLE_VERBOSE` | config load | Overrides `verbosity` for one invocation: `default`, `full` or `debug`. Matched exactly (case-sensitive, no trimming). Empty means "not set". |
 
 Variables prefixed `CRUCIBLE_` are reserved for Crucible. API keys always use

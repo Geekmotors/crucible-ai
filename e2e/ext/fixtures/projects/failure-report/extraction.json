@@ -1,0 +1,7 @@
+{
+  "description": "Deliberately failing extraction: the reply hedges, so the judge extracts null while the test insists on 2. The failure report must list the extraction with the judge's reasoning.",
+  "name": "insists on a value the reply only hedges about",
+  "response": "Probably two apples, maybe three.",
+  "target": "the number of apples",
+  "insisted": 2
+}

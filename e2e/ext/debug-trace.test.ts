@@ -36,6 +36,12 @@ describe('CRUCIBLE_VERBOSE=debug against the real provider', () => {
     expect(outcome.output).toContain(TraceLine.VerdictTrue);
   });
 
+  it('traces the recorded extraction', () => {
+    expect(outcome.output).toContain(
+      `${TraceLine.ExtractionFor} "${scenario.extract.target}" as string`,
+    );
+  });
+
   it('never reveals the API key', () => {
     expect(JestProcess.revealsApiKey(outcome.output)).toBe(false);
   });

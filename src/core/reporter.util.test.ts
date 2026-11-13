@@ -4,6 +4,8 @@ import { AssertionName } from './test/assertion-name.enum.js';
 import { BlankValue } from './test/blank-value.enum.js';
 import { ClaimText } from './test/claim-text.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
+import { ExtractTarget } from './test/extract-target.enum.js';
+import { ExtractText } from './test/extract-text.enum.js';
 import { MultilineText } from './test/multiline-text.enum.js';
 import { NearMiss } from './test/near-miss.enum.js';
 import { ProviderFault } from './test/provider-fault.enum.js';
@@ -189,6 +191,102 @@ describe('Reporter — a failed run', () => {
     expect(message).toContain(`${ReportText.FailedRun} Run #1`);
     expect(message).not.toContain(ReportText.ErroredRun);
     expect(message).not.toMatch(/not failed/i);
+  });
+});
+
+describe('Reporter — extractions in a failed run', () => {
+  it('lists the run’s extraction under the failed run, so a failing toBe shows why the judge returned null', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.extractingRun('failed', [
+          ReportHarness.extraction({
+            reasoning: 'The speaker hedges with "probably".',
+            response: 'Probably two apples.',
+          }),
+        ]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toBe(
+      [
+        'FAILED: the smoke run (runs: 1) did not pass.',
+        '',
+        '[FAILED] Run #1',
+        '  First failure: no assertion returned false; the body threw',
+        '  Thrown: Error: failed',
+        `  Extraction 1 of 1: "${ExtractTarget.Apples}" as number → null`,
+        '    Judge reasoning: The speaker hedges with "probably".',
+        '    Response excerpt: Probably two apples.',
+      ].join('\n'),
+    );
+  });
+
+  it('renders every extraction of the run in the order it was made, with its typed value', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.extractingRun('failed', [
+          ReportHarness.extraction({
+            description: ExtractTarget.City,
+            type: 'string',
+            value: ExtractText.City,
+            seq: 3,
+          }),
+          ReportHarness.extraction({ value: 2, seq: 1 }),
+        ]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain(`Extraction 1 of 2: "${ExtractTarget.Apples}" as number → 2`);
+    expect(message).toContain(
+      `Extraction 2 of 2: "${ExtractTarget.City}" as string → "${ExtractText.City}"`,
+    );
+  });
+
+  it('keeps naming the false coherent verdict as the first failed assertion', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.extractingRun(
+          'failed',
+          [ReportHarness.extraction({ seq: 0 })],
+          [ReportHarness.falseVerdict({ claim: ClaimText.NamesPrice, seq: 1 })],
+        ),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain(
+      `First failed assertion: ${AssertionName.Coherent} (assertion 1 of 1`,
+    );
+    expect(message).toContain(ClaimText.NamesPrice);
+    expect(message).toContain(`Extraction 1 of 1: "${ExtractTarget.Apples}"`);
+  });
+
+  it('bounds the extraction’s response excerpt at the configured length', () => {
+    const response = 'w'.repeat(ExcerptChars.Default);
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.extractingRun('failed', [ReportHarness.extraction({ response })])],
+      Threshold.Certain,
+      ReportHarness.reporter(ExcerptChars.Short),
+    );
+    expect(message).toContain('w'.repeat(ExcerptChars.Short) + '…');
+    expect(message).not.toContain('w'.repeat(ExcerptChars.Short + 1));
+  });
+
+  it('lists extractions among the judge calls at full verbosity, without repeating them', () => {
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.extractingRun('failed', [ReportHarness.extraction({ value: 3 })])],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(`Judge call 1 of 1: extract "${ExtractTarget.Apples}" as number → 3`);
+    expect(message).not.toContain('Extraction 1 of 1');
+  });
+
+  it('lists a passed run’s extractions at full verbosity', () => {
+    const message = ReportHarness.renderedPass(
+      [ReportHarness.extractingRun('passed', [ReportHarness.extraction({ value: 2 })])],
+      Threshold.Certain,
+    );
+    expect(message).toContain(`Judge call 1 of 1: extract "${ExtractTarget.Apples}" as number → 2`);
   });
 });
 

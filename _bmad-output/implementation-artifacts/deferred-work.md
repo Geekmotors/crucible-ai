@@ -172,3 +172,54 @@
 - source_spec: 4-1-tune-timeouts-per-test.md
   summary: `RunScope.enterRun(body, signal?, run?, inferenceTimeout?)` keeps growing optional positional parameters, and callers pad with `undefined`. It also has its own inference default, separate from the resolver. Consider one options object.
   evidence: `src/core/state.ts`, `src/core/test/judge-harness.util.ts`.
+
+## Deferred: product roadmap (2026-11-13)
+
+- source_spec: Jack, product discussion after the v0.1.0 release
+  summary: Port Crucible to C# (xUnit first, with the `[CrucibleFact(Runs, Threshold)]` shape sketched in docs/inspiration.md). Deferred until the TypeScript API settles: `extract()` (Story 4.2) and the failure-report attribution study change the surface, and porting earlier would mean redoing both in two languages. The judge schemas are already language-agnostic; the 3.4 conformance spike (`make conformance`, curl + jq only) is the starting point and must pass unchanged against the C# client.
+  status: Deferred by Jack 2026-11-13, after Story 4.2.
+
+
+## Deferred from: code review of 4-2-extract-a-value (2026-11-13)
+
+- source_spec: 4-2-extract-a-value.md
+  summary: Live verification still outstanding. Neither `make e2e-ext` (extract conformance matrix, failure-report extraction, debug-trace extraction) nor `make conformance` (11 extract cases, with the reworded rules 2/4/6/8 of `schemas/extract.md`) has run against a real provider. The candidates for flakes are `state-only-value`, `string-value` and the debug-trace child's exact `toBe("Tuesday")`. That child's pass/fail now depends on an exact string, so if it flakes, switch the scenario to a boolean target.
+  evidence: `e2e/ext/extract-conformance.test.ts`, `e2e/ext/fixtures/extract-conformance.json`, `e2e/ext/fixtures/projects/debug-trace/`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: Gaps in the extract schema. There is no rule for case or canonical form of strings ("NYC" vs "New York"), and none for a response that commits to different values for different things under one ambiguous target ("two in the bowl, five in the bag"). Settle both with conformance cases.
+  evidence: `schemas/extract.md` rules 2 and 5.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: Report gaps for extractions:
+  - errored runs don't list their extractions in the default verbosity;
+  - the hidden-runs "Failing claims" tally labels extraction-driven failures "thrown without a false verdict";
+  - default Extraction lines are unbounded per run;
+  - descriptions and claims are wrapped in literal quotes with no escaping, so an embedded `"` is ambiguous.
+  evidence: `src/core/reporter.util.ts` `erroredSection`, `failureLabel`, `extractionFields`, `extracted`; `src/core/trace-reporter.ts` `judgeRecorded`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: `JudgeExchange` refactor drift, unreachable in practice:
+  - recording and tracing a verdict or extraction now runs outside the exchange's error-recording `try`;
+  - the schema text now loads before the completion target is resolved, so when both fail the config error surfaced differs.
+  The trace tells record types apart by property (`'description' in record`) rather than by a discriminant.
+  evidence: `src/core/judge.ts`, `src/core/extractor.ts`, `src/core/judge-exchange.ts` `ask`, `src/core/trace-reporter.ts`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: Number values that are integers beyond `Number.MAX_SAFE_INTEGER` pass validation after silent rounding. Consider re-asking on unsafe integers.
+  evidence: `src/core/extractor.ts` `matches`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: The architecture spine still states the boolean-only assertion contract (AD-6), "parsing lives only in core/judge" (AD-7) and `RunContext { state, verdicts, errors }` (AD-5). Amend it for `extract()`, `JudgeExchange` and `extractions`.
+  evidence: `_bmad-output/planning-artifacts/architecture/architecture-crucible-ai-2026-08-10/ARCHITECTURE-SPINE.md`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: The conformance harness interface changed for existing coherent users. The `CONFORMANCE_SCHEMA`/`CONFORMANCE_CASES` overrides are gone (replaced by `_DIR`), and the `payloads` headers now read `=== coherent/<id>`. Verdicts are unaffected. Note it in a changelog, or restore aliases.
+  evidence: `e2e/ext/conformance/conformance.sh`.
+
+- source_spec: 4-2-extract-a-value.md
+  summary: Docs polish:
+  - `docs/api.md` lists four `extract` signature forms, but the declaration is one generic signature;
+  - a few lines in getting-started.md, gotchas.md and instruction-schema.md break the hard-wrap style;
+  - internal `Judge` names (`response`, `claim`) still differ from the public `(actual, expectation)`.
+  evidence: `docs/api.md`, `docs/getting-started.md`, `docs/gotchas.md`, `docs/instruction-schema.md`, `src/core/judge.ts`.

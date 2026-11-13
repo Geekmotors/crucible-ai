@@ -19,6 +19,7 @@ class PackVerifier {
     'dist/index.d.ts',
     'dist/index.d.cts',
     'schemas/coherent.md',
+    'schemas/extract.md',
   ];
 
   packedFiles() {

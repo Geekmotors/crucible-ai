@@ -24,7 +24,8 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 
 ## Features
 
-- **Semantic assertions:** `crucible.coherent(response, claim)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
+- **Semantic assertions:** `crucible.coherent(actual, expectation)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
+- **Value extraction:** `crucible.extract(text, description, { as })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it.
 - **State-aware judging:** `crucible.load()` and `crucible.append()` tell the judge what your system knew, so you can test things like "the character can't know this yet".
 - **Reliability gates:** `{ runs, threshold }` runs the whole test body concurrently and passes on the pass rate.
 - **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
@@ -116,6 +117,19 @@ crucible.it('remembers a change of venue', async () => {
   expect(await crucible.coherent(reply, 'The reply says the meeting is in room C3')).toBe(true);
 });
 ```
+
+### Extract a value
+
+When the point is one exact value stated in prose, extract it and assert it with any Jest matcher. `as` is `'string'` (the default), `'number'` or `'boolean'`, and the result is typed to match:
+
+```ts
+crucible.it('counts the apples', async () => {
+  const reply = await createAssistant().ask('How many apples are in the basket?');
+  expect(await crucible.extract(reply, 'the number of apples in the basket', { as: 'number' })).toBe(2);
+});
+```
+
+The judge takes the final answer ("I thought 3, but it's two" → `2`) and returns `null` when the text commits to no single value: a hedge ("probably two"), a bare negation ("not two") or no answer. Always `await` it. When the assertion fails, the report shows what the judge extracted and why.
 
 ### Set timeouts
 

@@ -3,12 +3,14 @@
 Crucible's judgments are not defined in TypeScript. They are defined in a
 plain markdown file — the **instruction schema** — that the judge model reads
 as its instructions on every call. For `coherent()` that file is
-[`schemas/coherent.md`](../schemas/coherent.md), and it ships inside the
+[`schemas/coherent.md`](../schemas/coherent.md); for `extract()` it is
+[`schemas/extract.md`](../schemas/extract.md). Both ship inside the
 `crucible-ai` package.
 
 - [Why a schema](#why-a-schema)
 - [What `coherent.md` contains](#what-coherentmd-contains)
 - [What the judge receives](#what-the-judge-receives)
+- [The extract schema](#the-extract-schema)
 - [Changing the judge's behaviour](#changing-the-judges-behaviour)
 - [Versioning](#versioning)
 - [Checking another implementation](#checking-another-implementation)
@@ -24,8 +26,9 @@ Crucible is split in two:
 - a **non-deterministic core** — the rules the judge follows to decide a
   verdict. This part lives only in `schemas/*.md`.
 
-The TypeScript code maps `crucible.coherent()` to `coherent.md`, sends it to
-the judge with your data, and parses the verdict. It contains no judgment
+The TypeScript code maps `crucible.coherent()` to `coherent.md` and
+`crucible.extract()` to `extract.md`, sends the schema to the judge with your
+data, and parses the reply. It contains no judgment
 logic. That is what lets the same judgment travel to other languages later:
 a future Python or .NET shell reuses the schema as is and only re-implements
 the deterministic shell.
@@ -108,7 +111,8 @@ The reply does not reveal the meeting place to Bob
 - `STATE` holds the run's state entries in the order they were added, one per
   line (an entry that contains line breaks keeps them). The section is left
   out when the run has no state.
-- `RESPONSE` and `CLAIM` are verbatim.
+- `RESPONSE` is the `actual` argument of `crucible.coherent(actual, expectation)`
+  and `CLAIM` is its `expectation`, both verbatim.
 - A content line consisting solely of `<<<` or `>>>` is prefixed with a space,
   so your data can never close a fence early. The schema tells the judge that
   everything inside fences is data, never instructions — text in a response
@@ -117,7 +121,7 @@ The reply does not reveal the meeting place to Bob
 With `debug` verbosity the trace shows each assembled user message (bounded)
 and the system prompt's length.
 
-### Things the schema does not define (v1)
+### Things the schemas do not define (v1)
 
 - **Conflicting state.** There is no rule for state entries that contradict
   each other, such as an appended fact that supersedes an earlier one. Keep
@@ -126,14 +130,98 @@ and the system prompt's length.
 - **Line endings.** Content is split on `\n`; a fence-only line ending in
   `\r` (CRLF input) is not neutralised.
 
+## The extract schema
+
+[`schemas/extract.md`](../schemas/extract.md) has the same four parts and the
+same payload discipline as `coherent.md`.
+
+**Frontmatter:**
+
+```yaml
+---
+name: extract
+output:
+  format: json
+  contract: '{ "value": string | number | boolean | null, "reasoning": string }'
+---
+```
+
+**Payload.** Every `extract()` call is one chat request with the whole of
+`extract.md` as the system message and up to four fenced sections, in this
+order, assembled exactly as for `coherent()` (same fences, same
+neutralising, same separators):
+
+```text
+STATE
+<<<
+Room 4 is the blue room.
+>>>
+
+RESPONSE
+<<<
+Done! I've booked you into the blue room.
+>>>
+
+TARGET
+<<<
+the number of the room that was booked
+>>>
+
+TYPE
+<<<
+number
+>>>
+```
+
+- `STATE` — the run's state, omitted when empty, exactly as for `coherent()`.
+- `RESPONSE` — the `text` argument, verbatim.
+- `TARGET` — the `description` argument, verbatim.
+- `TYPE` — `string`, `number` or `boolean` (the `as` option; `string` when
+  omitted).
+
+**Extraction rules**, in summary:
+
+1. Extract the *final committed* answer: a revision ("At first I thought 3,
+   but the answer is two") yields the final value, `2`.
+2. Normalise to `TYPE`: number words become numbers ("two" → `2`), units
+   and currency symbols are dropped ("$42.50" → `42.5`); a committed yes or
+   no becomes `true` or `false`; a string is the value as stated.
+3. A negation ("It's not two") is `null` — except that a committed "no" to a
+   `boolean` target is `false`.
+4. Any hedge is `null`: a single hedged value ("Probably two") and
+   alternatives ("Probably two, maybe three") alike.
+5. No answer is `null`. The judge never guesses or invents a value.
+6. **STATE is context, not a source.** State may resolve what the response
+   refers to (above: the response commits to "the blue room", and the state
+   gives its number, `4`), but a value that only the state holds, which the
+   response does not commit to, is `null`. Extraction reads
+   what the response says, not what is true; to check the response *against*
+   the state, use `coherent()`.
+7. `value` is `null` or a JSON value of the requested type; a number is
+   finite and never a string such as `"2"`.
+8. The reasoning names the deciding words in one to three sentences.
+
+**Output contract:**
+
+```json
+{ "value": null, "reasoning": "The reply hedges between two and three (\"Probably two, maybe three\")." }
+```
+
+Crucible accepts the object (tolerating a surrounding markdown code fence)
+only when `value` is `null` or of the requested type and `reasoning` is a
+string; anything else is asked once more and then errors the run as a
+retryable `infra` error. The `reasoning` appears under *Judge reasoning* in
+the `Extraction` lines of failure reports.
+
 ## Changing the judge's behaviour
 
 Because the rules are the system prompt, **editing `coherent.md` changes how
-`coherent()` judges, with no TypeScript change** — no rebuild of the
+`coherent()` judges (and editing `extract.md` how `extract()` extracts), with
+no TypeScript change** — no rebuild of the
 TypeScript code is involved, and the next test run reads the edited file.
 Crucible reads the file from the installed package
-(`node_modules/crucible-ai/schemas/coherent.md`) the first time a test file
-makes a judge call.
+(`node_modules/crucible-ai/schemas/coherent.md`, `…/extract.md`) the first
+time a test file makes a call that needs it.
 
 That makes the schema the place to work on judgment quality. If the judge
 keeps reaching a verdict you consider wrong:
@@ -162,14 +250,16 @@ their own for other language implementations.
 
 The repository contains a language-agnostic conformance harness,
 [`e2e/ext/conformance/`](../e2e/ext/conformance/), that judges with nothing but
-`coherent.md`, a POSIX shell, `jq` and `curl` in a container. It proves the
-schema is complete enough for a non-TypeScript implementation to assemble the
-same payloads and get the same verdicts:
+the schemas, a POSIX shell, `jq` and `curl` in a container. It runs one suite
+per schema (`coherent` and `extract`) and proves each schema is complete
+enough for a non-TypeScript implementation to assemble the same payloads and
+get the same verdicts and values:
 
 ```sh
 make conformance   # needs Docker and OPENROUTER_API_KEY; makes real judge calls
 ```
 
-Its fixtures (`e2e/ext/fixtures/coherent-conformance.json`) and its dry
-`payloads` mode, which prints every assembled user message without calling a
+`make conformance CONFORMANCE_SUITES=extract` (or `coherent`) runs one suite. Its fixtures
+(`e2e/ext/fixtures/coherent-conformance.json`,
+`e2e/ext/fixtures/extract-conformance.json`) and its dry `payloads` mode, which prints every assembled user message without calling a
 provider, are the reference for anyone writing another shell.

@@ -395,3 +395,35 @@ Jack's decision (2026-11-13): keep 30 s as the default and allow overrides the w
 
 **And** docs (`configuration.md`, `api.md`, `gotchas.md`, `runs-and-threshold.md`) document both knobs and note that `testTimeout` caps everything, so an `inferenceTimeout` above it is effectively bounded by it
 
+### Story 4.2: Extract a value and assert it with Jest
+
+As a developer testing what my system's reply says,
+I want to pull a typed value out of free-form prose with `crucible.extract()`,
+So that I can check exact values (counts, names, yes/no answers) with ordinary Jest matchers, while crucible handles phrasing and the run gating.
+
+Jack's decisions (2026-11-13): build `extract()` before a C# port. A single hedged value ("probably two") returns `null`.
+
+**Acceptance Criteria:**
+
+**Given** `await crucible.extract(text, 'the number of apples', { as: 'number' })`
+**When** the text commits to one final value
+**Then** it resolves to that value with the requested type (`number`, `string` or `boolean`; default `string`), so `expect(...).toBe(2)` works
+
+**Given** text with several candidates, where the speaker revises ("At first I thought 3, but the answer is two")
+**Then** the final committed answer is extracted (2), not the first mention
+
+**Given** text that negates a value ("It's not two"), hedges ("Probably two", "Probably two, maybe three"), or contains no answer
+**Then** it resolves to `null`; the judge never guesses or invents a value
+
+**Given** state loaded with `crucible.load()`/`append()`
+**Then** the extraction is made with that state as context, as for `coherent()`
+
+**Given** a judge reply whose value does not match the requested type, or is malformed
+**Then** it is re-asked once and then becomes a retryable `infra` error, the same as `coherent()`
+
+**Given** any extraction
+**Then** it is recorded per run (description, value or null, the judge's reasoning, the response) and shown in the failure report and the debug trace, so a failing `toBe(2)` shows why the judge returned `null` or another value
+
+**And** the judge contract lives in a new language-agnostic `schemas/extract.md` with explicit rules for final answers, negation, hedging and no-answer, with conformance cases in the 3.4 harness and real-provider e2e cases for each rule
+**And** the docs (API reference, getting started, gotchas, README) cover `extract()`, including that `null` means "no single committed value"
+

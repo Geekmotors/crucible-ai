@@ -2,8 +2,9 @@
 set -eu
 
 HARNESS_DIR=$(cd "$(dirname "$0")" && pwd)
-SCHEMA_FILE=${CONFORMANCE_SCHEMA:-$HARNESS_DIR/schema.md}
-CASES_FILE=${CONFORMANCE_CASES:-$HARNESS_DIR/cases.json}
+SUITES=${CONFORMANCE_SUITES:-coherent extract}
+SCHEMA_DIR=${CONFORMANCE_SCHEMA_DIR:-$HARNESS_DIR/schemas}
+CASES_DIR=${CONFORMANCE_CASES_DIR:-$HARNESS_DIR/cases}
 JUDGE_CONFIG=${CONFORMANCE_JUDGE_CONFIG:-$HARNESS_DIR/judge.config.json}
 REPS=${CONFORMANCE_REPS:-3}
 EXTRA_CA_FILE=${CONFORMANCE_EXTRA_CA:-/etc/conformance/extra-ca.pem}
@@ -17,8 +18,37 @@ jq_lib() {
   jq -L "$HARNESS_DIR" "$@"
 }
 
+suite_defs() {
+  cat "$HARNESS_DIR/payload-sections.jq" "$HARNESS_DIR/$1-payload.jq"
+}
+
+schema_file() {
+  printf '%s/%s.md' "$SCHEMA_DIR" "$1"
+}
+
+cases_file() {
+  printf '%s/%s.json' "$CASES_DIR" "$1"
+}
+
+require_suites() {
+  for suite in $SUITES; do
+    case "$suite" in
+      coherent | extract) ;;
+      *)
+        echo "conformance: unknown suite '$suite' in CONFORMANCE_SUITES (known: coherent extract)" >&2
+        exit "$EXIT_USAGE"
+        ;;
+    esac
+  done
+}
+
 print_payloads() {
-  jq_lib -r 'include "coherent-payload"; .cases[] | "=== \(.id)\n\(coherent_payload)"' "$CASES_FILE"
+  for suite in $SUITES; do
+    jq_lib -r --arg suite "$suite" \
+      "$(suite_defs "$suite")
+.cases[] | \"=== \\(\$suite)/\\(.id)\\n\\(${suite}_payload)\"" \
+      "$(cases_file "$suite")"
+  done
 }
 
 require_key() {
@@ -38,11 +68,21 @@ prepare_ca_bundle() {
 
 request_body() {
   jq_lib -n \
-    --rawfile schema "$SCHEMA_FILE" \
+    --rawfile schema "$(schema_file "$1")" \
     --slurpfile judge "$JUDGE_CONFIG" \
-    --slurpfile matrix "$CASES_FILE" \
-    --argjson index "$1" \
-    'include "coherent-payload"; $matrix[0].cases[$index] | coherent_request($schema; $judge[0])'
+    --slurpfile matrix "$(cases_file "$1")" \
+    --argjson index "$2" \
+    "$(suite_defs "$1")
+\$matrix[0].cases[\$index] | ${1}_request(\$schema; \$judge[0])"
+}
+
+strict_outcome() {
+  jq_lib -s -c \
+    --slurpfile matrix "$(cases_file "$1")" \
+    --argjson index "$2" \
+    "$(suite_defs "$1")
+if ${1}_strict_reply(\$matrix[0].cases[\$index]) then ${1}_outcome else error(\"non-compliant\") end" \
+    "$3"
 }
 
 call_judge() {
@@ -59,18 +99,35 @@ call_judge() {
 }
 
 run_matrix() {
-  case_count=$(jq '.cases | length' "$CASES_FILE")
   model=$(jq -r '.model' "$JUDGE_CONFIG")
-  echo "conformance: $case_count cases x $REPS reps against $model"
+  echo "conformance: suites [$SUITES] x $REPS reps against $model"
   calls=0
   failures=0
   total_cost=0
   summary=""
+  for suite in $SUITES; do
+    run_suite "$suite"
+  done
+  echo
+  printf '%s' "$summary"
+  echo "calls $calls, cost \$$total_cost"
+  if [ "$failures" -gt 0 ]; then
+    echo "conformance: FAILED ($failures of $calls calls did not conform)"
+    exit "$EXIT_MISMATCH"
+  fi
+  echo "conformance: PASSED"
+}
+
+run_suite() {
+  suite=$1
+  cases=$(cases_file "$suite")
+  case_count=$(jq '.cases | length' "$cases")
+  echo "conformance: suite $suite, $case_count cases"
   index=0
   while [ "$index" -lt "$case_count" ]; do
-    case_id=$(jq -r ".cases[$index].id" "$CASES_FILE")
-    expected=$(jq -r ".cases[$index].expected" "$CASES_FILE")
-    request_body "$index" > "$WORK_DIR/body.json"
+    case_id="$suite/$(jq -r ".cases[$index].id" "$cases")"
+    expected=$(jq -c ".cases[$index].expected" "$cases")
+    request_body "$suite" "$index" > "$WORK_DIR/body.json"
     matched=0
     compliant=0
     errored=0
@@ -92,35 +149,26 @@ run_matrix() {
       cost=$(jq -r '.usage.cost // 0' "$WORK_DIR/reply.json")
       total_cost=$(awk -v a="$total_cost" -v b="$cost" 'BEGIN { printf "%.6f", a + b }')
       jq -j '.choices[0].message.content' "$WORK_DIR/reply.json" > "$WORK_DIR/content.txt"
-      if jq_lib -s -e 'include "coherent-payload"; strict_verdict' "$WORK_DIR/content.txt" > /dev/null 2>&1; then
+      if outcome=$(strict_outcome "$suite" "$index" "$WORK_DIR/content.txt" 2> /dev/null); then
         compliant=$((compliant + 1))
-        verdict=$(jq -s -r '.[0].verdict' "$WORK_DIR/content.txt")
       else
-        verdict=non-compliant
+        outcome=non-compliant
       fi
-      if [ "$verdict" = "$expected" ]; then
+      if [ "$outcome" = "$expected" ]; then
         matched=$((matched + 1))
-        echo "PASS $case_id rep $rep/$REPS: verdict $verdict (${seconds}s, \$$cost)"
+        echo "PASS $case_id rep $rep/$REPS: $outcome (${seconds}s, \$$cost)"
       else
         failures=$((failures + 1))
-        echo "FAIL $case_id rep $rep/$REPS: verdict $verdict, expected $expected (${seconds}s, \$$cost)"
+        echo "FAIL $case_id rep $rep/$REPS: $outcome, expected $expected (${seconds}s, \$$cost)"
         echo "     reply: $(cat "$WORK_DIR/content.txt")"
       fi
       rep=$((rep + 1))
     done
-    summary="$summary$(printf '%-26s expected %-5s verdict matches %s/%s  strict JSON %s/%s  errored %s' \
+    summary="$summary$(printf '%-34s expected %-7s matches %s/%s  strict JSON %s/%s  errored %s' \
       "$case_id" "$expected" "$matched" "$REPS" "$compliant" "$REPS" "$errored")
 "
     index=$((index + 1))
   done
-  echo
-  printf '%s' "$summary"
-  echo "calls $calls, cost \$$total_cost"
-  if [ "$failures" -gt 0 ]; then
-    echo "conformance: FAILED ($failures of $calls calls did not conform)"
-    exit "$EXIT_MISMATCH"
-  fi
-  echo "conformance: PASSED"
 }
 
 case "$REPS" in
@@ -129,6 +177,8 @@ case "$REPS" in
     exit "$EXIT_USAGE"
     ;;
 esac
+
+require_suites
 
 case "${1:-run}" in
   payloads)

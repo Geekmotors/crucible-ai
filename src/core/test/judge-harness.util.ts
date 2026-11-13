@@ -1,7 +1,8 @@
 import type { ProviderAdapter } from '../../providers/types.js';
 import { TestModel } from '../../providers/test/test-model.enum.js';
 import { Judge } from '../judge.js';
-import type { Deadline } from '../judge.js';
+import { JudgeExchange } from '../judge-exchange.js';
+import type { Deadline } from '../judge-exchange.js';
 import { RetryingCompleter } from '../retry.js';
 import { RunScope } from '../state.js';
 import { TraceReporter } from '../trace-reporter.js';
@@ -22,14 +23,27 @@ import { TraceHarness } from './trace-harness.util.js';
 class JudgeHarness {
   static schemaText = (): string => 'judge schema text';
 
+  static exchange(
+    adapter: ProviderAdapter,
+    scope: RunScope,
+    deadline?: Deadline,
+    trace: TraceReporter = new TraceReporter(),
+  ): JudgeExchange {
+    return new JudgeExchange(
+      new RetryingCompleter(trace, new SleepRecorder().sleep),
+      () => ({ adapter, model: TestModel.Generic }),
+      scope,
+      trace,
+      deadline,
+    );
+  }
+
   static judge(adapter: ProviderAdapter, scope: RunScope, deadline?: Deadline): Judge {
     return new Judge(
       JudgeHarness.schemaText,
-      new RetryingCompleter(new TraceReporter(), new SleepRecorder().sleep),
-      () => ({ adapter, model: TestModel.Generic }),
+      JudgeHarness.exchange(adapter, scope, deadline),
       scope,
       new TraceReporter(),
-      deadline,
     );
   }
 
@@ -75,14 +89,15 @@ class JudgeHarness {
     const trace = traced.trace();
     const judge = new Judge(
       JudgeHarness.schemaText,
-      new RetryingCompleter(trace, new SleepRecorder().sleep),
-      () => ({
-        adapter: new ScriptedAdapter(
+      JudgeHarness.exchange(
+        new ScriptedAdapter(
           replies.map((reply) => ({ resolve: reply })),
           'retryable',
         ),
-        model: TestModel.Generic,
-      }),
+        traced.scope,
+        undefined,
+        trace,
+      ),
       traced.scope,
       trace,
     );

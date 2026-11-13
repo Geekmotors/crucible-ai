@@ -1,6 +1,10 @@
 *
 !schemas/coherent.md
+!schemas/extract.md
 !e2e/crucible.config.json
 !e2e/ext/fixtures/coherent-conformance.json
+!e2e/ext/fixtures/extract-conformance.json
 !e2e/ext/conformance/conformance.sh
+!e2e/ext/conformance/payload-sections.jq
 !e2e/ext/conformance/coherent-payload.jq
+!e2e/ext/conformance/extract-payload.jq

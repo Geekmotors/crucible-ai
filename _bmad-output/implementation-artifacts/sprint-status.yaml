@@ -80,4 +80,5 @@ development_status:
   # Epic 4: Field readiness
   epic-4: in-progress
   4-1-tune-timeouts-per-test: done
+  4-2-extract-a-value: done
   epic-4-retrospective: optional
