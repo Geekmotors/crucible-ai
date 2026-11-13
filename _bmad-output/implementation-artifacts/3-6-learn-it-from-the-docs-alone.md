@@ -159,3 +159,14 @@ Self-review 2026-11-13 against ACs, every claim re-checked against `src/` (no ad
 - [x] [Patch] configuration.md failure table: timeout / bad-JSON rows were labelled "retryable" though they are not retried by the provider loop → "non-fatal"; backoff stated as exact ranges.
 - [x] [Defer] Exported provider types without registration API; permissive `crucible.it` type; README links on npm → deferred-work.
 - Accepted: fake-timer description does not claim whether the per-reply 30 s `AbortSignal.timeout` is faked (depends on Jest's fake-timer implementation); the claims made (deadline, backoff via global `setTimeout`) are code-verified.
+
+### Doc fact-check
+
+Independent check of getting-started, configuration, api, instruction-schema and gotchas against `src/` and `schemas/coherent.md`.
+
+Verified accurate: config location (cwd only, no parent search) and lazy per-test-file load; field table, defaults (`runs` 1, `threshold` 1, `excerptChars` 500, verbosity `default`); validation order and kinds (key-like before unknown fields, `CRUCIBLE_VERBOSE` → `usage`, empty ignored, BOM tolerated); config/usage errors abort the whole test and rethrow unchanged; key trimming; retry policy (3 attempts, 250–500 / 500–1000 ms backoff, 408/429/5xx/network retryable, other 4xx fatal → abort, embedded numeric codes treated as HTTP status); 2 reply attempts on bad JSON, fence tolerance; 30 s per reply attempt; deadline 30 s + 1 s × (runs − 1); Jest timeout = deadline + 5 s only when `runs` declared, else ~24.8 days; `meta` spread before `model`/`messages`; trace shows meta keys only; three-zone verdict and `need`; false-red figures (26%, 1.6%); report headline/field format and 3-run cap; payload assembly and fence neutralising; schema loaded once per test file from the package.
+
+Fixed:
+- configuration.md: "30 s test deadline" corrected to the real formula (30 s + 1 s per extra run); clarified the 30 s per-call limit sits inside the test deadline.
+- configuration.md: added the missing `usage` error for non-JSON-serializable `meta` at judge-call time.
+- getting-started.md: said `createAssistant` is a stand-in for the reader's system; noted the sample failure report is trimmed to one run (a real 5-failure report shows 3 runs plus a hidden-runs line and claim tally).

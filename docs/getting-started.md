@@ -94,7 +94,9 @@ The key is read when a judge call is made, so tests that never call
 
 A test declared with `crucible.it()` and no options runs once, like a normal
 Jest test ("smoke mode"), unless you set project-wide
-[`testDefaults`](#6-turn-it-into-a-multi-run-gate). The body follows arrange → act → assert:
+[`testDefaults`](#6-turn-it-into-a-multi-run-gate). The body follows arrange → act → assert.
+`createAssistant` stands for your own system under test — replace it and its
+`remember`/`ask` calls with however you build and call your system:
 
 ```ts
 import { crucible } from 'crucible-ai';
@@ -218,7 +220,7 @@ Runs: 15 passed, 5 failed, 0 errored, 0 discarded.
   excerpt of the response. Read the reasoning before re-running: it tells you
   whether the failure is a real defect or a borderline call.
 - At most three failed runs are shown in full; the rest are listed by number
-  with a tally of failing claims.
+  with a tally of failing claims (the example above is trimmed to one run).
 
 The full format is in
 [Reading the failure report](runs-and-threshold.md#reading-the-failure-report).
