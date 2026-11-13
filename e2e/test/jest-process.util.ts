@@ -9,6 +9,9 @@ class JestProcess {
     new URL('../node_modules/jest/bin/jest.js', JestProcess.e2eRoot),
   );
   private static jestConfig = fileURLToPath(new URL('jest.config.mjs', JestProcess.e2eRoot));
+  private static deadlineMs = 100000;
+  private static outputBytes = 16 * 1024 * 1024;
+  private static plainOutput = { FORCE_COLOR: '0', NO_COLOR: '1' };
 
   static run(project: string, environment: Record<string, string> = {}): Promise<JestOutcome> {
     const projectDir = fileURLToPath(
@@ -26,7 +29,13 @@ class JestProcess {
       execFile(
         process.execPath,
         args,
-        { cwd: projectDir, env: { ...process.env, ...environment } },
+        {
+          cwd: projectDir,
+          env: { ...process.env, ...JestProcess.plainOutput, ...environment },
+          timeout: JestProcess.deadlineMs,
+          killSignal: 'SIGKILL',
+          maxBuffer: JestProcess.outputBytes,
+        },
         (error, stdout, stderr) =>
           resolve({ exitCode: JestProcess.exitCode(error), output: `${stdout}${stderr}` }),
       );

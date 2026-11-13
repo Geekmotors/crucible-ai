@@ -103,3 +103,13 @@
 - source_spec: 3-3-prove-it-end-to-end-locally.md
   summary: e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
   evidence: npm run typecheck stays src-only so it needs no build.
+
+## Deferred from: code review of 3-3-prove-it-end-to-end-locally.md (2026-11-13)
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
+  summary: `--use-system-ca` is accepted in `NODE_OPTIONS` only from Node 22.15 / 23.8; `engines` says `>=22`. Story 3.5's ubuntu main lane must pin a Node that accepts it (setup-node `22` resolves to latest 22.x, fine) or override `E2E_NODE_OPTIONS` (now `?=` in the Makefile) to drop it.
+  evidence: Makefile `E2E_NODE_OPTIONS`.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
+  summary: `crucible.coherent` judges the run state as it stands when the call is made (payload assembled before the first await), so later `append`s do not leak into an in-flight judgment. The e2e bodies now rely on it to issue step judgments concurrently (deadline headroom), but no doc states it. Document it in the API docs (Story 3.6).
+  evidence: Judge.judgeCoherent; e2e/core/stateful-coherence.test.ts.

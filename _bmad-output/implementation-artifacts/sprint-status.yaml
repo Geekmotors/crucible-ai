@@ -70,7 +70,7 @@ development_status:
   epic-3: in-progress
   3-1-read-a-failure-like-a-report: done
   3-2-turn-up-the-volume-when-needed: done
-  3-3-prove-it-end-to-end-locally: review
+  3-3-prove-it-end-to-end-locally: done
   3-4-language-agnostic-judge-conformance-spike: backlog
   3-5-e2e-core-on-merge-to-main: backlog
   3-6-learn-it-from-the-docs-alone: backlog

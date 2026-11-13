@@ -1,6 +1,7 @@
 .PHONY: e2e-core e2e-ext e2e e2e-key e2e-build
 
-E2E_JEST = cd e2e && NODE_OPTIONS="--experimental-vm-modules --use-system-ca" ../node_modules/.bin/jest --config jest.config.mjs --ci
+E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
+E2E_JEST = cd e2e && NODE_OPTIONS="$(E2E_NODE_OPTIONS)" ../node_modules/.bin/jest --config jest.config.mjs --ci
 
 e2e-key:
 	@if [ -z "$$OPENROUTER_API_KEY" ]; then \

@@ -62,3 +62,6 @@ Measured 2026-11-13 against real OpenRouter while building the e2e suite:
 - The e2e configs (`e2e/crucible.config.json` and the child projects) use
   `"reasoning": { "effort": "low" }`: correct verdicts, inside the deadline.
   A full `make e2e` is ~23 judge calls.
+- Multi-step e2e bodies start every step's `coherent` call before awaiting
+  any of them (each call judges the state as it stands when it is made), so a
+  run costs about one judge round trip instead of one per step.

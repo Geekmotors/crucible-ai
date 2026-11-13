@@ -4,7 +4,7 @@ baseline_commit: 03ec916
 
 # Story 3.3: Prove it end-to-end locally
 
-Status: review
+Status: done
 
 ## Story
 
@@ -131,3 +131,18 @@ Claude Opus 5.5 (claude-opus-5-5), unattended (user away — decisions recorded 
 ### Change Log
 
 - 2026-11-13: Story 3.3 implemented — fixture-driven e2e against the built package and real OpenRouter (`make e2e-core` / `e2e-ext` / `e2e`), CJS build check, deliberate-failure and debug-trace child projects, missing-key guard. Status → review.
+
+### Review Triage Log
+
+Code review 2026-11-13 (bmad-code-review, unattended; diff `story-3-2-turn-up-the-volume...HEAD`). Secret checks: OpenRouter key-prefix count in diff = 0; no `.env*` tracked.
+
+- [x] [Review][Patch][Medium] Deadline flake on main lane: the core and knowledge-boundary bodies awaited each step's `coherent` one after another (~14–15 s per test against a 32 s deadline), so slow provider calls would push the test to ERRORED. Fixed: every step's judgment is started before any is awaited, then `Promise.all` is compared with the expected verdicts; each call still judges the state as it stands when made (load → append order kept). Core test now ~6 s. [e2e/core/stateful-coherence.test.ts, e2e/ext/knowledge-boundary.test.ts]
+- [x] [Review][Patch][Medium] `JestProcess` child had no timeout and the 1 MB default `maxBuffer`: a hung child outlived the outer 120 s hook, and an overflow killed the child, giving a false non-zero exit. Fixed: 100 s timeout with SIGKILL, 16 MB buffer. [e2e/test/jest-process.util.ts]
+- [x] [Review][Patch][Low] Child output could carry ANSI colour codes when the caller's env forces colour (CI), which breaks the `toContain` report assertions. Fixed: child env sets `FORCE_COLOR=0`, `NO_COLOR=1`. [e2e/test/jest-process.util.ts]
+- [x] [Review][Patch][Low] Portability for Story 3.5: `NODE_OPTIONS` was hard-coded. Now `E2E_NODE_OPTIONS ?=` (same default) so CI or an older Node can override it. [Makefile]
+- [x] [Review][Defer] `--use-system-ca` needs Node ≥22.15 in `NODE_OPTIONS` (engines `>=22`). 3.5 must pin it. → deferred-work.md
+- [x] [Review][Defer] Call-time state snapshot of `coherent` is relied on but not documented. → deferred-work.md (3.6 docs)
+- Gate headroom ruling: `{ runs: 3, threshold: 0.6 }` (need 2) on core. With per-run pass p_run = 0.90 the false-red rate is 2.8%; at 0.95 it is 0.7% (binomial, docs/runs-and-threshold.md). The measured runs were 3/3 every time at low reasoning effort. This is acceptable for AC 9 (3 runs), and the deadline fix removes the larger flake source. Kept. The single-run CJS smoke checks a trivial stateless claim. Kept.
+- Rejected: `npm run typecheck` skips e2e (it needs `dist` types; Makefile runs `tsc -p e2e`; already deferred). Rejected: `revealsApiKey` reads `process.env` (read-only, inherent to a leak check, boolean result cannot print the key). Rejected: a caller's `CRUCIBLE_VERBOSE` reaches the child runs (only adds output; assertions still hold). Rejected: the Makefile works only from the repo root (`make` is run from the root by contract). Rejected: a whitespace-only key passes the guard (the adapter fails fatally at the first call, so a manual run sees it at once).
+- Verified: ESM → `dist/index.js` and `.cts` → `dist/index.cjs` through the package self-reference (dev-record proof by moving each file away). Unit `testMatch` is src-only (350/350 unchanged). `npm pack --dry-run` has no e2e, fixtures or configs. ESLint lints every e2e `.ts`, `.cts` and `.mjs` file, and Prettier covers e2e. Fixtures are domain-agnostic and use "state" vocabulary. No CLAUDE.md violations in e2e code (classes, enums, `type`, end-of-file named exports, no comments).
+- Gates after fixes: lint, format:check, typecheck, unit 350/350, build, `tsc -p e2e` green. Real `make e2e` (1 live run, ~23 calls): e2e-core 2/2, e2e-ext 15/15.

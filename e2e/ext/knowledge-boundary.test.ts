@@ -8,8 +8,7 @@ crucible.it(
   { runs: Gate.Runs, threshold: Gate.Threshold },
   async () => {
     crucible.load(scenario.state);
-    for (const step of scenario.steps) {
-      expect(await crucible.coherent(step.response, step.claim)).toBe(step.expected);
-    }
+    const verdicts = scenario.steps.map((step) => crucible.coherent(step.response, step.claim));
+    expect(await Promise.all(verdicts)).toEqual(scenario.steps.map((step) => step.expected));
   },
 );
