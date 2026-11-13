@@ -68,3 +68,43 @@ Measured 2026-11-13 against real OpenRouter while building the e2e suite:
 - Multi-step e2e bodies start every step's `coherent` call before awaiting
   any of them (each call judges the state as it stands when it is made), so a
   run costs about one judge round trip instead of one per step.
+
+## Using another provider or model
+
+Every measurement on this page was made on OpenRouter with the models named
+here. Judge quality is a property of the model, not of Crucible: a model that
+returns prose instead of strict JSON, or that misreads state, makes runs
+errored or verdicts wrong whichever provider serves it. Before relying on a
+different model — on OpenRouter, on OpenAI, or behind an `openai-compatible`
+endpoint — check it with the conformance harness, which sends the real
+schemas and the conformance cases to your judge and reports, per case,
+whether each reply was strict JSON and matched the expected verdict or value.
+
+```sh
+make conformance CONFORMANCE_CONFIG=path/to/your/crucible.config.json
+```
+
+- Needs Docker. The harness reads `provider`, `model`, `meta`, `baseUrl` and
+  `apiKeyEnv` from the config you point it at (default:
+  `e2e/crucible.config.json`, OpenRouter) and passes the key into the
+  container by the variable's name: `OPENROUTER_API_KEY` for `openrouter`,
+  `OPENAI_API_KEY` for `openai`, the `apiKeyEnv` variable for
+  `openai-compatible` (none when `apiKeyEnv` is absent). Export it first.
+- `CONFORMANCE_REPS` (default 3) repeats each case; `CONFORMANCE_SUITES`
+  (`coherent`, `extract`, default both) picks the suites. It makes real,
+  usually paid, judge calls: about `cases × reps` of them.
+- The harness runs in a container, so `localhost` there is the container
+  itself. For a model server on your machine, use
+  `http://host.docker.internal:11434/v1` (Docker Desktop) as `baseUrl` in the
+  config you pass to the harness.
+- `usage: { include: true }` (OpenRouter's per-call cost report) is sent only
+  to `openrouter`; other providers report cost as `$0`.
+
+Treat anything short of every case matching on every rep as a reason to pick
+another model, or to measure your gates with that in mind
+([measure first](runs-and-threshold.md#1-measure-first-with-many-runs)).
+
+Tested so far: `openai-compatible` against OpenRouter's compatible endpoint
+(`https://openrouter.ai/api/v1`), which the e2e suite runs live. The `openai`
+preset, Azure OpenAI, Ollama and LiteLLM have not been tested against the
+live services.

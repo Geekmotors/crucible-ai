@@ -84,6 +84,9 @@ A developer can debug a failing CI run from terminal output alone, and the packa
 ### Epic 4: Field readiness
 Field use from real e2e runs and the first consumer project surfaced constraints that block adoption. A developer can tune crucible's time budgets per test and project the way Jest users expect.
 
+### Epic 5: Bring your own provider
+A developer who can't or won't use OpenRouter can point Crucible's judge at the model access they already have. Jack's decision (2026-11-14): start with OpenAI and any OpenAI-compatible endpoint. Bedrock and Vertex wait until there is an account to test against.
+
 ## Epic 1: First semantic assertion (walking skeleton)
 
 A developer can install crucible-ai, configure OpenRouter, and get a real semantic verdict inside a Jest test — smoke mode, schema-driven judge, fail-fast config, retry taxonomy, and a failure print that includes the judge's reasoning. Proves the core bet — schema-driven judging — earliest and cheapest.
@@ -426,4 +429,33 @@ Jack's decisions (2026-11-13): build `extract()` before a C# port. A single hedg
 
 **And** the judge contract lives in a new language-agnostic `schemas/extract.md` with explicit rules for final answers, negation, hedging and no-answer, with conformance cases in the 3.4 harness and real-provider e2e cases for each rule
 **And** the docs (API reference, getting started, gotchas, README) cover `extract()`, including that `null` means "no single committed value"
+
+## Epic 5: Bring your own provider
+
+### Story 5.1: Judge with OpenAI or any OpenAI-compatible endpoint
+
+As a developer whose company uses OpenAI, Azure OpenAI, a LiteLLM gateway or a local model server instead of OpenRouter,
+I want to point Crucible's judge at that endpoint from `crucible.config.json`,
+So that I can use Crucible without an OpenRouter account.
+
+**Acceptance Criteria:**
+
+**Given** `{ "provider": "openai", "model": "<openai model id>" }`
+**When** a judge call is made
+**Then** it is sent to OpenAI's chat completions API with the key from `OPENAI_API_KEY`, and a missing key is a `config` error
+
+**Given** `{ "provider": "openai-compatible", "baseUrl": "<url>", "apiKeyEnv": "<ENV_NAME>", "model": "..." }`
+**When** a judge call is made
+**Then** it is sent to `<baseUrl>/chat/completions` with the key read from the named environment variable
+**And** when `apiKeyEnv` is omitted, no Authorization header is sent (local servers such as Ollama), while a named but unset variable is a `config` error
+
+**Given** an invalid `baseUrl` (not http/https or not parseable), an `apiKeyEnv` that is not a valid environment variable name, or `baseUrl`/`apiKeyEnv` with a provider that does not use them
+**Then** config load fails with a `config` error; a key value is never accepted in the config file
+
+**Given** the existing retry, timeout, abort, verdict and report behaviour
+**Then** it is identical for every provider: HTTP 408/429/5xx retryable, other 4xx fatal, malformed envelopes retryable, `meta` passed through unchanged
+
+**And** OpenRouter-only request fields are never sent to other providers
+**And** `make conformance` and the e2e suites can run against any OpenAI-compatible endpoint; the live tests use OpenRouter's OpenAI-compatible endpoint through `openai-compatible`
+**And** the docs (configuration, getting started, judge models, README, gotchas) cover both providers, including Azure OpenAI and Ollama examples and that judge quality must be checked per model with the conformance harness
 

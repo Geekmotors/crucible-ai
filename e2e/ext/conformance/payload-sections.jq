@@ -19,6 +19,6 @@ def chat_request($schema; $judge; $payload):
       messages: [
         { role: "system", content: $schema },
         { role: "user", content: $payload }
-      ],
-      usage: { include: true }
-    };
+      ]
+    }
+  + (if $judge.provider == "openrouter" then { usage: { include: true } } else {} end);

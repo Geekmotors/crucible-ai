@@ -1,4 +1,4 @@
-# Configuration and OpenRouter reference
+# Configuration and provider reference
 
 Crucible is configured by one committable file, `crucible.config.json`, plus
 environment variables for anything secret or per-invocation.
@@ -7,7 +7,8 @@ environment variables for anything secret or per-invocation.
 - [Fields](#fields)
 - [Validation and errors](#validation-and-errors)
 - [Environment variables](#environment-variables)
-- [OpenRouter](#openrouter)
+- [Providers](#providers)
+- [Provider failures](#provider-failures)
 - [Choosing a judge model](#choosing-a-judge-model)
 - [CI secrets](#ci-secrets)
 
@@ -41,8 +42,10 @@ environment variables for anything secret or per-invocation.
 
 | Field | Required | Type and valid values | Default | Meaning |
 | --- | --- | --- | --- | --- |
-| `provider` | yes | non-empty string; v1 accepts `"openrouter"` only | — | Which judge provider to call |
+| `provider` | yes | `"openrouter"`, `"openai"` or `"openai-compatible"` | — | Which judge provider to call ([Providers](#providers)) |
 | `model` | yes | non-empty string (not only whitespace) | — | The provider's model id, passed through as given |
+| `baseUrl` | with `openai-compatible` only | http or https URL, no credentials, query or fragment | — | The endpoint's API root; judge calls go to `<baseUrl>/chat/completions` (a trailing `/` is dropped) |
+| `apiKeyEnv` | no; `openai-compatible` only | environment variable **name**: letters, digits and `_`, not starting with a digit | none (no key sent) | The variable that holds the endpoint's API key |
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
 | `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647) | `{}` | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)) |
@@ -52,8 +55,8 @@ No other top-level field is accepted.
 
 ### `meta`
 
-`meta` is copied into the body of every judge request. With the config above,
-each request to OpenRouter is:
+`meta` is copied into the body of every judge request, for every provider.
+With the config above, each request to OpenRouter is:
 
 ```json
 {
@@ -63,9 +66,13 @@ each request to OpenRouter is:
 }
 ```
 
-- Use it for any [OpenRouter request parameter](https://openrouter.ai/docs/api-reference/parameters):
-  `temperature`, `reasoning`, `provider` routing preferences, and so on.
-  Crucible does not interpret it.
+- Use it for any request parameter your provider accepts: for OpenRouter,
+  any [OpenRouter request parameter](https://openrouter.ai/docs/api-reference/parameters)
+  (`temperature`, `reasoning`, `provider` routing preferences, and so on); for
+  OpenAI and most compatible endpoints, chat-completions parameters such as
+  `temperature` or `reasoning_effort`. Crucible does not interpret it, so a
+  parameter one provider understands may be rejected by another — change
+  `meta` when you change `provider`.
 - `model` and `messages` are always set by Crucible; the same keys inside
   `meta` are overwritten.
 - Crucible validates only that `meta` is an object. It never inspects its
@@ -85,14 +92,18 @@ the first problem:
 | `crucible.config.json` missing, unreadable, not valid JSON, or not a JSON object | `config` |
 | A top-level field named like a secret — `apiKey`, `api_key`, `key`, `token`, `secret`, `authorization` (any letter case) | `config` |
 | Any other unknown top-level field | `config` |
-| `provider` missing, empty, not a string, or not a supported provider | `config` |
+| `provider` missing, empty, or not a string | `config` |
+| `baseUrl` not a string, not a parseable URL, not http/https, or carrying credentials (`user:pass@`), a query (`?`) or a fragment (`#`) | `config` |
+| `apiKeyEnv` not a string or not a valid environment variable name (a key value such as `sk-…` fails this check) | `config` |
+| `provider` not a supported provider | `config` |
+| `baseUrl` or `apiKeyEnv` set for a provider that does not take them (`openrouter`, `openai`), or `baseUrl` missing for `openai-compatible` | `config` |
 | `model` missing, empty, whitespace only, or not a string | `config` |
 | `meta` present but not an object (`null`, an array, a string…) | `config` |
 | `verbosity` not one of the three levels — checked even when `CRUCIBLE_VERBOSE` is set | `config` |
 | `CRUCIBLE_VERBOSE` set to anything other than the three levels (an empty value is ignored) | `usage` |
 | `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout` | `config` |
 | `excerptChars` not an integer ≥ 1 | `config` |
-| `OPENROUTER_API_KEY` missing or blank when a judge call is made | `config` |
+| The provider's key variable (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or the one `apiKeyEnv` names) missing or blank when a judge call is made | `config` |
 | `meta` not JSON-serializable (for example a `BigInt` value) when a judge call is made | `usage` |
 
 A `config` or `usage` error stops the whole test at once — other in-flight
@@ -104,20 +115,132 @@ is tolerated.
 
 | Variable | Read by | Meaning |
 | --- | --- | --- |
-| `OPENROUTER_API_KEY` | the OpenRouter adapter, on every judge call | Your OpenRouter API key. Surrounding whitespace is trimmed. Required only for tests that call `coherent()` or `extract()`. |
+| `OPENROUTER_API_KEY` | the `openrouter` provider, on every judge call | Your OpenRouter API key. |
+| `OPENAI_API_KEY` | the `openai` provider, on every judge call | Your OpenAI API key. |
+| the variable `apiKeyEnv` names | the `openai-compatible` provider, on every judge call | Your endpoint's API key. |
 | `CRUCIBLE_VERBOSE` | config load | Overrides `verbosity` for one invocation: `default`, `full` or `debug`. Matched exactly (case-sensitive, no trimming). Empty means "not set". |
 
-Variables prefixed `CRUCIBLE_` are reserved for Crucible. API keys always use
-the provider's own variable name.
+Key values have surrounding whitespace trimmed, and are needed only by tests
+that call `coherent()` or `extract()`. Variables prefixed `CRUCIBLE_` are
+reserved for Crucible. API keys always come from the environment, never from
+`crucible.config.json`.
 
-## OpenRouter
+## Providers
 
-Crucible calls OpenRouter's chat-completions endpoint
-(`https://openrouter.ai/api/v1/chat/completions`) with your key as a bearer
-token. The system message is the [instruction schema](instruction-schema.md);
-the user message holds the state, response and claim.
+Every provider speaks the OpenAI chat-completions protocol: Crucible sends one
+`POST` per judge call with `model`, your `meta` and two messages — the
+system message is the [instruction schema](instruction-schema.md), the user
+message holds the state, response and claim — and reads
+`choices[0].message.content`. The key, when there is one, goes in an
+`Authorization: Bearer` header. Retries, timeouts, cancellation, verdicts and
+reports are the same whichever provider you pick, and Crucible adds no
+provider-specific fields of its own to the request.
 
-How provider failures are handled, per judge call:
+| `provider` | Endpoint | Key |
+| --- | --- | --- |
+| `openrouter` | `https://openrouter.ai/api/v1/chat/completions` | `OPENROUTER_API_KEY`, required |
+| `openai` | `https://api.openai.com/v1/chat/completions` | `OPENAI_API_KEY`, required |
+| `openai-compatible` | `<baseUrl>/chat/completions` | the variable named by `apiKeyEnv`; without `apiKeyEnv` no key is sent |
+
+### `openrouter`
+
+One key gives you every model OpenRouter routes to. `model` is an OpenRouter
+model id such as `deepseek/deepseek-v4-flash-0731`. This is the provider
+Crucible's own tests, judge measurements and CI run on.
+
+### `openai`
+
+```json
+{
+  "provider": "openai",
+  "model": "gpt-5-mini"
+}
+```
+
+```sh
+export OPENAI_API_KEY=...   # your OpenAI key
+```
+
+`model` is an OpenAI model id. Calls go to OpenAI's chat completions API.
+
+### `openai-compatible`
+
+For any server that implements `POST /chat/completions` the way OpenAI does:
+Azure OpenAI, a LiteLLM or other gateway, a company proxy, or a local model
+server. `baseUrl` is the API root the server documents — the part before
+`/chat/completions`, usually ending in `/v1`.
+
+- With `apiKeyEnv`, Crucible reads the key from that variable on every judge
+  call and sends it as a bearer token. A named variable that is unset or blank
+  is a `config` error at the judge call, as for the built-in providers.
+- Without `apiKeyEnv`, no `Authorization` header is sent — for local servers
+  that need no key.
+- `apiKeyEnv` holds a variable **name**. Crucible rejects anything that is not
+  a valid name, so a pasted key with a `-` or other punctuation (`sk-…`) is
+  refused instead of committed. A key made only of letters, digits and
+  underscores looks like a name and cannot be told apart, so check what you
+  put there.
+
+**Azure OpenAI** (the v1 API only; `model` is your **deployment name**). The
+older API that needs `?api-version=…` is not supported, because `baseUrl`
+takes no query string:
+
+```json
+{
+  "provider": "openai-compatible",
+  "baseUrl": "https://<resource>.openai.azure.com/openai/v1",
+  "apiKeyEnv": "AZURE_OPENAI_API_KEY",
+  "model": "<deployment-name>"
+}
+```
+
+**Ollama** on your machine (no key):
+
+```json
+{
+  "provider": "openai-compatible",
+  "baseUrl": "http://localhost:11434/v1",
+  "model": "qwen3:8b"
+}
+```
+
+LM Studio works the same way at `http://localhost:1234/v1`.
+
+**LiteLLM proxy** (`model` is a model name your proxy config defines):
+
+```json
+{
+  "provider": "openai-compatible",
+  "baseUrl": "https://litellm.internal.example.com/v1",
+  "apiKeyEnv": "LITELLM_API_KEY",
+  "model": "judge"
+}
+```
+
+**OpenRouter through its OpenAI-compatible endpoint** — equivalent to
+`"provider": "openrouter"`, and how Crucible's own e2e suite exercises this
+provider:
+
+```json
+{
+  "provider": "openai-compatible",
+  "baseUrl": "https://openrouter.ai/api/v1",
+  "apiKeyEnv": "OPENROUTER_API_KEY",
+  "model": "deepseek/deepseek-v4-flash-0731"
+}
+```
+
+What is tested: the OpenRouter compatible endpoint above is the only
+`openai-compatible` endpoint Crucible's e2e suite runs against a live service.
+The `openai` preset and the Azure OpenAI, Ollama, LM Studio and LiteLLM
+examples follow those services' published OpenAI-compatible APIs but have
+**not** been run against them. Whatever you
+point Crucible at, check the judge on it with the conformance harness first
+([judge models](judge-models.md#using-another-provider-or-model)).
+
+## Provider failures
+
+How provider failures are handled, per judge call, for every provider:
 
 | Failure | Class | What Crucible does |
 | --- | --- | --- |
@@ -126,10 +249,12 @@ How provider failures are handled, per judge call:
 | A reply that is not valid `{ "verdict", "reasoning" }` JSON | non-fatal | Asks once more; a second bad reply makes the run errored. |
 | A reply attempt (including its retries) running past the inference timeout (30 s unless `inferenceTimeout` is set) | non-fatal | The run is errored; other runs carry on. This per-call limit sits inside the test timeout (30 s plus 1 s per extra run unless `testTimeout` is set), which caps everything and also stops the test. |
 
-An error that OpenRouter embeds in a `200` response body with a numeric code
-is treated as that HTTP status. All runs start together, so a test can have
-up to `runs` judge calls in flight at once — mind your OpenRouter rate limits
-for large gates.
+An error embedded in a `200` response body (as OpenRouter does) with a
+numeric code is treated as that HTTP status; without one, it is retryable,
+like a reply with no completion text. All runs start together, so a test can
+have up to `runs` judge calls in flight at once — mind your provider's rate
+limits for large gates (a local server may also queue them one at a time;
+raise `inferenceTimeout` if calls time out).
 
 ## Choosing a judge model
 
@@ -151,7 +276,10 @@ The recommended default judge is `deepseek/deepseek-v4-flash-0731` with
 
 This guidance is provisional. The validation matrix is small and
 deliberately unambiguous, so it cannot yet tell models apart on hard cases.
-Any OpenRouter model id works; if you switch, re-measure your gates
+Any model id your provider serves works, but judge quality varies by model:
+before relying on a different model or provider, run the conformance harness
+against it ([judge models](judge-models.md#using-another-provider-or-model)),
+then re-measure your gates
 ([measure first](runs-and-threshold.md#1-measure-first-with-many-runs)).
 
 The judge can be wrong, as any model can. Crucible's stance on that is in
@@ -159,9 +287,10 @@ The judge can be wrong, as any model can. Crucible's stance on that is in
 
 ## CI secrets
 
-- Store the key as a **repository secret** named `OPENROUTER_API_KEY`
-  (GitHub: Settings → Secrets and variables → Actions → New repository
-  secret). Never commit it, never put it in `crucible.config.json`.
+- Store the key as a **repository secret** named after your provider's key
+  variable — `OPENROUTER_API_KEY` below, or `OPENAI_API_KEY`, or the name in
+  `apiKeyEnv` (GitHub: Settings → Secrets and variables → Actions → New
+  repository secret). Never commit it, never put it in `crucible.config.json`.
 - Expose it **only to the step that runs your inference tests**, through
   that step's `env`, not at workflow or job level.
 - Keep pull-request lanes **provider-free**: run lint, type-check and
@@ -205,5 +334,5 @@ jobs:
         run: npx jest --ci
 ```
 
-Everything you `load`, `append` and judge is sent to OpenRouter and the model
-provider it routes to — see [gotchas](gotchas.md#everything-you-judge-leaves-your-machine).
+Everything you `load`, `append` and judge is sent to your judge provider (and,
+for OpenRouter or a gateway, the model provider it routes to) — see [gotchas](gotchas.md#everything-you-judge-leaves-your-machine).

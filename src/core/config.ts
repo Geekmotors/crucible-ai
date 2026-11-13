@@ -9,7 +9,7 @@ import type { RunOptions } from './run-options.js';
 import { VERBOSITY_LEVELS } from './verbosity.js';
 import type { Verbosity } from './verbosity.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
-import type { ProviderAdapter } from '../providers/types.js';
+import type { ProviderAdapter, ProviderSettings } from '../providers/types.js';
 
 const KNOWN_FIELDS = [
   'provider',
@@ -18,8 +18,12 @@ const KNOWN_FIELDS = [
   'verbosity',
   'testDefaults',
   'excerptChars',
+  'baseUrl',
+  'apiKeyEnv',
 ] as const;
 const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authorization'] as const;
+const WEB_PROTOCOLS = ['http:', 'https:'] as const;
+const ENV_VAR_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 type CrucibleConfig = {
   readonly provider: ProviderAdapter;
@@ -49,7 +53,10 @@ class ConfigStore {
     this.rejectKeyLikeFields(root);
     this.rejectUnknownFields(root);
     return Object.freeze({
-      provider: this.registry.resolve(this.requireName(root.provider, 'provider')),
+      provider: this.registry.create(
+        this.requireName(root.provider, 'provider'),
+        this.requireProviderSettings(root),
+      ),
       model: this.requireName(root.model, 'model'),
       meta: this.requireMetaShape(root.meta),
       effectiveVerbosity: this.resolveEffectiveVerbosity(root.verbosity),
@@ -99,16 +106,76 @@ class ConfigStore {
     }
     throw this.failure(
       `${CONFIG_FILE_NAME} must never contain API keys: remove "${found}" and set ` +
-        `${this.describeKeyEnvVar(root.provider)} instead.`,
+        `${this.describeKeyEnvVar(root)} instead.`,
     );
   }
 
-  private describeKeyEnvVar(providerName: unknown): string {
-    const adapter =
-      typeof providerName === 'string' ? this.registry.tryResolve(providerName) : undefined;
-    return adapter !== undefined
-      ? `the ${adapter.envVar} environment variable`
-      : "your provider's API-key environment variable";
+  private describeKeyEnvVar(root: Record<string, unknown>): string {
+    const settings = {
+      baseUrl: typeof root.baseUrl === 'string' ? root.baseUrl : undefined,
+      apiKeyEnv:
+        typeof root.apiKeyEnv === 'string' && ENV_VAR_NAME.test(root.apiKeyEnv)
+          ? root.apiKeyEnv
+          : undefined,
+    };
+    const envVar =
+      typeof root.provider === 'string'
+        ? this.registry.tryCreate(root.provider, settings)?.envVar
+        : undefined;
+    return envVar !== undefined
+      ? `the ${envVar} environment variable`
+      : 'an environment variable holding the key (named in "apiKeyEnv" where the provider takes it)';
+  }
+
+  private requireProviderSettings(root: Record<string, unknown>): ProviderSettings {
+    return {
+      baseUrl: this.requireBaseUrl(root.baseUrl),
+      apiKeyEnv: this.requireApiKeyEnv(root.apiKeyEnv),
+    };
+  }
+
+  private requireBaseUrl(value: unknown): string | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    const url = typeof value === 'string' ? this.parsePlainWebUrl(value) : undefined;
+    if (url === undefined) {
+      throw this.failure(
+        `"baseUrl" in ${CONFIG_FILE_NAME} must be an http or https URL without credentials, ` +
+          `query or fragment, e.g. "http://localhost:11434/v1".`,
+      );
+    }
+    return url.href.replace(/\/+$/, '');
+  }
+
+  private parsePlainWebUrl(value: string): URL | undefined {
+    if (/[?#]/.test(value)) {
+      return undefined;
+    }
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      return undefined;
+    }
+    const plain =
+      (WEB_PROTOCOLS as readonly string[]).includes(url.protocol) &&
+      url.username === '' &&
+      url.password === '';
+    return plain ? url : undefined;
+  }
+
+  private requireApiKeyEnv(value: unknown): string | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (typeof value !== 'string' || !ENV_VAR_NAME.test(value)) {
+      throw this.failure(
+        `"apiKeyEnv" in ${CONFIG_FILE_NAME} must be the name of an environment variable ` +
+          `(letters, digits and underscores, not starting with a digit), never the key itself.`,
+      );
+    }
+    return value;
   }
 
   private rejectUnknownFields(root: Record<string, unknown>): void {

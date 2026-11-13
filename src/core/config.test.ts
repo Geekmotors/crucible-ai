@@ -2,7 +2,15 @@ import { describe, expect, it } from '@jest/globals';
 import { ConfigStore } from './config.js';
 import { ConfigHarness } from './test/config-harness.util.js';
 import { FakeConfigBoundary } from './test/config-boundary.fake.js';
-import { providerRegistry } from '../providers/registry.js';
+import { ApiKey } from '../providers/test/api-key.enum.js';
+import { BaseUrl } from '../providers/test/base-url.enum.js';
+import { ChatAdapterHarness } from '../providers/test/chat-adapter-harness.util.js';
+import { EndpointUrl } from '../providers/test/endpoint-url.enum.js';
+import { FakeEnvironment } from '../providers/test/environment.fake.js';
+import { FakeFetchBoundary } from '../providers/test/fetch-boundary.fake.js';
+import { KeyEnv } from '../providers/test/key-env.enum.js';
+import { InvalidBaseUrl } from './test/invalid-base-url.enum.js';
+import { InvalidKeyEnv } from './test/invalid-key-env.enum.js';
 import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
@@ -12,6 +20,7 @@ import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
 import { InvalidTimeout } from './test/invalid-timeout.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
+import { ProviderName } from '../providers/test/provider-name.enum.js';
 
 describe('ConfigStore with a valid config', () => {
   it('resolves the registered adapter, model, meta, and verbosity', () => {
@@ -26,17 +35,6 @@ describe('ConfigStore with a valid config', () => {
     expect(config.model).toBe(TestModel.DeepseekV3);
     expect(config.meta).toEqual(ROUTING_META);
     expect(config.effectiveVerbosity).toBe('full');
-  });
-
-  it('resolves the built-in openrouter provider singleton through the default registry', () => {
-    const store = new ConfigStore(
-      new FakeConfigBoundary({
-        found: true,
-        raw: JSON.stringify({ provider: 'openrouter', model: TestModel.Gpt5 }),
-      }),
-      providerRegistry,
-    );
-    expect(store.get().provider).toBe(providerRegistry.resolve('openrouter'));
   });
 
   it('applies defaults when optional fields are omitted', () => {
@@ -245,5 +243,131 @@ describe('ConfigStore excerptChars', () => {
         ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, excerptChars }),
       ),
     ).toBe('config');
+  });
+});
+
+describe('ConfigStore built-in providers', () => {
+  const reply = ChatAdapterHarness.rawJudgeReply;
+
+  it('judges through openrouter with its key', async () => {
+    const store = ConfigHarness.builtInStore(
+      { provider: ProviderName.OpenRouter, model: TestModel.Gpt5 },
+      FakeFetchBoundary.serving(EndpointUrl.OpenRouter, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.OpenRouter]: ApiKey.Valid }),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
+
+  it('judges through openai with its key', async () => {
+    const store = ConfigHarness.builtInStore(
+      { provider: ProviderName.OpenAi, model: TestModel.Generic },
+      FakeFetchBoundary.serving(EndpointUrl.OpenAi, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.OpenAi]: ApiKey.Valid }),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
+
+  it('judges through an openai-compatible endpoint with the key from apiKeyEnv', async () => {
+    const store = ConfigHarness.builtInStore(
+      {
+        provider: ProviderName.OpenAiCompatible,
+        baseUrl: BaseUrl.Gateway,
+        apiKeyEnv: KeyEnv.Gateway,
+        model: TestModel.Generic,
+      },
+      FakeFetchBoundary.serving(EndpointUrl.Gateway, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.Gateway]: ApiKey.Valid }),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
+
+  it('strips a trailing slash from baseUrl', async () => {
+    const store = ConfigHarness.builtInStore(
+      {
+        provider: ProviderName.OpenAiCompatible,
+        baseUrl: BaseUrl.LocalWithTrailingSlash,
+        model: TestModel.Generic,
+      },
+      FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, reply),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
+
+  it('an apiKeyEnv naming an unset variable fails as config at call time, not at load', async () => {
+    const store = ConfigHarness.builtInStore({
+      provider: ProviderName.OpenAiCompatible,
+      baseUrl: BaseUrl.Gateway,
+      apiKeyEnv: KeyEnv.Gateway,
+      model: TestModel.Generic,
+    });
+    expect(await ChatAdapterHarness.failureKind(store.get().provider)).toBe('config');
+  });
+});
+
+describe('ConfigStore rejects invalid provider settings as config failures', () => {
+  it.each([...Object.values(InvalidBaseUrl), 11434])(
+    'openai-compatible with baseUrl %p',
+    (baseUrl) => {
+      expect(
+        ConfigHarness.errorKind(
+          ConfigHarness.builtInStore({
+            provider: ProviderName.OpenAiCompatible,
+            model: TestModel.Generic,
+            baseUrl,
+          }),
+        ),
+      ).toBe('config');
+    },
+  );
+
+  it.each([...Object.values(InvalidKeyEnv), 42])(
+    'openai-compatible with apiKeyEnv %p',
+    (apiKeyEnv) => {
+      expect(
+        ConfigHarness.errorKind(
+          ConfigHarness.builtInStore({
+            provider: ProviderName.OpenAiCompatible,
+            model: TestModel.Generic,
+            baseUrl: BaseUrl.Gateway,
+            apiKeyEnv,
+          }),
+        ),
+      ).toBe('config');
+    },
+  );
+
+  it('openai-compatible without baseUrl', () => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.builtInStore({
+          provider: ProviderName.OpenAiCompatible,
+          model: TestModel.Generic,
+        }),
+      ),
+    ).toBe('config');
+  });
+
+  it.each([
+    [ProviderName.OpenRouter, { baseUrl: BaseUrl.Gateway }],
+    [ProviderName.OpenRouter, { apiKeyEnv: KeyEnv.Gateway }],
+    [ProviderName.OpenAi, { baseUrl: BaseUrl.Gateway }],
+    [ProviderName.OpenAi, { apiKeyEnv: KeyEnv.OpenAi }],
+  ])('%s with %p', (provider, settings) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.builtInStore({ provider, model: TestModel.Generic, ...settings }),
+      ),
+    ).toBe('config');
+  });
+
+  it('never echoes a key pasted into apiKeyEnv when a key-like field is also present', () => {
+    const store = ConfigHarness.builtInStore({
+      provider: ProviderName.OpenAiCompatible,
+      model: TestModel.Generic,
+      baseUrl: BaseUrl.Gateway,
+      apiKeyEnv: InvalidKeyEnv.KeyValue,
+      token: InvalidKeyEnv.KeyValue,
+    });
+    expect(ConfigHarness.revealsInError(store, InvalidKeyEnv.KeyValue)).toBe(false);
   });
 });

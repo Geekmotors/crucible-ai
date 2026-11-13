@@ -5,6 +5,7 @@ CONFORMANCE_IMAGE ?= crucible-ai-conformance
 CONFORMANCE_REPS ?= 3
 CONFORMANCE_SUITES ?= coherent extract
 CONFORMANCE_CA_BUNDLE ?=
+CONFORMANCE_CONFIG ?= e2e/crucible.config.json
 MACOS_CA_KEYCHAINS = /Library/Keychains/System.keychain /System/Library/Keychains/SystemRootCertificates.keychain
 
 E2E_JEST = cd e2e && NODE_OPTIONS="$(E2E_NODE_OPTIONS)" ../node_modules/.bin/jest --config jest.config.mjs --ci
@@ -31,13 +32,29 @@ e2e: e2e-core e2e-ext
 conformance-image:
 	docker build --file e2e/ext/conformance/Dockerfile --tag $(CONFORMANCE_IMAGE) .
 
-conformance: e2e-key conformance-image
-	@{ \
+CONFORMANCE_RUN = docker run --rm --volume "$(abspath $(CONFORMANCE_CONFIG)):/conformance/judge.config.json:ro"
+
+conformance: conformance-image
+	@if [ ! -f "$(CONFORMANCE_CONFIG)" ]; then \
+		echo "conformance: judge config $(CONFORMANCE_CONFIG) not found. Set CONFORMANCE_CONFIG to a crucible.config.json." >&2; \
+		exit 2; \
+	fi
+	@key_env=$$($(CONFORMANCE_RUN) $(CONFORMANCE_IMAGE) key-env) || exit $$?; \
+	key_flag=; \
+	if [ -n "$$key_env" ]; then \
+		if [ -z "$$(printenv "$$key_env")" ]; then \
+			echo "conformance: $$key_env is not set. The judge config $(CONFORMANCE_CONFIG) reads its key from it." >&2; \
+			echo "     Export your key first, e.g.: set -a; . ./.env.dev.local; set +a" >&2; \
+			exit 2; \
+		fi; \
+		key_flag="--env $$key_env"; \
+	fi; \
+	{ \
 		if [ -n "$(CONFORMANCE_CA_BUNDLE)" ]; then cat "$(CONFORMANCE_CA_BUNDLE)"; \
 		elif command -v security >/dev/null 2>&1; then security find-certificate -a -p $(MACOS_CA_KEYCHAINS); \
 		fi; \
-	} | docker run --rm --interactive \
-		--env OPENROUTER_API_KEY \
+	} | $(CONFORMANCE_RUN) --interactive \
+		$$key_flag \
 		--env CONFORMANCE_REPS=$(CONFORMANCE_REPS) \
 		--env CONFORMANCE_SUITES="$(CONFORMANCE_SUITES)" \
 		--env CONFORMANCE_EXTRA_CA=/dev/stdin \

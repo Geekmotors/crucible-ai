@@ -1,5 +1,5 @@
 # generated: 2026-08-16 10:42:22
-# last_updated: 2026-11-13
+# last_updated: 2026-11-14
 # project: crucible-ai
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-16 10:42:22
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 project: crucible-ai
 project_key: NOKEY
 tracking_system: file-system
@@ -82,3 +82,8 @@ development_status:
   4-1-tune-timeouts-per-test: done
   4-2-extract-a-value: done
   epic-4-retrospective: optional
+
+  # Epic 5: Bring your own provider
+  epic-5: in-progress
+  5-1-openai-compatible-provider: done
+  epic-5-retrospective: optional
