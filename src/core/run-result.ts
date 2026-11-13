@@ -27,6 +27,10 @@ type VerdictSummary = {
 
 type AbortSummary = Omit<VerdictSummary, 'tally'>;
 
+type FatalSummary = AbortSummary & {
+  readonly fatal: unknown;
+};
+
 type ExpirySummary = AbortSummary & {
   readonly deadlineMs: number;
 };
@@ -34,6 +38,7 @@ type ExpirySummary = AbortSummary & {
 export type {
   AbortSummary,
   ExpirySummary,
+  FatalSummary,
   RunResult,
   RunStatus,
   RunTally,

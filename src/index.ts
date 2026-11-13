@@ -5,7 +5,6 @@ export type {
   FailureClass,
   ProviderAdapter,
   RunOptions,
-  RunStatus,
   TestBody,
   VerdictOutcome,
 } from './api/crucible.js';

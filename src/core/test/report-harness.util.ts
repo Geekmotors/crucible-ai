@@ -5,6 +5,7 @@ import type { ResolvedRunOptions } from '../run-options.js';
 import type { RunResult, RunStatus } from '../run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
+import { ClaimText } from './claim-text.enum.js';
 import { Threshold } from './threshold.enum.js';
 
 class ReportHarness {
@@ -15,7 +16,7 @@ class ReportHarness {
   static falseVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
     return {
       assertion: AssertionName.Coherent,
-      claim: 'the claim',
+      claim: ClaimText.Default,
       verdict: false,
       reasoning: 'the reasoning',
       response: 'the response',
@@ -64,11 +65,19 @@ class ReportHarness {
     );
   }
 
-  static renderedAbort(results: RunResult[], threshold: number = Threshold.Certain): string {
+  static renderedAbort(
+    results: RunResult[],
+    fatal: unknown = ReportHarness.firstErroredCause(results),
+  ): string {
     return ReportHarness.reporter().renderAborted({
       results,
-      options: { runs: results.length, threshold },
+      options: { runs: results.length, threshold: Threshold.Certain },
+      fatal,
     });
+  }
+
+  static firstErroredCause(results: RunResult[]): unknown {
+    return results.find((result) => result.status === 'errored')?.cause;
   }
 
   static renderedExpiry(results: RunResult[], deadlineMs: number): string {

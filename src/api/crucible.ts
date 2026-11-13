@@ -77,6 +77,5 @@ const crucible = Object.freeze({
 export { crucible, CrucibleError, CrucibleVerdictError };
 export type { VerdictOutcome } from '../core/verdict-error.js';
 export type { RunOptions, TestBody };
-export type { RunStatus } from '../core/run-result.js';
 export type { CrucibleErrorKind } from '../core/errors.js';
 export type { CompletionRequest, FailureClass, ProviderAdapter } from '../providers/types.js';

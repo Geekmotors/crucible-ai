@@ -4,7 +4,7 @@ baseline_commit: 7982321
 
 # Story 3.1: Read a failure like a report
 
-Status: review
+Status: done
 
 ## Story
 
@@ -21,7 +21,7 @@ so that I can diagnose a red CI run from terminal output alone.
 5. **Multiple assertions attribute correctly.** A run with several `coherent` calls where the second is false names the second claim (and `#2 of n`), never the first passing claim or a later false one. [AD-13]
 6. **Bounded output when many runs fail.** At most 3 failed and 3 errored runs (lowest run number first) render in full; the rest are listed by run number on one `+ k more … not shown in full` line per status, and — when failed runs are hidden — a `Failing claims` tally groups every failed run by its first failing assertion + claim (de-duplication). Run-number lists compress contiguous ranges (`#4-#20`). [deferred from 2.1]
 7. **Consistent headlines across outcomes.** Smoke (`runs: 1`) fail / errored / fatal / expired, multi-run fail / errored, fatal abort, and deadline expiry all lead with the same `FAILED:` or `ERRORED, not failed:` marker; smoke headlines say "the smoke run" and omit the counts line; a smoke fatal no longer prints "0 in-flight run(s) discarded". [deferred from 2.3]
-8. **Records at verdict time only.** All rendering comes from run results/records at verdict time; nothing prints mid-run (`grep console. src` empty). The runner's settled/discarded snapshot is observable on the thrown `CrucibleVerdictError` as `runStatuses` (run order), so the runner-side discard snapshot is locked by runner tests without asserting message text. [AD-10, deferred from 2.3]
+8. **Records at verdict time only.** All rendering comes from run results/records at verdict time; nothing prints mid-run (`grep console. src` empty). [AD-10] *(Amended in review: the `runStatuses` public field was removed as test-induced API — see Review Triage Log.)*
 9. **Docs.** `docs/runs-and-threshold.md` output examples match the new layout; `excerptChars` documented.
 10. **Quality gates.** `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build` green; no `console.` in `src/`.
 
@@ -159,3 +159,41 @@ Modified:
 ### Change Log
 
 - 2026-11-13: Story 3.1 implemented. Full FR-8 failure report (headline with pass rate, threshold, need and per-status counts; first failure per failed run with assertion position, claim, reasoning, bounded excerpt, thrown error; distinct [FAILED]/[ERRORED]/[DISCARDED] markers; 3-per-status bound with run-number ranges and a failing-claim tally; consistent smoke/multi/fatal/expiry headlines), configurable `excerptChars`, `CrucibleVerdictError.runStatuses`, docs.
+
+### Review Triage Log
+
+Code review 2026-11-13 (bmad-code-review, unattended; Blind Hunter + Edge Case Hunter + Acceptance Auditor over `git diff story-2-5-project-wide-run-defaults...HEAD`). Suite 293 → 300 tests / 14 suites; all gates green; no `console.` in `src/`.
+
+**Ruling — `CrucibleVerdictError.runStatuses` + exported `RunStatus`: removed (test-induced design damage / premature public API).** AC8 itself states the motivation ("so the runner-side discard snapshot is locked by runner tests"). No PRD FR, AD-3 or AD-10 asks for a structured verdict — the architecture fixes the rendered message as the user-facing output, and normal use never catches the error (Jest prints it). A bare status array without causes/claims is not a designed structured surface; adding one is an AD-3/AD-10 amendment, not a test convenience. No compliant runner-level replacement exists (message-text and reporter-call capture are forbidden; extracting the one-line `settled[i] ?? discarded` into a class purely to test it is the same damage), so the gap is accepted and recorded in deferred-work.md. Runner-side discard remains covered indirectly (reporter tests over discarded results; runner test that deadline expiry cancels every in-flight run). AC8 is amended accordingly: records at verdict time only; no `runStatuses`. Removed: field, 4th ctor param, 3 runner tests, `RunStatus` re-exports from `src/api/` and `src/index.ts`, docs paragraph.
+
+Patched (test-first):
+- [x] [Review][Patch] (medium) Fatal cause hidden when the fatal run is the 4th+ errored run — abort report never named e.g. the invalid-key error. `renderAborted` now takes `FatalSummary { fatal }` (runner passes `batch.cause`); the fatal run is ordered first among errored runs so it is always shown in full. [src/core/reporter.util.ts fatalFirst, src/core/run-result.ts, src/core/runner.ts]
+- [x] [Review][Patch] (low) Excerpt header overstated length when a surrogate pair was held back; `excerptChars: 1` on a leading emoji rendered an empty excerpt. Header states the length actually shown; a lone leading pair is kept whole. Full-length test now pins the `first N of M chars` header. [src/core/reporter.util.ts excerpt]
+- [x] [Review][Patch] (low) Trailing whitespace: empty values, empty `Error` messages, values starting with a line break, whitespace-only continuation lines. Field lines are right-trimmed; whitespace-only continuation lines are not indented. [src/core/reporter.util.ts field/indented]
+- [x] [Review][Patch] (low) Lone `\r` / ` ` / ` ` line breaks escaped the continuation indent. [src/core/reporter.util.ts indented]
+- [x] [Review][Patch] (low) Coverage/test hygiene: pass-rate floor test that actually exercises a would-round-up case (1899/2000 vs 0.95 → `0.949`); tally header and judge-error / bare-throw tally labels now asserted; "adds no tally" asserts the header; stale test name ("every errored run cause"); new magic literals moved to `ClaimText`, `BlankValue`, `MultilineText`, `NearMiss`, `ReportText` enums; module-level `EXCERPT_LIMIT` alias removed.
+- [x] [Review][Patch] (low) Docs: example now says it uses `"excerptChars": 60`; fatal-run-first ordering and UTF-16 / surrogate excerpt rule documented; `runStatuses` paragraph removed.
+- [x] Pruned deferred-work.md: 2.1 "unbounded sections / headline omits failed count" and 2.3 "smoke fatal headline + runner snapshot" (part (b) re-deferred under this story after the `runStatuses` ruling).
+
+Deferred (recorded in deferred-work.md):
+- [x] [Review][Defer] Runner-side discard snapshot coverage gap (consequence of the `runStatuses` ruling).
+- [x] [Review][Defer] `seq` assigned at judge completion → concurrent assertions in one body ordered by completion, affecting "first failure" / "k of n" (pre-existing AD-13 semantics).
+- [x] [Review][Defer] `Judge attempts` taken from lowest-seq error record, not the terminal cause's record (pre-existing).
+- [x] [Review][Defer] Range lists uncapped for many non-contiguous runs.
+- [x] [Review][Defer] ANSI codes inside Jest matcher messages pass through `Thrown:` (AC4 covers crucible markers only).
+
+Rejected:
+- `!record.verdict` vs `=== false` — `VerdictRecord.verdict` is `boolean`; judge parses strictly.
+- Expiry headline "N/N settled" race — timer callback cannot interleave between last settle and disarm (resolve is synchronous, disarm runs in microtasks).
+- `runs: 0` → NaN rate — resolver rejects `runs < 1`.
+- Threshold 0.9995 shown vs `0.999` rate — display still never meets the threshold; `need` is exact.
+- `ranges` assumes sorted input — guaranteed by construction (and preserved by fatal-first partition, hidden tail stays ascending).
+- Removed public `renderFailed`/`renderErrored` — `Reporter` is internal; typecheck proves no callers.
+- `excerptChars` has no upper bound — explicit user decision recorded in Completion Notes.
+- Supplier re-read per excerpt — `config.get()` is memoized; values cannot change mid-report.
+- Tally lumps judge errors / bare throws — by design (kind-level grouping; 3.2 `full` is the escape hatch).
+- Tally key quote collision — assertion names are fixed identifiers without quotes.
+- Threshold float display (`0.1+0.2`) — threshold is user-supplied and echoed verbatim.
+- AC wording `#k of n` vs `assertion k of n judged in this run` — recorded dev decision; docs match code.
+- Docs `Thrown:` line / `…` placeholders simplified — illustrative abbreviation, prose says so via layout.
+- Multi-line claim indent in tally lines — cosmetic; claims are single-line in practice.

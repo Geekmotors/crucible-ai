@@ -3,6 +3,7 @@ import type { ReportSettings, ReportSettingsSupplier } from './report-settings.j
 import type {
   AbortSummary,
   ExpirySummary,
+  FatalSummary,
   RunResult,
   RunStatus,
   VerdictSummary,
@@ -50,17 +51,17 @@ class Reporter {
     return this.compose(this.verdictHeadline(summary), summary);
   }
 
-  renderAborted(summary: AbortSummary): string {
-    return this.compose(this.abortHeadline(summary), summary);
+  renderAborted(summary: FatalSummary): string {
+    return this.compose(this.abortHeadline(summary), summary, summary.fatal);
   }
 
   renderExpired(summary: ExpirySummary): string {
     return this.compose(this.expiryHeadline(summary), summary);
   }
 
-  private compose(headline: string, { results, options }: AbortSummary): string {
+  private compose(headline: string, { results, options }: AbortSummary, fatal?: unknown): string {
     const top = this.isSmoke(options.runs) ? headline : `${headline}\n${this.countsLine(results)}`;
-    return [top, ...this.runSections(results)].join('\n\n');
+    return [top, ...this.runSections(results, fatal)].join('\n\n');
   }
 
   private verdictHeadline({ tally, options }: VerdictSummary): string {
@@ -114,10 +115,10 @@ class Reporter {
     );
   }
 
-  private runSections(results: readonly RunResult[]): string[] {
+  private runSections(results: readonly RunResult[], fatal: unknown): string[] {
     const numbered = results.map((result, index) => ({ result, number: index + 1 }));
     const failed = this.withStatus(numbered, 'failed');
-    const errored = this.withStatus(numbered, 'errored');
+    const errored = this.fatalFirst(this.withStatus(numbered, 'errored'), fatal);
     const discarded = this.withStatus(numbered, 'discarded');
     const sections = [
       ...this.shown(failed).map((run) => this.failedSection(run)),
@@ -132,6 +133,14 @@ class Reporter {
       );
     }
     return sections;
+  }
+
+  private fatalFirst(runs: readonly NumberedRun[], fatal: unknown): NumberedRun[] {
+    if (fatal === undefined) {
+      return [...runs];
+    }
+    const isFatal = ({ result }: NumberedRun): boolean => result.cause === fatal;
+    return [...runs.filter(isFatal), ...runs.filter((run) => !isFatal(run))];
   }
 
   private shown(runs: readonly NumberedRun[]): readonly NumberedRun[] {
@@ -250,22 +259,30 @@ class Reporter {
     if (response.length <= limit) {
       return this.field('Response excerpt', response);
     }
-    const cut = response.slice(0, limit).replace(/[\uD800-\uDBFF]$/, '');
+    const cut = this.excerpt(response, limit);
     return this.field(
-      `Response excerpt (first ${limit} of ${response.length} chars)`,
+      `Response excerpt (first ${cut.length} of ${response.length} chars)`,
       cut + Reporter.TRUNCATION_MARKER,
     );
   }
 
+  private excerpt(response: string, limit: number): string {
+    const cut = response.slice(0, limit);
+    if (!/[\uD800-\uDBFF]$/.test(cut)) {
+      return cut;
+    }
+    return limit > 1 ? cut.slice(0, -1) : response.slice(0, limit + 1);
+  }
+
   private field(label: string, value: string): string {
-    return `${Reporter.FIELD_INDENT}${label}: ${this.indented(value)}`;
+    return `${Reporter.FIELD_INDENT}${label}: ${this.indented(value)}`.replace(/[ \t]+$/gm, '');
   }
 
   private indented(value: string): string {
     return value
-      .split(/\r?\n/)
+      .split(/\r\n|[\r\n\u2028\u2029]/)
       .map((line, index) =>
-        index === 0 || line.length === 0 ? line : Reporter.CONTINUATION_INDENT + line,
+        index === 0 || line.trim().length === 0 ? line : Reporter.CONTINUATION_INDENT + line,
       )
       .join('\n');
   }

@@ -181,7 +181,8 @@ Worked examples:
 
 The `CrucibleVerdictError` message is a report rendered from the run records
 when the verdict is reached; nothing is printed while runs are in flight. For
-`{ runs: 20, threshold: 0.95 }` with mixed outcomes it reads:
+`{ runs: 20, threshold: 0.95 }` with mixed outcomes it reads (this example
+sets `"excerptChars": 60` to keep the excerpt short):
 
 ```text
 FAILED: 14/20 runs passed (pass rate 0.7) against threshold 0.95 (need 19).
@@ -228,17 +229,17 @@ Failing claims (first failure of each of the 5 failed runs):
 - **Discarded runs** (`[DISCARDED]`): one line of run numbers; counted in no
   zone.
 - **Bounded output.** At most three failed and three errored runs are shown
-  in full (lowest run number first). The rest are listed by number, and when
+  in full (lowest run number first; after a fatal abort the run that hit the
+  fatal error is always shown first). The rest are listed by number, and when
   failed runs are hidden a `Failing claims` tally groups every failed run by
   its first failing assertion and claim, so you can see whether the failures
   share one cause.
 - **Response excerpt length.** 500 characters by default. Set
   `"excerptChars"` (an integer ≥ 1) in `crucible.config.json` to change it; an
   invalid value fails at config load as a `CrucibleError` of kind `config`.
-
-The thrown error also carries `runStatuses` — every run's status
-(`'passed' | 'failed' | 'errored' | 'discarded'`) in run order — for tooling
-that wants the outcome without parsing the message.
+  Lengths are counted in UTF-16 code units, and the cut never splits an emoji
+  or other surrogate pair, so the excerpt can differ from the limit by one;
+  the header states the length actually shown.
 
 ### Timeout
 

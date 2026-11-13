@@ -32,18 +32,32 @@
   summary: Per-test timeout `30000 + (runs-1)×1000` assumes near-perfect parallelism; under provider throttling and retry backoff, Jest may kill a large gate before a verdict report is rendered. Revisit together with the Story 2.5 testDefaults budget note and OQ-3.
   evidence: Runner.timeoutFor; spec "Timeout policy" decision.
 
-- source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
-  summary: The aggregate report renders one section per non-passed run with no bound or grouping, and the headline omits the failed count. Belongs to the Story 3.1 output contract.
-  evidence: Reporter.renderVerdict / headline.
-
 - source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
   summary: The per-test abort reaches only crucible's judge calls; the user's own SUT/provider calls in discarded runs keep running (and spending) after the test rejects. AC6 forbids a public signal handle in 2.3; decide whether a public `crucible.signal`-style accessor is wanted (would need an AD-5 amendment).
   evidence: Blind Hunter + Edge Case Hunter; `RunScope.abortSignal()` is internal only by spec.
 
-- source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
-  summary: Story 3.1 output contract — (a) smoke-mode (1-run) fatal now renders the abort headline ("0 in-flight run(s) discarded") instead of the pass-rate headline; (b) runner-side snapshot (settled runs keep status, unsettled → discarded) is only locked by reporter tests over hand-built results, because asserting the thrown report text from runner tests is forbidden (no error-message assertions, no reporter-call capture). Revisit when 3.1 defines a structured report surface.
-  evidence: Acceptance Auditor; `Runner.discardUnsettled`, `Reporter.renderAborted`.
-
 - source_spec: 2-5-project-wide-run-defaults.md (code review 2026-11-13)
   summary: Jest fake timers in a user's test file. With `jest.useFakeTimers()`, the runner-owned deadline (and the judge-call deadline) use the faked global `setTimeout`. An omitted-`runs` declaration now has a ~24.8-day Jest backstop rather than 30 s, so a hung body can hang the suite. Decide on a timer boundary that is immune to fake timers, or document it as a gotcha in Story 3.6.
   evidence: Runner.startTimer resolves `setTimeout` at call time; Runner.ceilingFor returns TIMER_MAX_MS when runs are omitted.
+
+## Deferred from: code review of 3-1-read-a-failure-like-a-report.md (2026-11-13)
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: Runner-side discard snapshot (settled runs keep their status, unsettled → discarded at fatal/expiry) is locked only by reporter tests over hand-built results plus the existing "expired deadline cancels every run in flight" runner test. The review removed the public `CrucibleVerdictError.runStatuses` that locked it (test-induced public API). Revisit if a deliberate structured-verdict surface is designed (AD-3/AD-10 amendment) or Story 3.3 e2e can observe it.
+  evidence: Runner.discardUnsettled; review triage log in the 3.1 story file.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: `seq` is taken when a verdict/error is recorded (judge completion), so concurrently awaited assertions in one body (`Promise.all`) are ordered by completion, not source order — "first failure" and "assertion k of n" follow completion order. Decide whether AD-13 wants seq reserved at assertion entry.
+  evidence: RunScope.recordVerdict/recordError take seq after the judge call resolves.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: An errored run's `Judge attempts` comes from its lowest-seq ErrorRecord, not necessarily the record of the terminal cause shown on `Cause:` (pre-existing 2.x behaviour, preserved).
+  evidence: Reporter.erroredSection / lowestSeqError.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: Run-number lists for hidden/discarded runs compress contiguous ranges but are not capped — a large gate with alternating outcomes (e.g. 1000 runs) can still emit hundreds of spans on one line. Cap span count if large gates become common (3.2 `full` remains the escape hatch).
+  evidence: Reporter.ranges.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: `Thrown:`/`Cause:` pass error messages through verbatim, so Jest matcher messages carry their own ANSI colour codes into the report. AC4 forbids colour in crucible's markers only; decide whether to strip ANSI from rendered causes.
+  evidence: Reporter.describe.

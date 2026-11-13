@@ -70,26 +70,6 @@ describe('Runner', () => {
     expect((error as CrucibleVerdictError).outcome).toBe('errored');
   });
 
-  it('snapshots every run status in run order on the verdict', async () => {
-    const behaviors = [
-      RunnerHarness.pass,
-      RunnerHarness.throwing(new Error('miss')),
-      RunnerHarness.throwing(new CrucibleError('infra', 'outage', { retryable: true })),
-    ];
-    const error = await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
-    expect((error as CrucibleVerdictError).runStatuses).toEqual(['passed', 'failed', 'errored']);
-  });
-
-  it('keeps runs settled before a fatal error under their status and discards the rest', async () => {
-    const behaviors = [
-      RunnerHarness.throwing(new Error('miss')),
-      RunnerHarness.throwing(RunnerHarness.fatal),
-      RunnerHarness.never,
-    ];
-    const error = await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
-    expect((error as CrucibleVerdictError).runStatuses).toEqual(['failed', 'errored', 'discarded']);
-  });
-
   it('carries the rejection of the first run matching the outcome as the cause', async () => {
     const first = new Error('first miss');
     const behaviors = [
@@ -307,18 +287,6 @@ describe('Runner', () => {
     const error = await pending;
     expect(error).toBeInstanceOf(CrucibleVerdictError);
     expect((error as CrucibleVerdictError).outcome).toBe('errored');
-  });
-
-  it('discards every run still in flight when the test deadline expires', async () => {
-    const timer = new ManualTimer();
-    const behaviors = Array.from({ length: RunCount.Smaller }, () => RunnerHarness.never);
-    const pending = Capture.rejection(
-      RunnerHarness.executeWith(behaviors, { runs: RunCount.Smaller }, {}, timer),
-    );
-    timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Smaller));
-    expect(((await pending) as CrucibleVerdictError).runStatuses).toEqual(
-      Array.from({ length: RunCount.Smaller }, () => 'discarded'),
-    );
   });
 
   it('an expired test deadline cancels every run still in flight', async () => {

@@ -1,7 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { AssertionName } from './test/assertion-name.enum.js';
+import { BlankValue } from './test/blank-value.enum.js';
+import { ClaimText } from './test/claim-text.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
+import { MultilineText } from './test/multiline-text.enum.js';
+import { NearMiss } from './test/near-miss.enum.js';
 import { ProviderFault } from './test/provider-fault.enum.js';
 import { ReportBound } from './test/report-bound.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
@@ -9,8 +13,6 @@ import { ReportText } from './test/report-text.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
-
-const EXCERPT_LIMIT = ExcerptChars.Default;
 
 describe('Reporter — a failed run', () => {
   it('renders the claim, the response, and the judge reasoning for a false verdict', () => {
@@ -40,22 +42,24 @@ describe('Reporter — a failed run', () => {
   });
 
   it('truncates a long response to 500 characters, marks the cut, and states the full length', () => {
-    const response = 'x'.repeat(EXCERPT_LIMIT + 100);
+    const response = 'x'.repeat(ExcerptChars.Default + 100);
     const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
-    expect(message).toContain('x'.repeat(EXCERPT_LIMIT) + '…');
-    expect(message).not.toContain('x'.repeat(EXCERPT_LIMIT + 1));
-    expect(message).toContain(String(EXCERPT_LIMIT + 100));
+    expect(message).toContain('x'.repeat(ExcerptChars.Default) + '…');
+    expect(message).not.toContain('x'.repeat(ExcerptChars.Default + 1));
+    expect(message).toContain(
+      `first ${ExcerptChars.Default} of ${ExcerptChars.Default + 100} chars`,
+    );
   });
 
   it('renders a response at the 500-character limit whole, without a truncation marker', () => {
-    const response = 'y'.repeat(EXCERPT_LIMIT);
+    const response = 'y'.repeat(ExcerptChars.Default);
     const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
     expect(message).toContain(response);
     expect(message).not.toContain('…');
   });
 
   it('cuts the excerpt at the configured length', () => {
-    const response = 'w'.repeat(EXCERPT_LIMIT);
+    const response = 'w'.repeat(ExcerptChars.Default);
     const message = ReportHarness.renderedFailure(
       [ReportHarness.falseVerdict({ response })],
       new Error('boom'),
@@ -67,10 +71,26 @@ describe('Reporter — a failed run', () => {
   });
 
   it('never cuts a surrogate pair in half at the excerpt boundary', () => {
-    const response = 'z'.repeat(EXCERPT_LIMIT - 1) + '😀' + 'tail';
+    const response = 'z'.repeat(ExcerptChars.Default - 1) + '😀' + 'tail';
     const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
     expect(message).not.toMatch(/[\uD800-\uDBFF]…/);
     expect(message).toContain('…');
+  });
+
+  it('states the excerpt length actually shown when a surrogate pair is held back', () => {
+    const response = 'z'.repeat(ExcerptChars.Default - 1) + '😀' + 'tail';
+    const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
+    expect(message).toContain(`first ${ExcerptChars.Default - 1} of ${response.length} chars`);
+  });
+
+  it('never renders an empty excerpt when the first character is a surrogate pair', () => {
+    const message = ReportHarness.renderedFailure(
+      [ReportHarness.falseVerdict({ response: '😀tail' })],
+      new Error('boom'),
+      [],
+      ReportHarness.reporter(ExcerptChars.Minimal),
+    );
+    expect(message).toContain('😀…');
   });
 
   it('renders only the lowest-seq false verdict when several exist', () => {
@@ -149,6 +169,21 @@ describe('Reporter — a failed run', () => {
     expect(message).not.toMatch(/ +\n/);
   });
 
+  it.each(Object.values(BlankValue))(
+    'renders a thrown message %j without trailing whitespace on any line',
+    (value) => {
+      const message = ReportHarness.renderedFailure([], new Error(value));
+      expect(message).not.toMatch(/[ \t]+$/m);
+    },
+  );
+
+  it('indents continuation lines split by a lone carriage return', () => {
+    const message = ReportHarness.renderedFailure([
+      ReportHarness.falseVerdict({ reasoning: MultilineText.LoneCarriageReturn }),
+    ]);
+    expect(message).toContain(MultilineText.Indented);
+  });
+
   it('marks a failed run with the failed marker, never the errored one', () => {
     const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict()]);
     expect(message).toContain(`${ReportText.FailedRun} Run #1`);
@@ -209,6 +244,17 @@ describe('Reporter — verdict headline', () => {
     expect(message).toContain('pass rate 0.666');
   });
 
+  it('floors a pass rate just under the threshold instead of rounding it up to meet it', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ...ReportHarness.runs(NearMiss.Passed, 'passed'),
+        ...ReportHarness.runs(NearMiss.Runs - NearMiss.Passed, 'failed'),
+      ],
+      Threshold.Strict,
+    );
+    expect(message).toContain(ReportText.NearMissRate);
+  });
+
   it('counts every run status under the headline', () => {
     const message = ReportHarness.renderedVerdict(
       [
@@ -222,7 +268,7 @@ describe('Reporter — verdict headline', () => {
     expect(message).toContain(`${ReportText.Counts} 1 passed, 2 failed, 1 errored, 0 discarded.`);
   });
 
-  it('marks an inconclusive verdict as errored, not failed, naming every errored run cause', () => {
+  it('marks an inconclusive verdict as errored, not failed, naming each errored run cause shown', () => {
     const message = ReportHarness.renderedVerdict(
       [
         ReportHarness.run('passed'),
@@ -338,6 +384,20 @@ describe('Reporter — aborted and expired tests', () => {
     expect(message).toContain('settled miss');
   });
 
+  it('always shows the fatal run in full, even beyond the errored-run bound', () => {
+    const fatal = new CrucibleError('infra', ProviderFault.InvalidKey);
+    const message = ReportHarness.renderedAbort(
+      [
+        ...ReportHarness.runs(ReportBound.FullSections, 'errored'),
+        ReportHarness.run('errored', fatal),
+        ReportHarness.run('discarded'),
+      ],
+      fatal,
+    );
+    expect(message).toContain(`${ReportText.ErroredRun} Run #${ReportBound.FullSections + 1}`);
+    expect(message).toContain(ProviderFault.InvalidKey);
+  });
+
   it('counts every run status under an abort headline', () => {
     const message = ReportHarness.renderedAbort([
       ReportHarness.run('passed'),
@@ -370,7 +430,7 @@ describe('Reporter — aborted and expired tests', () => {
 describe('Reporter — many failing runs', () => {
   it('renders only the first three failed runs in full', () => {
     const message = ReportHarness.renderedVerdict(
-      ReportHarness.runs(RunCount.Gated, 'failed', 'the claim'),
+      ReportHarness.runs(RunCount.Gated, 'failed', ClaimText.Default),
       Threshold.Certain,
     );
     expect(message).toContain(`${ReportText.FailedRun} Run #${ReportBound.FullSections}`);
@@ -379,7 +439,7 @@ describe('Reporter — many failing runs', () => {
 
   it('lists the failed runs not shown in full as a compressed range', () => {
     const message = ReportHarness.renderedVerdict(
-      ReportHarness.runs(RunCount.Gated, 'failed', 'the claim'),
+      ReportHarness.runs(RunCount.Gated, 'failed', ClaimText.Default),
       Threshold.Certain,
     );
     const hidden = RunCount.Gated - ReportBound.FullSections;
@@ -392,7 +452,7 @@ describe('Reporter — many failing runs', () => {
     const message = ReportHarness.renderedVerdict(
       [
         ...ReportHarness.runs(RunCount.Smaller, 'errored'),
-        ...ReportHarness.runs(1, 'failed', 'the claim'),
+        ...ReportHarness.runs(1, 'failed', ClaimText.Default),
       ],
       Threshold.Certain,
     );
@@ -407,22 +467,43 @@ describe('Reporter — many failing runs', () => {
   it('tallies the first failing claim of every failed run when some are not shown in full', () => {
     const message = ReportHarness.renderedVerdict(
       [
-        ...ReportHarness.runs(RunCount.Smaller, 'failed', 'stays on topic'),
-        ...ReportHarness.runs(1, 'failed', 'names the price'),
+        ...ReportHarness.runs(RunCount.Smaller, 'failed', ClaimText.OnTopic),
+        ...ReportHarness.runs(1, 'failed', ClaimText.NamesPrice),
       ],
       Threshold.Certain,
     );
     expect(message).toContain(
-      `${RunCount.Smaller} run(s): ${AssertionName.Coherent} "stays on topic"`,
+      `${RunCount.Smaller} run(s): ${AssertionName.Coherent} "${ClaimText.OnTopic}"`,
     );
-    expect(message).toContain(`1 run(s): ${AssertionName.Coherent} "names the price"`);
+    expect(message).toContain(`1 run(s): ${AssertionName.Coherent} "${ClaimText.NamesPrice}"`);
   });
 
   it('adds no tally when every failed run is shown in full', () => {
     const message = ReportHarness.renderedVerdict(
-      ReportHarness.runs(ReportBound.FullSections, 'failed', 'stays on topic'),
+      ReportHarness.runs(ReportBound.FullSections, 'failed', ClaimText.OnTopic),
       Threshold.Certain,
     );
-    expect(message).not.toContain('run(s): ');
+    expect(message).not.toContain(ReportText.TallyHeader);
+  });
+
+  it('heads the tally with the number of failed runs it covers', () => {
+    const message = ReportHarness.renderedVerdict(
+      ReportHarness.runs(RunCount.Smaller, 'failed', ClaimText.OnTopic),
+      Threshold.Certain,
+    );
+    expect(message).toContain(`${ReportText.TallyHeader} ${RunCount.Smaller} failed runs):`);
+  });
+
+  it('tallies runs whose first failure was a judge error or a bare throw by that kind', () => {
+    const judgeError = { cause: new Error(ProviderFault.InvalidKey), attempts: 1, seq: 0 };
+    const message = ReportHarness.renderedVerdict(
+      [
+        ...ReportHarness.runs(RunCount.Smaller, 'failed'),
+        ReportHarness.run('failed', new Error(ProviderFault.InvalidKey), [], [judgeError]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain(`${RunCount.Smaller} run(s): ${ReportText.ThrownOnlyLabel}`);
+    expect(message).toContain(`1 run(s): ${ReportText.JudgeErroredLabel}`);
   });
 });
