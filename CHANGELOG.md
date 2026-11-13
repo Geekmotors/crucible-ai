@@ -4,7 +4,7 @@ All notable changes to `crucible-ai` are listed here. The project follows
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may
 contain breaking changes, and they are marked **Breaking** below.
 
-## Unreleased (0.3.0)
+## 0.3.0
 
 ### Added
 
