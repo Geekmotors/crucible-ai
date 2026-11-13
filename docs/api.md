@@ -151,4 +151,3 @@ Thrown by a `crucible.it()` test that did not pass. Its `message` is the
 | `TestBody` | `() => unknown` — the body passed to `crucible.it()`, usually `async` |
 | `CrucibleErrorKind` | `'config' \| 'usage' \| 'infra'` |
 | `VerdictOutcome` | `'failed' \| 'errored'` |
-| `ProviderAdapter`, `CompletionRequest`, `FailureClass` | The shape of Crucible's internal provider interface. v1 has no public way to register another provider; only `openrouter` can be configured. |

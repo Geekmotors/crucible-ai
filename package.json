@@ -3,6 +3,25 @@
   "version": "0.1.0",
   "description": "Coherence testing for LLM-integrated code",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackula83/crucible-ai.git"
+  },
+  "homepage": "https://github.com/jackula83/crucible-ai#readme",
+  "bugs": {
+    "url": "https://github.com/jackula83/crucible-ai/issues"
+  },
+  "keywords": [
+    "llm",
+    "testing",
+    "jest",
+    "semantic-assertion",
+    "llm-as-a-judge",
+    "evals",
+    "non-deterministic",
+    "reliability",
+    "openrouter"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -24,8 +43,12 @@
   },
   "files": [
     "dist",
-    "schemas"
+    "schemas/*.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -34,7 +57,8 @@
     "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build",
     "prepare": "husky",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify:pack": "node scripts/verify-pack.mjs"
   },
   "peerDependencies": {
     "jest": "^30.0.0"

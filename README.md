@@ -35,7 +35,7 @@ crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
 
 `crucible.it()` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
 
-A threshold is a sampled estimate: a system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time. Before picking your numbers, read [docs/runs-and-threshold.md](docs/runs-and-threshold.md) — the `crucible.it()` reference, the three-zone verdict, and headroom guidance with worked examples.
+A threshold is a sampled estimate: a system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time. Before picking your numbers, read [docs/runs-and-threshold.md](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md) — the `crucible.it()` reference, the three-zone verdict, and headroom guidance with worked examples.
 
 ## Get started
 
@@ -43,7 +43,7 @@ A threshold is a sampled estimate: a system that is truly 95% reliable fails a `
 npm install --save-dev crucible-ai
 ```
 
-Crucible needs Node.js 22+, Jest 30, a committed `crucible.config.json` naming the judge model, and an `OPENROUTER_API_KEY` in the environment. [Getting started](docs/getting-started.md) walks you from install to a CI gate you can trust; the [documentation index](docs/README.md) lists every page — configuration and OpenRouter reference, API reference, gotchas, and how the instruction schema drives the judge.
+Crucible needs Node.js 22+, Jest 30, a committed `crucible.config.json` naming the judge model, and an `OPENROUTER_API_KEY` in the environment. [Getting started](https://github.com/jackula83/crucible-ai/blob/main/docs/getting-started.md) walks you from install to a CI gate you can trust; the [documentation index](https://github.com/jackula83/crucible-ai/blob/main/docs/README.md) lists every page — configuration and OpenRouter reference, API reference, gotchas, and how the instruction schema drives the judge.
 
 The same shape ports to each ecosystem's idiomatic form (roadmap — v1 is TypeScript/Jest):
 
@@ -124,7 +124,7 @@ async def test_jane_looks_for_bob():
 The `coherent` instruction schema — the language-agnostic core that judge
 models execute — was validated against real judge models over OpenRouter
 (4-case conformance matrix × 5 repetitions per model; schema as system
-prompt; details in [docs/judge-models.md](docs/judge-models.md)):
+prompt; details in [docs/judge-models.md](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-models.md)):
 
 | Model | JSON compliance | Verdict accuracy | Median latency | Cost / call | Speed | Cost | Reliability |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ against a frontier model's independent interpretation of the same cases.
 
 For trust and transparency, the verbatim inputs and unedited model replies
 from these runs are published in
-[docs/judge-validation-runs.md](docs/judge-validation-runs.md) — see for
+[docs/judge-validation-runs.md](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-validation-runs.md) — see for
 yourself that the concept works.
 
 ## Alternatives

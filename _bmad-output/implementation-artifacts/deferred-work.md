@@ -111,23 +111,31 @@
 ## Deferred from: 3-5-e2e-core-on-merge-to-main.md (2026-11-13)
 
 - source_spec: 3-5-e2e-core-on-merge-to-main.md
-  summary: Workflow actions are pinned by major tag (`actions/checkout@v4`, `actions/setup-node@v4`), not commit SHA. The e2e job now holds `OPENROUTER_API_KEY`, so SHA-pin all actions (with Dependabot for updates) across `ci.yml` and the Story 3.7 publish workflow in one pass.
+  summary: (Closed by Story 3.7 — both workflows SHA-pinned to v4.4.0 commits, `.github/dependabot.yml` keeps them fresh.) Workflow actions are pinned by major tag (`actions/checkout@v4`, `actions/setup-node@v4`), not commit SHA. The e2e job now holds `OPENROUTER_API_KEY`, so SHA-pin all actions (with Dependabot for updates) across `ci.yml` and the Story 3.7 publish workflow in one pass.
   evidence: `.github/workflows/ci.yml` (kept consistent with the existing `unit` job in 3.5).
 
 - source_spec: 3-5-e2e-core-on-merge-to-main.md
-  summary: The PR lane does not run `npm run format:check` (local gate does); add it to the `unit` job if formatting drift reaches main. The spine's Structural Seed still annotates `e2e/core/ e2e/ext/` as "local-only" — stale since the AD-12 amendment (e2e/core also runs on the main lane).
+  summary: (format:check half closed by Story 3.7 — added to the `unit` job.) Remaining: the spine's Structural Seed still annotates `e2e/core/ e2e/ext/` as "local-only" — stale since the AD-12 amendment (e2e/core also runs on the main lane).
   evidence: `.github/workflows/ci.yml` unit job; ARCHITECTURE-SPINE.md Structural Seed.
 
 ## Deferred from: 3-6-learn-it-from-the-docs-alone.md (2026-11-13)
 
 - source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
-  summary: `ProviderAdapter`, `CompletionRequest` and `FailureClass` are exported as public types, but there is no public way to register an adapter (`providerRegistry` is internal; only `openrouter` resolves). The types suggest an extension point that does not exist. Decide before the first publish (Story 3.7 surface check): drop them from the entry point, or design a registration API (AD-2/AD-9 amendment). `docs/api.md` states the current truth.
+  summary: (Closed by Story 3.7 — removed from the public surface before first publish; re-adding with a registration API later is non-breaking.) `ProviderAdapter`, `CompletionRequest` and `FailureClass` were exported as public types, but there is no public way to register an adapter (`providerRegistry` is internal; only `openrouter` resolves). The types suggest an extension point that does not exist. Decide before the first publish (Story 3.7 surface check): drop them from the entry point, or design a registration API (AD-2/AD-9 amendment). `docs/api.md` states the current truth.
   evidence: `src/index.ts`, `src/providers/registry.ts`; `docs/runs-and-threshold.md` previously said "a custom adapter must not either" (fixed in 3.6).
 
 - source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
-  summary: `crucible.it` is typed as one permissive signature `(name, optsOrBody: RunOptions | TestBody, maybeBody?)`, so `crucible.it(name, { runs: 5 })` with no body type-checks and only fails at registration (`usage`). Two overloads (`(name, body)`, `(name, options, body)`) would make it a compile error; the docs describe the call forms as overloads. TDD a type-level change if wanted (no runtime change).
+  summary: `crucible.it` is typed as one permissive signature `(name, optsOrBody: RunOptions | TestBody, maybeBody?)`, so `crucible.it(name, { runs: 5 })` with no body type-checks and only fails at registration (`usage`). Two overloads (`(name, body)`, `(name, options, body)`) would make it a compile error; the docs describe the call forms as overloads. TDD a type-level change if wanted (no runtime change). Story 3.7 decision: stays deferred past first publish — tightening later only rejects calls that already throw `usage` at registration, so it is not a practical breaking change.
   evidence: `dist/index.d.ts`; `docs/api.md` notes the permissive signature.
 
 - source_spec: 3-6-learn-it-from-the-docs-alone.md
-  summary: README links to `docs/*.md` relatively, but `docs/` is not in the npm tarball and package.json has no `repository` field, so the links break on npmjs.com. Story 3.7 (npm README check) should add `repository` (npm then rewrites relative links to the GitHub repo) or switch README links to absolute GitHub URLs.
+  summary: (Closed by Story 3.7 — README links are absolute `github.com/jackula83/crucible-ai/blob/main/docs/...` URLs and package.json has `repository`/`homepage`/`bugs`.) README linked to `docs/*.md` relatively, but `docs/` is not in the npm tarball and package.json has no `repository` field, so the links break on npmjs.com. Story 3.7 (npm README check) should add `repository` (npm then rewrites relative links to the GitHub repo) or switch README links to absolute GitHub URLs.
   evidence: package.json `files: [dist, schemas]`, no `repository`.
+
+- source_spec: 3-7-ship-it-with-provenance.md
+  summary: The publish pipeline has never run. The first real release (claim `crucible-ai` with an `NPM_TOKEN` granular token, tag `v0.1.0`, then switch to Trusted Publishing and revoke the token) is Jack's manual action per `RELEASING.md`. Things only that run can confirm: npm's OIDC-first/token-fallback order when both are configured, `origin/main` being present after a `fetch-depth: 0` tag checkout, and `npm install -g npm@11.21.2` on the runner's toolcache Node.
+  evidence: `.github/workflows/publish.yml`; `RELEASING.md`. Validated so far only by actionlint, `npm pack --dry-run` and `verify:pack`.
+
+- source_spec: 3-7-ship-it-with-provenance.md
+  summary: The publish job installs `npm@11.21.2` from the registry by version, without an integrity pin. Once the Node 24 image bundles npm 11.5.1 or later, consider dropping the install and asserting `npm --version` instead.
+  evidence: `.github/workflows/publish.yml` publish job.
