@@ -1,8 +1,8 @@
 # Crucible
 
 [![npm](https://img.shields.io/npm/v/crucible-ai)](https://www.npmjs.com/package/crucible-ai)
-[![ci](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
-[![license](https://img.shields.io/npm/l/crucible-ai)](https://github.com/jackula83/crucible-ai/blob/main/LICENSE)
+[![ci](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
+[![license](https://img.shields.io/npm/l/crucible-ai)](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)
 
 Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
@@ -20,7 +20,7 @@ crucible.it('keeps the meeting place secret', { runs: 10, threshold: 0.9 }, asyn
 });
 ```
 
-Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspiration](https://github.com/jackula83/crucible-ai/blob/main/docs/inspiration.md).
+Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspiration](https://github.com/Geekmotors/crucible-ai/blob/main/docs/inspiration.md).
 
 ## Features
 
@@ -98,7 +98,7 @@ crucible.it('stays in character', { runs: 20, threshold: 0.9 }, async () => {
 });
 ```
 
-A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md) explains how to choose both.
+A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md) explains how to choose both.
 
 ### Give the judge state
 
@@ -183,16 +183,16 @@ Assert `toBe(true)` on claims that describe the behaviour you want. To check tha
 
 ## Documentation
 
-- [Inspiration](https://github.com/jackula83/crucible-ai/blob/main/docs/inspiration.md): why Crucible exists, the design ideas, and how it compares with alternatives
-- [API reference](https://github.com/jackula83/crucible-ai/blob/main/docs/api.md): every function, option, error and exported type
-- [Getting started](https://github.com/jackula83/crucible-ai/blob/main/docs/getting-started.md): from install to a CI gate you can trust
-- [Runs and threshold](https://github.com/jackula83/crucible-ai/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
-- [Configuration and OpenRouter](https://github.com/jackula83/crucible-ai/blob/main/docs/configuration.md): every config field, environment variable and CI secret
-- [Gotchas](https://github.com/jackula83/crucible-ai/blob/main/docs/gotchas.md): read before your first real suite
-- [The instruction schema](https://github.com/jackula83/crucible-ai/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
-- [Judge models](https://github.com/jackula83/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model
-- [All documentation](https://github.com/jackula83/crucible-ai/blob/main/docs/README.md)
+- [Inspiration](https://github.com/Geekmotors/crucible-ai/blob/main/docs/inspiration.md): why Crucible exists, the design ideas, and how it compares with alternatives
+- [API reference](https://github.com/Geekmotors/crucible-ai/blob/main/docs/api.md): every function, option, error and exported type
+- [Getting started](https://github.com/Geekmotors/crucible-ai/blob/main/docs/getting-started.md): from install to a CI gate you can trust
+- [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
+- [Configuration and OpenRouter](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md): every config field, environment variable and CI secret
+- [Gotchas](https://github.com/Geekmotors/crucible-ai/blob/main/docs/gotchas.md): read before your first real suite
+- [The instruction schema](https://github.com/Geekmotors/crucible-ai/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
+- [Judge models](https://github.com/Geekmotors/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model
+- [All documentation](https://github.com/Geekmotors/crucible-ai/blob/main/docs/README.md)
 
 ## License
 
-[MIT](https://github.com/jackula83/crucible-ai/blob/main/LICENSE)
+[MIT](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)
