@@ -1,5 +1,5 @@
 # generated: 2026-08-16 10:42:22
-# last_updated: 2026-08-16 10:48:00
+# last_updated: 2026-11-13
 # project: crucible-ai
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-16 10:42:22
-last_updated: 2026-08-16 10:48:00
+last_updated: 2026-11-13
 project: crucible-ai
 project_key: NOKEY
 tracking_system: file-system
@@ -58,8 +58,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Reliability measurement (stateful pass^k)
-  epic-2: backlog
-  2-1-repeat-and-gate-on-pass-rate: backlog
+  epic-2: in-progress
+  2-1-repeat-and-gate-on-pass-rate: ready-for-dev
   2-2-arrange-state-per-run: backlog
   2-3-fail-fast-without-burning-spend: backlog
   2-4-choose-runs-and-threshold-with-eyes-open: backlog
