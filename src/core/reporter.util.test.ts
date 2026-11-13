@@ -189,4 +189,53 @@ describe('Reporter', () => {
     );
     expect(message).not.toMatch(/not failed/i);
   });
+
+  it('headlines an aborted test as aborted and names the fatal cause', () => {
+    const message = ReportHarness.renderedAbort(
+      [
+        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('discarded'),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toMatch(/aborted/i);
+    expect(message).toContain('invalid API key');
+  });
+
+  it('renders runs aborted in flight as discarded, never as failed', () => {
+    const message = ReportHarness.renderedAbort(
+      [
+        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('discarded'),
+        ReportHarness.run('discarded'),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toMatch(/discarded/i);
+    expect(message).toContain('Run #2');
+    expect(message).toContain('Run #3');
+    expect(message).not.toMatch(/Run failed/);
+  });
+
+  it('keeps a run settled before the abort under its own status', () => {
+    const message = ReportHarness.renderedAbort(
+      [
+        ReportHarness.run('failed', new Error('settled miss')),
+        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('discarded'),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain('Run #1 (failed)');
+    expect(message).toContain('settled miss');
+  });
+
+  it('never renders a discarded run as a failed section in a verdict report', () => {
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.run('passed'), ReportHarness.run('discarded')],
+      Threshold.Certain,
+    );
+    expect(message).toMatch(/discarded/i);
+    expect(message).not.toMatch(/Run failed/);
+  });
 });

@@ -52,8 +52,9 @@ class Judge {
       },
       classifyFailure: (error) => adapter.classifyFailure(error),
     };
+    const runSignal = this.scope.abortSignal();
     try {
-      const parsed = await this.judgedReply(counted, request);
+      const parsed = await this.judgedReply(counted, request, runSignal);
       this.scope.recordVerdict({
         assertion: COHERENT_ASSERTION,
         claim,
@@ -71,13 +72,14 @@ class Judge {
   private async judgedReply(
     adapter: ProviderAdapter,
     request: Parameters<RetryingCompleter['complete']>[1],
+    runSignal: AbortSignal,
   ): Promise<ParsedVerdict> {
     let lastFailure: CrucibleError | undefined;
     for (let attempt = 1; attempt <= MAX_REPLY_ATTEMPTS; attempt += 1) {
       const reply = await this.completer.complete(
         adapter,
         request,
-        AbortSignal.timeout(JUDGE_CALL_TIMEOUT_MS),
+        AbortSignal.any([runSignal, AbortSignal.timeout(JUDGE_CALL_TIMEOUT_MS)]),
       );
       try {
         return this.parseReply(reply);

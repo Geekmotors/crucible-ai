@@ -33,6 +33,10 @@ class ReportHarness {
     return { status, cause, context: ReportHarness.context(verdicts) };
   }
 
+  static renderedAbort(results: RunResult[], threshold: number): string {
+    return new Reporter().renderAborted({ results, options: { runs: results.length, threshold } });
+  }
+
   static renderedVerdict(results: RunResult[], threshold: number): string {
     const options: ResolvedRunOptions = { runs: results.length, threshold };
     const tally = new Aggregator().tally(

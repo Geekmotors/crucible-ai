@@ -1,8 +1,11 @@
+import type { ProviderAdapter } from '../../providers/types.js';
+import { CrucibleError } from '../errors.js';
 import { Runner } from '../runner.js';
 import type { RunOptions } from '../run-options.js';
 import { RunScope } from '../state.js';
 import type { VerdictRecord } from '../state.js';
 import { Capture } from './capture.util.js';
+import { JudgeHarness } from './judge-harness.util.js';
 import { StartGate } from './start-gate.util.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
@@ -44,10 +47,43 @@ class RunnerHarness {
 
   static pass: RunBehavior = async () => {};
 
+  static fatal = new CrucibleError('infra', 'invalid API key', { retryable: false });
+
   static throwing(cause: unknown): RunBehavior {
     return async () => {
       throw cause;
     };
+  }
+
+  static never: RunBehavior = () => new Promise<void>(() => {});
+
+  static awaitingAbort(cancelled: StartGate): RunBehavior {
+    return (scope) =>
+      new Promise<void>((resolve) => {
+        scope.abortSignal().addEventListener(
+          'abort',
+          () => {
+            void cancelled.arrive();
+            resolve();
+          },
+          { once: true },
+        );
+      });
+  }
+
+  static gatedThrowing(gate: StartGate, cause: unknown): RunBehavior {
+    return async () => {
+      await gate.arrive();
+      throw cause;
+    };
+  }
+
+  static async judgedRejection(adapter: ProviderAdapter, runs: number): Promise<unknown> {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(adapter, scope);
+    return Capture.rejection(
+      new Runner(scope).execute(() => judge.judgeCoherent('the response', 'the claim'), { runs }),
+    );
   }
 
   static gated(gate: StartGate): RunBehavior {

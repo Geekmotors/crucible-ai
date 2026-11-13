@@ -61,7 +61,7 @@ development_status:
   epic-2: in-progress
   2-1-repeat-and-gate-on-pass-rate: done
   2-2-arrange-state-per-run: done
-  2-3-fail-fast-without-burning-spend: backlog
+  2-3-fail-fast-without-burning-spend: review
   2-4-choose-runs-and-threshold-with-eyes-open: backlog
   2-5-project-wide-run-defaults: backlog
   epic-2-retrospective: optional

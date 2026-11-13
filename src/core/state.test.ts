@@ -147,4 +147,22 @@ describe('RunScope', () => {
     ]);
     expect(seen).toEqual(facts.map((fact) => [fact]));
   });
+  it('a run sees its test abort through its abort signal', () => {
+    const scope = new RunScope();
+    const controller = new AbortController();
+    const signal = scope.enterRun(() => scope.abortSignal(), controller.signal);
+    controller.abort();
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('a run entered without a test signal is never aborted', () => {
+    const scope = new RunScope();
+    expect(scope.enterRun(() => scope.abortSignal().aborted)).toBe(false);
+  });
+
+  it('reading the abort signal outside a run scope is a usage error', () => {
+    const error = Capture.thrown(() => new RunScope().abortSignal());
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
+  });
 });
