@@ -101,13 +101,13 @@
   evidence: docs/judge-models.md "Reasoning effort and the per-test deadline" section.
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md
-  summary: e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
+  summary: (Main-lane half closed by Story 3.5 — `make e2e-core` on every main push type-checks e2e.) e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
   evidence: npm run typecheck stays src-only so it needs no build.
 
 ## Deferred from: code review of 3-3-prove-it-end-to-end-locally.md (2026-11-13)
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
-  summary: `--use-system-ca` is accepted in `NODE_OPTIONS` only from Node 22.15 / 23.8; `engines` says `>=22`. Story 3.5's ubuntu main lane must pin a Node that accepts it (setup-node `22` resolves to latest 22.x, fine) or override `E2E_NODE_OPTIONS` (now `?=` in the Makefile) to drop it.
+  summary: (Closed for CI by Story 3.5 — main lane pins setup-node `24`.) `--use-system-ca` is accepted in `NODE_OPTIONS` only from Node 22.15 / 23.8; `engines` says `>=22`. Story 3.5's ubuntu main lane must pin a Node that accepts it (setup-node `22` resolves to latest 22.x, fine) or override `E2E_NODE_OPTIONS` (now `?=` in the Makefile) to drop it.
   evidence: Makefile `E2E_NODE_OPTIONS`.
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
@@ -127,3 +127,13 @@
 - source_spec: 3-4-language-agnostic-judge-conformance-spike.md
   summary: `e2e/ext/conformance/conformance.sh` has no retry on 429/5xx (an errored call fails the check) and `alpine:3.22` is not digest-pinned. Harden before running it in any CI lane.
   evidence: Story 3.4 Review Triage Log.
+
+## Deferred from: 3-5-e2e-core-on-merge-to-main.md (2026-11-13)
+
+- source_spec: 3-5-e2e-core-on-merge-to-main.md
+  summary: Workflow actions are pinned by major tag (`actions/checkout@v4`, `actions/setup-node@v4`), not commit SHA. The e2e job now holds `OPENROUTER_API_KEY`, so SHA-pin all actions (with Dependabot for updates) across `ci.yml` and the Story 3.7 publish workflow in one pass.
+  evidence: `.github/workflows/ci.yml` (kept consistent with the existing `unit` job in 3.5).
+
+- source_spec: 3-5-e2e-core-on-merge-to-main.md
+  summary: The PR lane does not run `npm run format:check` (local gate does); add it to the `unit` job if formatting drift reaches main. The spine's Structural Seed still annotates `e2e/core/ e2e/ext/` as "local-only" — stale since the AD-12 amendment (e2e/core also runs on the main lane).
+  evidence: `.github/workflows/ci.yml` unit job; ARCHITECTURE-SPINE.md Structural Seed.

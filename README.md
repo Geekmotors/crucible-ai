@@ -1,5 +1,7 @@
 # Crucible
 
+[![ci](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jackula83/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
+
 A semantic assertion library for stateful systems.
 
 Recently when I was working on one of my AI side projects (which I am calling Proscenium), I had trouble testing its inference capabilities.
