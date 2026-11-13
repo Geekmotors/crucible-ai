@@ -161,14 +161,15 @@ class ConfigStore {
   }
 
   private resolveEffectiveVerbosity(configured: unknown): Verbosity {
+    const fromConfig =
+      configured === undefined
+        ? 'default'
+        : this.requireVerbosity(configured, `"verbosity" in ${CONFIG_FILE_NAME}`, 'config');
     const override = this.boundary.readVerbosityOverride();
     if (override !== undefined && override !== '') {
       return this.requireVerbosity(override, 'the CRUCIBLE_VERBOSE environment variable', 'usage');
     }
-    if (configured !== undefined) {
-      return this.requireVerbosity(configured, `"verbosity" in ${CONFIG_FILE_NAME}`, 'config');
-    }
-    return 'default';
+    return fromConfig;
   }
 
   private requireVerbosity(value: unknown, source: string, kind: CrucibleErrorKind): Verbosity {

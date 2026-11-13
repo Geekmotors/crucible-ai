@@ -20,9 +20,9 @@ class RetryingCompleter {
   }
 
   constructor(
+    private readonly trace: TraceReporter = new TraceReporter(),
     private readonly sleep: Sleep = RetryingCompleter.defaultSleep,
     backoff: BackoffPolicy = {},
-    private readonly trace: TraceReporter = new TraceReporter(),
   ) {
     this.baseDelayMs = Math.max(1, backoff.baseDelayMs ?? 250);
     this.jitter = backoff.jitter ?? Math.random;

@@ -44,7 +44,7 @@ class ReportHarness {
 
   static claimedRuns(status: RunStatus, claims: readonly string[]): RunResult[] {
     return claims.map((claim) =>
-      ReportHarness.run(status, new Error(status), [
+      ReportHarness.run(status, status === 'passed' ? undefined : new Error(status), [
         ReportHarness.falseVerdict({ claim, verdict: status === 'passed' }),
       ]),
     );
@@ -126,8 +126,12 @@ class ReportHarness {
     return results.find((result) => result.status === 'errored')?.cause;
   }
 
-  static renderedExpiry(results: RunResult[], deadlineMs: number): string {
-    return ReportHarness.reporter().renderExpired({
+  static renderedExpiry(
+    results: RunResult[],
+    deadlineMs: number,
+    reporter: Reporter = ReportHarness.reporter(),
+  ): string {
+    return reporter.renderExpired({
       results,
       options: { runs: results.length, threshold: Threshold.Certain },
       deadlineMs,

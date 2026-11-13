@@ -4,7 +4,7 @@ baseline_commit: 8ae930e
 
 # Story 3.2: Turn up the volume when needed
 
-Status: review
+Status: done
 
 ## Story
 
@@ -128,3 +128,36 @@ Claude Opus 5.5 (claude-opus-5-5), unattended (user away — decisions recorded 
 ### Change Log
 
 - 2026-11-13: Story 3.2 implemented — verbosity ladder (`default`/`full`/`debug`), env-invalid = `usage`, full report, `TraceReporter` debug sink, docs. Status → review.
+
+### Review Triage Log
+
+Code review 2026-11-13 (bmad-code-review, unattended: Blind Hunter + Edge Case Hunter + Acceptance Auditor + manual security hunt). Diff: `story-3-1-read-a-failure-like-a-report...HEAD`.
+
+**Security verdict: no key leak path.** The trace is taken at the provider port (`CompletionRequest`/reply) in `RetryingCompleter`; headers are built inside `OpenRouterAdapter.complete` and never leave it. `OpenRouterHttpError` / `OpenRouterEnvelopeError` messages carry only the HTTP status / a fixed sentence; `TextFormat.describe` prints `name: message` of the top-level error only (no cause chain, no request config). `meta` is traced as key names only (header + request lines; test asserts the secret value is absent). Config rejects key-like fields. Residual: a custom adapter that embeds a secret in its own error message would surface it (same as the 3.1 failure report) — documented.
+
+**Fixed (test-first where behavioural):**
+- [high] Valid `CRUCIBLE_VERBOSE` masked an invalid config `verbosity` (AC 2 / AD-9: config validated at load). Config value is now always validated; env still wins. RED test `an invalid configured verbosity fails even when a valid override is set` → kind `config`.
+- [medium] A throwing output stream (e.g. EPIPE) propagated out of trace calls — inside `RetryingCompleter`'s try it would reclassify a good reply as a provider failure; inside the runner's settle callback it would hang the batch; at `full` it would fail a passing test. `TraceReporter` now delivers through a guarded `deliver`. RED test with `BrokenWriter` fake.
+- [low] Multi-line causes/claims in a trace headline produced untagged lines. Headline continuation lines are now indented under the tagged line. RED test.
+- [low] Design smell: positional `undefined` placeholders in the composition root. `trace` now precedes the clock boundary (`timer`/`deadline`/`sleep`) in `Runner`, `Judge`, `RetryingCompleter`; root wiring is `new RetryingCompleter(this.trace)` etc. Harnesses updated.
+- [low] Abort label "the run was aborted" was wrong for a judge-call timeout → neutral "the call was aborted" (distinction deferred).
+- [low] Docs: debug sample char counts (reasoning 26, reply 57) and missing `provider request attempt 2` line; API-key claim scoped to adapter error messages; `full`/`debug` PASSED report also bypasses Jest capture; config validated even with env set.
+- [low] Tests: expiry trace assertion was satisfied by "test started … deadline" → asserts `deadline of`; loose `'pass'`/`'false'` → `verdict pass` / `judge verdict false`; system-prompt test now asserts the length line and uses its own constant; new reply-bound test; new `full` expiry and judge-error-attempts tests; repeated literals (`'fake'`, `'not json at all'`, `'flake'`, in-flight fragment, `'judge schema text'`) moved to enums / harness static; `claimedRuns` no longer gives passed runs a cause.
+
+**Rejected:**
+- Passing test printing at `full` = AD-10 noise — rejected: AC 4 / epic "full prints all judge output per run"; a passing test has no error message to carry it; written once at verdict time, never mid-run. Upheld.
+- Full report repeats the failing verdict under first-failure fields and judge calls — by spec (AC 4 "Failed sections keep the default-level first-failure fields").
+- Full report not in run-number order — by spec (status grouping, run order within).
+- `TraceSettings.excerptChars` only for header — rejected: it is part of the resolved config the AC 5 header must show.
+- Quiet-default `TraceReporter` with placeholder settings — rejected: same default-collaborator pattern as `Reporter`; placeholders are never rendered (header only emits at `debug`).
+- `failure()` bypassed in config — `failure()` is just `new CrucibleError('config', …)`; identical.
+- Settings rebuilt per event — `config.get()` is memoized; negligible.
+- Header once per instance — one shared instance per module load (per Jest file), as documented.
+- `reportPassed` lines unprefixed at debug — it is the report, not trace.
+- Non-infra `CrucibleError` traced "fatal, not retried" — accurate.
+- `runSettled` tag from outer scope — `execute` never runs inside a run scope.
+- `[PASSED]`/`[DISCARDED]` inline section labels — matches existing `[FAILED]`/`[ERRORED]` style in `Reporter`.
+
+**Deferred** (→ deferred-work.md): abort during backoff untraced; post-halt trace lines from discarded runs; unbounded causes in trace headlines; judge-timeout vs run-abort label; `CRUCIBLE_VERBOSE` case/whitespace.
+
+Gates: lint, format:check, typecheck, test (350/350, 15 suites), build green; `grep -rn 'console\.' src --include='*.ts'` empty; `process.stdout` only in `TraceReporter.stdout`.

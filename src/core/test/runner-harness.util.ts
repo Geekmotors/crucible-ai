@@ -14,7 +14,7 @@ import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
 import { ReportHarness } from './report-harness.util.js';
 import { RunCount } from './run-count.enum.js';
 import { TraceHarness } from './trace-harness.util.js';
-import type { TraceReporter } from '../trace-reporter.js';
+import { TraceReporter } from '../trace-reporter.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
 
@@ -24,7 +24,7 @@ class RunnerHarness {
     timer: ManualTimer = new ManualTimer(),
     defaults: RunOptions = {},
   ): Runner {
-    return new Runner(scope, new Reporter(), () => defaults, timer.arm);
+    return new Runner(scope, new Reporter(), () => defaults, new TraceReporter(), timer.arm);
   }
 
   static tracedRunner(traced: TraceHarness, timer: ManualTimer = new ManualTimer()): Runner {
@@ -32,8 +32,8 @@ class RunnerHarness {
       traced.scope,
       ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, traced.verbosity),
       () => ({}),
-      timer.arm,
       traced.trace(),
+      timer.arm,
     );
   }
 
@@ -74,6 +74,7 @@ class RunnerHarness {
       () => {
         throw cause;
       },
+      new TraceReporter(),
       new ManualTimer().arm,
     );
   }

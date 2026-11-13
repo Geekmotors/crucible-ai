@@ -36,8 +36,8 @@ class Judge {
     private readonly completer: RetryingCompleter,
     private readonly target: CompletionTargetSupplier,
     private readonly scope: RunScope = runScope,
-    private readonly deadline: Deadline = Judge.timeoutDeadline,
     private readonly trace: TraceReporter = new TraceReporter(),
+    private readonly deadline: Deadline = Judge.timeoutDeadline,
   ) {}
 
   async judgeCoherent(response: string, claim: string): Promise<boolean> {

@@ -61,3 +61,23 @@
 - source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
   summary: `Thrown:`/`Cause:` pass error messages through verbatim, so Jest matcher messages carry their own ANSI colour codes into the report. AC4 forbids colour in crucible's markers only; decide whether to strip ANSI from rendered causes.
   evidence: Reporter.describe.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: An abort that lands during the retry backoff sleep is not traced — `throwIfAborted` at the top of the next attempt throws with no `providerFailure` event, so the trace ends on "retrying in N ms". The run-settle / halt lines still show the outcome.
+  evidence: RetryingCompleter.complete loop head.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: In-flight runs discarded by a fatal abort or deadline keep tracing (aborted provider call, judge error) after the halt/verdict line, possibly inside the next test's trace. Lines are run-tagged, so they are attributable; suppress after batch resolution if it confuses users.
+  evidence: TraceReporter has no per-test lifecycle; RetryingCompleter/Judge trace on abort.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: Trace headlines carry `describe(cause)` and claim text unbounded (only prompt/reply/reasoning use the 2000-char payload bound). Same as the failure report's `Thrown:`/`Cause:`; bound both together if huge provider error bodies appear.
+  evidence: TraceReporter.runSettled/providerFailure/testAborted/judgeRecorded.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: A judge-call deadline timeout is traced as "the call was aborted" (label made neutral in review); distinguishing judge timeout vs run abort needs the per-call deadline reason surfaced to RetryingCompleter.
+  evidence: RetryingCompleter catch (signal.aborted branch); Judge combined signal.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: `CRUCIBLE_VERBOSE` is matched exactly (case- and whitespace-sensitive, like the config value). Decide whether to trim/lowercase env input.
+  evidence: ConfigStore.requireVerbosity.

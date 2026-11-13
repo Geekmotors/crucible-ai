@@ -365,7 +365,7 @@ describe('Runner — verbosity', () => {
     expect(output).toContain(TraceText.TestStarted);
     expect(output).toContain('run #1 settled passed');
     expect(output).toContain('run #2 settled failed');
-    expect(output).toContain('verdict pass');
+    expect(output).toContain(TraceText.VerdictPass);
   });
 
   it('traces a fatal abort at debug verbosity', async () => {
@@ -380,8 +380,8 @@ describe('Runner — verbosity', () => {
 
   it('traces a deadline expiry at debug verbosity', async () => {
     const output = await RunnerHarness.tracedExpiryOutput(new TraceHarness(VerbosityLevel.Debug));
-    expect(output).toContain('deadline');
-    expect(output).toContain('1 in-flight run(s) discarded');
+    expect(output).toContain(TraceText.ExpiredFragment);
+    expect(output).toContain(TraceText.OneDiscarded);
   });
 
   it('tags work inside each run with its run number at debug verbosity', async () => {

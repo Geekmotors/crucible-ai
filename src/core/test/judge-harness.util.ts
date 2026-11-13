@@ -4,6 +4,7 @@ import { Judge } from '../judge.js';
 import type { Deadline } from '../judge.js';
 import { RetryingCompleter } from '../retry.js';
 import { RunScope } from '../state.js';
+import { TraceReporter } from '../trace-reporter.js';
 import { Capture } from './capture.util.js';
 import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { SleepRecorder } from './sleep-recorder.fake.js';
@@ -11,12 +12,15 @@ import { ClaimText } from './claim-text.enum.js';
 import { TraceHarness } from './trace-harness.util.js';
 
 class JudgeHarness {
+  static schemaText = (): string => 'judge schema text';
+
   static judge(adapter: ProviderAdapter, scope: RunScope, deadline?: Deadline): Judge {
     return new Judge(
-      () => 'judge schema text',
-      new RetryingCompleter(new SleepRecorder().sleep),
+      JudgeHarness.schemaText,
+      new RetryingCompleter(new TraceReporter(), new SleepRecorder().sleep),
       () => ({ adapter, model: TestModel.Generic }),
       scope,
+      new TraceReporter(),
       deadline,
     );
   }
@@ -24,8 +28,8 @@ class JudgeHarness {
   static async tracedOutput(replies: string[], traced: TraceHarness): Promise<string> {
     const trace = traced.trace();
     const judge = new Judge(
-      () => 'judge schema text',
-      new RetryingCompleter(new SleepRecorder().sleep, {}, trace),
+      JudgeHarness.schemaText,
+      new RetryingCompleter(trace, new SleepRecorder().sleep),
       () => ({
         adapter: new ScriptedAdapter(
           replies.map((reply) => ({ resolve: reply })),
@@ -34,7 +38,6 @@ class JudgeHarness {
         model: TestModel.Generic,
       }),
       traced.scope,
-      undefined,
       trace,
     );
     await traced.scope

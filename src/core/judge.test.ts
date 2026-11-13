@@ -164,7 +164,7 @@ describe('Judge', () => {
 describe('Judge — debug trace', () => {
   it('traces an unusable reply before the re-ask, then the verdict with its claim', async () => {
     const output = await JudgeHarness.tracedOutput(
-      ['not json at all', TraceText.Reply],
+      [TraceText.UnparseableReply, TraceText.Reply],
       new TraceHarness(),
     );
     expect(output).toContain('judge reply 1 unusable');
@@ -180,7 +180,7 @@ describe('Judge — debug trace', () => {
   it('writes nothing below debug verbosity', async () => {
     await expect(
       JudgeHarness.tracedOutput(
-        ['not json at all', TraceText.Reply],
+        [TraceText.UnparseableReply, TraceText.Reply],
         new TraceHarness(VerbosityLevel.Full),
       ),
     ).resolves.toBe('');

@@ -142,6 +142,17 @@ describe('ConfigStore verbosity override', () => {
       ),
     ).toBe('usage');
   });
+
+  it('an invalid configured verbosity fails even when a valid override is set', () => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store(
+          { provider: 'fake', model: TestModel.Generic, verbosity: 'loud' },
+          'debug',
+        ),
+      ),
+    ).toBe('config');
+  });
 });
 
 describe('ConfigStore testDefaults', () => {

@@ -23,10 +23,9 @@ class CompositionRoot {
   coherentJudge(): Judge {
     this.judge ??= new Judge(
       CompositionRoot.coherentSchemaSupplier(),
-      new RetryingCompleter(undefined, {}, this.trace),
+      new RetryingCompleter(this.trace),
       CompositionRoot.completionTarget,
       runScope,
-      undefined,
       this.trace,
     );
     return this.judge;
@@ -38,7 +37,6 @@ class CompositionRoot {
         runScope,
         new Reporter(CompositionRoot.reportSettings),
         CompositionRoot.testDefaults,
-        undefined,
         this.trace,
       ),
     );

@@ -264,7 +264,7 @@ CRUCIBLE_VERBOSE=debug npx jest checkout.test.ts
 
 The level is resolved once, when the first test executes (registering tests
 never reads config). An invalid `"verbosity"` in the config file fails as a
-`CrucibleError` of kind `config`; an invalid `CRUCIBLE_VERBOSE` fails as kind
+`CrucibleError` of kind `config`, even when `CRUCIBLE_VERBOSE` is set; an invalid `CRUCIBLE_VERBOSE` fails as kind
 `usage`. Both messages list the valid levels: `default`, `full`, `debug`.
 
 A run at `full` lists its judge calls like this:
@@ -286,11 +286,13 @@ each line inside a run names it):
 [crucible:debug] test started: 5 run(s) at threshold 0.8, deadline 34000 ms
 [crucible:debug] run #2 provider request attempt 1 to "openrouter": model "openai/gpt-5", system prompt 4210 chars, meta keys [temperature]
     prompt (312 chars): STATE …
-[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 412 ms): OpenRouterHttpError: …
+[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 412 ms): OpenRouterHttpError: OpenRouter responded with HTTP 503.
+[crucible:debug] run #2 provider request attempt 2 to "openrouter": model "openai/gpt-5", system prompt 4210 chars, meta keys [temperature]
+    prompt (312 chars): STATE …
 [crucible:debug] run #2 provider response attempt 2
-    reply (61 chars): {"verdict":true,"reasoning":"The reply declines to say."}
+    reply (57 chars): {"verdict":true,"reasoning":"The reply declines to say."}
 [crucible:debug] run #2 judge verdict true for coherent "the reply never reveals the meeting location"
-    reasoning (27 chars): The reply declines to say.
+    reasoning (26 chars): The reply declines to say.
 [crucible:debug] run #2 settled passed
 [crucible:debug] verdict pass: 5 passed, 0 failed, 0 errored of 5 (need 4)
 ```
@@ -298,7 +300,9 @@ each line inside a run names it):
 What the trace never shows:
 
 - **Your API key.** The trace is taken at crucible's provider interface, above
-  the HTTP layer, so request headers never reach it.
+  the HTTP layer, so request headers never reach it. Error messages are shown
+  as the adapter wrote them: the bundled OpenRouter adapter never puts the key
+  in one, and a custom adapter must not either.
 - **`meta` values.** Only `meta` key names are shown, because values can hold
   secrets.
 - **Unbounded payloads.** Prompts and replies longer than 2000 characters are
@@ -306,9 +310,11 @@ What the trace never shows:
   instructions, the same on every call) is shown by length only.
 
 All output goes to standard output; crucible never writes files at any level.
-The trace is written straight to `process.stdout`, not through `console.log`:
+The trace, and the `PASSED:` report that `full` and `debug` print for a
+passing test, are written straight to `process.stdout`, not through
+`console.log`:
 Jest buffers `console` output until a test finishes and wraps every call in a
-source-location block, which would hide the trace of a hung test. Because it
+source-location block, which would hide the trace of a hung test. Because this output
 bypasses Jest's capture, `--silent` does not mute it, and in an interactive
 terminal it can interleave with Jest's progress line; run with `--runInBand`
 or redirect to a file (`> trace.txt`) for a clean read. The engine-init and

@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { TestModel } from '../providers/test/test-model.enum.js';
 import { CrucibleError } from './errors.js';
+import { BrokenWriter } from './test/broken-writer.fake.js';
+import { MultilineText } from './test/multiline-text.enum.js';
 import { ProviderFault } from './test/provider-fault.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
 import { RunCount } from './test/run-count.enum.js';
@@ -84,7 +86,11 @@ describe('TraceReporter — debug trace', () => {
     const harness = new TraceHarness();
     harness
       .trace()
-      .providerRequest('fake', { model: TestModel.Generic, prompt: TraceText.Prompt }, 1);
+      .providerRequest(
+        TraceText.Provider,
+        { model: TestModel.Generic, prompt: TraceText.Prompt },
+        1,
+      );
     expect(harness.output.text).toContain(TraceText.Prompt);
     expect(harness.output.text).toContain(TestModel.Generic);
   });
@@ -92,9 +98,37 @@ describe('TraceReporter — debug trace', () => {
   it('bounds a long prompt and states its full length', () => {
     const harness = new TraceHarness();
     const prompt = 'p'.repeat(TraceBound.PayloadChars + 1);
-    harness.trace().providerRequest('fake', { model: TestModel.Generic, prompt }, 1);
+    harness.trace().providerRequest(TraceText.Provider, { model: TestModel.Generic, prompt }, 1);
     expect(harness.output.text).not.toContain(prompt);
     expect(harness.output.text).toContain(`${TraceBound.PayloadChars + 1} chars`);
+  });
+
+  it('bounds a long reply and states its full length', () => {
+    const harness = new TraceHarness();
+    const reply = 'r'.repeat(TraceBound.PayloadChars + 1);
+    harness.trace().providerResponse(1, reply);
+    expect(harness.output.text).not.toContain(reply);
+    expect(harness.output.text).toContain(`${TraceBound.PayloadChars + 1} chars`);
+  });
+
+  it('keeps every line of a multi-line cause inside the trace block', () => {
+    const harness = new TraceHarness();
+    harness
+      .trace()
+      .runSettled(RunCount.Smaller, ReportHarness.run('failed', new Error(MultilineText.Flush)));
+    const lines = harness.output.text.split('\n').filter((line) => line.length > 0);
+    expect(lines.every((line) => line.startsWith(TraceText.Prefix) || line.startsWith(' '))).toBe(
+      true,
+    );
+  });
+
+  it('never fails its caller when the output stream breaks', () => {
+    const harness = new TraceHarness();
+    const trace = harness.trace(new BrokenWriter().write);
+    expect(() => {
+      TraceHarness.everyEvent(trace);
+      trace.reportPassed(() => TraceText.ReportBody);
+    }).not.toThrow();
   });
 
   it('shows the system prompt by length only', () => {
@@ -102,11 +136,12 @@ describe('TraceReporter — debug trace', () => {
     harness
       .trace()
       .providerRequest(
-        'fake',
-        { model: TestModel.Generic, system: TraceText.ReportBody, prompt: TraceText.Prompt },
+        TraceText.Provider,
+        { model: TestModel.Generic, system: TraceText.SystemPrompt, prompt: TraceText.Prompt },
         1,
       );
-    expect(harness.output.text).not.toContain(TraceText.ReportBody);
+    expect(harness.output.text).not.toContain(TraceText.SystemPrompt);
+    expect(harness.output.text).toContain(`system prompt ${TraceText.SystemPrompt.length} chars`);
   });
 
   it('states a retryable provider failure, its cause and the backoff before the next attempt', () => {
@@ -123,7 +158,7 @@ describe('TraceReporter — debug trace', () => {
     const harness = new TraceHarness();
     harness.trace().judgeRecorded(ReportHarness.falseVerdict());
     expect(harness.output.text).toContain(ReportHarness.falseVerdict().claim);
-    expect(harness.output.text).toContain('false');
+    expect(harness.output.text).toContain(TraceText.VerdictFalse);
   });
 
   it('states a recorded judge error with its cause', () => {
@@ -161,7 +196,7 @@ describe('TraceReporter — debug trace', () => {
       Threshold.Half,
     );
     harness.trace().verdictReached(tally, options);
-    expect(harness.output.text).toContain('pass');
+    expect(harness.output.text).toContain(TraceText.VerdictPass);
     expect(harness.output.text).toContain(`need ${tally.need}`);
   });
 
@@ -173,6 +208,6 @@ describe('TraceReporter — debug trace', () => {
         ReportHarness.run('discarded'),
       ]);
     expect(harness.output.text).toContain(ProviderFault.InvalidKey);
-    expect(harness.output.text).toContain('1 in-flight run(s) discarded');
+    expect(harness.output.text).toContain(TraceText.OneDiscarded);
   });
 });

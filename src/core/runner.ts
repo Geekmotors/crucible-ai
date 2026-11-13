@@ -50,8 +50,8 @@ class Runner {
     private readonly scope: RunScope = runScope,
     private readonly reporter: Reporter = new Reporter(),
     private readonly testDefaults: TestDefaultsSupplier = Runner.noTestDefaults,
-    private readonly timer: DeadlineTimer = Runner.startTimer,
     private readonly trace: TraceReporter = new TraceReporter(),
+    private readonly timer: DeadlineTimer = Runner.startTimer,
   ) {}
 
   timeoutFor(runs: number): number {

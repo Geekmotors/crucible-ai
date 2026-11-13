@@ -32,7 +32,7 @@ class TraceReporter {
   private static readonly FAILURE_NEXT = {
     fatal: 'fatal, not retried',
     exhausted: 'retryable, but no attempts left',
-    aborted: 'the run was aborted',
+    aborted: 'the call was aborted',
   } as const;
 
   private readonly text = new TextFormat();
@@ -60,7 +60,7 @@ class TraceReporter {
 
   reportPassed(render: () => string): void {
     if (this.settings().verbosity !== 'default') {
-      this.write(`${render()}\n`);
+      this.deliver(`${render()}\n`);
     }
   }
 
@@ -166,15 +166,25 @@ class TraceReporter {
   private emit(headline: string, body?: string): void {
     if (!this.announced) {
       this.announced = true;
-      this.write(this.header());
+      this.deliver(this.header());
     }
     const run = this.scope.runNumber();
     const tag = run === undefined ? '' : `run #${run} `;
-    const lines = [`${TraceReporter.PREFIX} ${tag}${headline}`];
+    const lines = [
+      `${TraceReporter.PREFIX} ${tag}${this.text.indented(headline, TraceReporter.BODY_INDENT)}`,
+    ];
     if (body !== undefined) {
       lines.push(TraceReporter.BODY_INDENT + this.text.indented(body, TraceReporter.BODY_INDENT));
     }
-    this.write(`${lines.join('\n')}\n`);
+    this.deliver(`${lines.join('\n')}\n`);
+  }
+
+  private deliver(text: string): void {
+    try {
+      this.write(text);
+    } catch {
+      return;
+    }
   }
 
   private header(): string {

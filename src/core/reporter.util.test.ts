@@ -574,6 +574,31 @@ describe('Reporter — full verbosity', () => {
     expect(failing).toBeGreaterThan(errored);
   });
 
+  it('states how many attempts a judge call took before it errored', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run(
+          'failed',
+          new Error('miss'),
+          [],
+          [{ cause: new Error(ProviderFault.InvalidKey), attempts: 3, seq: 0 }],
+        ),
+      ],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(ReportText.JudgeCallErrored);
+  });
+
+  it('renders every run of an expired test, beyond the default bound', () => {
+    const message = ReportHarness.renderedExpiry(
+      ReportHarness.runs(RunCount.Smaller, 'discarded'),
+      TimeoutBudget.SmokeMs,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(`${ReportText.DiscardedRun} Run #${RunCount.Smaller}`);
+  });
+
   it('states when a run recorded no judge calls', () => {
     const message = ReportHarness.renderedVerdict(
       [ReportHarness.run('failed', new Error('thrown before judging'))],
