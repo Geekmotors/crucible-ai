@@ -50,7 +50,7 @@ jobs:
       - run: npm run verify:pack
 
   publish:
-    name: npm publish (provenance)
+    name: npm stage publish (provenance)
     needs: verify
     if: github.repository == 'jackula83/crucible-ai'
     runs-on: ubuntu-latest
@@ -67,12 +67,12 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - name: Install npm with trusted publishing support
+      - name: Install npm with staged and trusted publishing support
         run: npm install --global npm@11.21.2
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run verify:pack
-      - name: npm publish
+      - name: npm stage publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public --ignore-scripts
+        run: npm stage publish --provenance --access public --ignore-scripts
