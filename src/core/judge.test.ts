@@ -127,6 +127,7 @@ describe('Judge', () => {
       },
     ]);
   });
+
   it('an in-flight judge call rejects as soon as the run’s test aborts', async () => {
     const scope = new RunScope();
     const controller = new AbortController();

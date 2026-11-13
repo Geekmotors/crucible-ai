@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { Reporter } from './reporter.util.js';
+import { ProviderFault } from './test/provider-fault.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
 
@@ -193,19 +194,19 @@ describe('Reporter', () => {
   it('headlines an aborted test as aborted and names the fatal cause', () => {
     const message = ReportHarness.renderedAbort(
       [
-        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('errored', new CrucibleError('infra', ProviderFault.InvalidKey)),
         ReportHarness.run('discarded'),
       ],
       Threshold.Certain,
     );
     expect(message).toMatch(/aborted/i);
-    expect(message).toContain('invalid API key');
+    expect(message).toContain(ProviderFault.InvalidKey);
   });
 
   it('renders runs aborted in flight as discarded, never as failed', () => {
     const message = ReportHarness.renderedAbort(
       [
-        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('errored', new CrucibleError('infra', ProviderFault.InvalidKey)),
         ReportHarness.run('discarded'),
         ReportHarness.run('discarded'),
       ],
@@ -221,7 +222,7 @@ describe('Reporter', () => {
     const message = ReportHarness.renderedAbort(
       [
         ReportHarness.run('failed', new Error('settled miss')),
-        ReportHarness.run('errored', new CrucibleError('infra', 'invalid API key')),
+        ReportHarness.run('errored', new CrucibleError('infra', ProviderFault.InvalidKey)),
         ReportHarness.run('discarded'),
       ],
       Threshold.Certain,

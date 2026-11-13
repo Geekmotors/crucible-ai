@@ -149,11 +149,13 @@ class Runner {
   }
 
   private firstCrucibleInChain(cause: unknown): CrucibleError | undefined {
+    const visited = new Set<unknown>();
     let current = cause;
-    while (current !== null && current !== undefined) {
+    while (current !== null && current !== undefined && !visited.has(current)) {
       if (current instanceof CrucibleError) {
         return current;
       }
+      visited.add(current);
       current = current instanceof Error ? current.cause : undefined;
     }
     return undefined;

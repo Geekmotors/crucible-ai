@@ -3,6 +3,7 @@ import { CrucibleError } from './errors.js';
 import { Runner } from './runner.js';
 import { RunScope } from './state.js';
 import { BlockingAdapter } from './test/blocking-adapter.fake.js';
+import { ProviderFault } from './test/provider-fault.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 import { RunnerHarness } from './test/runner-harness.util.js';
@@ -212,25 +213,33 @@ describe('Runner', () => {
     await expect(RunnerHarness.execute(behaviors, Threshold.Half)).resolves.toBeUndefined();
   });
 
-  it('a usage error aborts every sibling and is rethrown untouched without waiting', async () => {
-    const usage = new CrucibleError('usage', 'fix your setup');
+  it.each([
+    ['a usage error', new CrucibleError('usage', 'fix your setup')],
+    ['a config error', new CrucibleError('config', 'fix your setup')],
+    ['a nested verdict error', new CrucibleVerdictError('failed', 'already rendered', undefined)],
+  ])('%s aborts every sibling and is rethrown untouched without waiting', async (_label, cause) => {
     const cancelled = new StartGate(RunCount.Gated);
     const behaviors = [
-      RunnerHarness.throwing(usage),
+      RunnerHarness.throwing(cause),
       ...Array.from({ length: RunCount.Gated - 1 }, () => RunnerHarness.awaitingAbort(cancelled)),
     ];
     const error = await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
-    expect(error).toBe(usage);
+    expect(error).toBe(cause);
     await expect(cancelled.arrive()).resolves.toBeUndefined();
   });
 
   it('a fatal judge call cancels every sibling judge call still in flight', async () => {
     const cancelled = new StartGate(RunCount.Gated);
-    const adapter = new BlockingAdapter(cancelled, [new Error('401 invalid API key')]);
-    const error = await RunnerHarness.judgedRejection(adapter, RunCount.Gated);
-    expect((error as CrucibleVerdictError).outcome).toBe('errored');
-    expect(((error as CrucibleVerdictError).cause as CrucibleError).kind).toBe('infra');
-    expect(((error as CrucibleVerdictError).cause as CrucibleError).retryable).toBe(false);
+    const adapter = new BlockingAdapter(cancelled, [new Error(ProviderFault.InvalidKey)]);
+    await RunnerHarness.judgedRejection(adapter, RunCount.Gated);
     await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('a run rejecting with a cyclic cause chain still settles as failed', async () => {
+    const error = await RunnerHarness.executionRejection(
+      [RunnerHarness.throwing(RunnerHarness.cyclic())],
+      Threshold.Certain,
+    );
+    expect((error as CrucibleVerdictError).outcome).toBe('failed');
   });
 });

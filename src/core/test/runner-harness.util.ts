@@ -6,6 +6,7 @@ import { RunScope } from '../state.js';
 import type { VerdictRecord } from '../state.js';
 import { Capture } from './capture.util.js';
 import { JudgeHarness } from './judge-harness.util.js';
+import { ProviderFault } from './provider-fault.enum.js';
 import { StartGate } from './start-gate.util.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
@@ -47,12 +48,19 @@ class RunnerHarness {
 
   static pass: RunBehavior = async () => {};
 
-  static fatal = new CrucibleError('infra', 'invalid API key', { retryable: false });
+  static fatal = new CrucibleError('infra', ProviderFault.InvalidKey, { retryable: false });
 
   static throwing(cause: unknown): RunBehavior {
     return async () => {
       throw cause;
     };
+  }
+
+  static cyclic(): Error {
+    const outer = new Error('outer');
+    const inner = new Error('inner', { cause: outer });
+    outer.cause = inner;
+    return outer;
   }
 
   static never: RunBehavior = () => new Promise<void>(() => {});

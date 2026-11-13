@@ -4,7 +4,7 @@ baseline_commit: d68cac0
 
 # Story 2.3: Fail fast without burning spend
 
-Status: review
+Status: done
 
 ## Story
 
@@ -159,3 +159,37 @@ Modified:
 ### Change Log
 
 - 2026-11-13: Story 2.3 implemented — per-test `AbortController`; first fatal provider error (or config/usage error) aborts sibling runs via the ambient run signal reaching the judge's port calls; in-flight runs discarded (no zone, rendered as discarded); test rejects immediately.
+
+### Review Triage Log
+
+Code review 2026-11-13 (bmad-code-review, unattended; Blind Hunter, Edge Case Hunter, Acceptance Auditor + orchestrator pass) on `git diff story-2-2-arrange-state-per-run...HEAD`.
+
+**Fixed (test-first):**
+- [Medium] Cyclic `cause` chain (`e.cause` loop) hung the runner synchronously in `firstCrucibleInChain` (now hit by both `classify` and `isFatal`). Red: new runner test hung; fix: visited-set in the walk → run settles `failed`.
+- [Low] AC5 coverage: only `usage` was proven to abort siblings and rethrow immediately; test now `it.each` over usage / config / nested `CrucibleVerdictError` (green on first run — shared `rethrow` path; locks the AC).
+- [Low] End-to-end judged-cancellation test asserted four things (outcome, cause kind, retryable, gate); trimmed to its single purpose (sibling judge calls cancelled). Outcome/cause already covered by the `it.each` fatal test.
+- [Low] Repeated `'invalid API key'` literal (reporter tests ×4, runner harness, runner test) → `src/core/test/provider-fault.enum.ts` `ProviderFault.InvalidKey`.
+- [Low] `BlockingAdapter` had an unused `classification` constructor parameter (speculative fake surface) → removed; always `'fatal'`.
+- [Nit] Missing blank lines before new `it(` blocks in judge/state tests.
+
+**Deferred** (deferred-work.md): per-call judge timeout classified `failed` not `errored` (pre-existing since 1.4, needs injectable timeout to test); user SUT calls not cancelled (AC6 forbids public signal); smoke-mode abort headline wording + runner-side discard snapshot only lockable via report surface (Story 3.1).
+
+**Rejected:**
+- Two fatals at once / rethrow vs fatal race — first settlement wins under `signal.aborted` guard; whichever halts first is deterministic per settlement order and both are halting outcomes.
+- Fatal after all others settled — fatal branch precedes `pending` decrement; resolves `fatal` with 0 discarded. Correct.
+- Abort between judge calls / between parse attempts / during backoff — `RetryingCompleter.throwIfAborted` precedes every adapter call; no spend.
+- Aborted siblings' AbortError misclassified — post-abort settlements are ignored (`signal.aborted` guard); never tallied.
+- Unhandled rejections — `settle` catches everything; run promises never reject. A throwing `cause` getter is pathological.
+- `AbortSignal.any` listener leak — Node holds dependants weakly, timeout timers are unref'd; per-test scale.
+- Infra without explicit `retryable` is fatal — spec decision, mirrors `retry.ts` which never retries `retryable:false`.
+- `runs: 0` hang — resolver rejects `runs < 1`.
+- Aggregator/reporter discarded tests green-first — spec-declared lock-in rows; shared run-sections body.
+- `toBeInstanceOf(CrucibleVerdictError)` / `cause` `toBe` — asserting error TYPE and AC3's required cause is the outcome, not shape testing.
+- Judge abort test `resolves.toBeDefined()` — proves rejection vs hang; DOMException cross-realm prevents a kind check.
+- `RunCount.Single + n` gate sizes, `BlockingAdapter` array `shift` — readable derivation; arrays are per-test literals.
+- Discarded run's context is live — discarded runs render by number only; no reader of their context.
+- Discarded label for runs finishing in the abort tick — snapshot semantics per spec.
+- `AbortSignal.any` Node version — `engines: node >=22`.
+
+Result: 229 tests / 14 suites green; lint, format:check, typecheck, build green; no `console.` in `src/`.
+

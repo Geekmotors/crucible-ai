@@ -8,7 +8,6 @@ class BlockingAdapter implements ProviderAdapter {
   constructor(
     private cancelled: StartGate,
     private leadingFailures: Error[] = [],
-    private classification: FailureClass = 'fatal',
   ) {}
 
   complete(_request: CompletionRequest, signal: AbortSignal): Promise<string> {
@@ -30,7 +29,7 @@ class BlockingAdapter implements ProviderAdapter {
   }
 
   classifyFailure(): FailureClass {
-    return this.classification;
+    return 'fatal';
   }
 }
 

@@ -147,6 +147,7 @@ describe('RunScope', () => {
     ]);
     expect(seen).toEqual(facts.map((fact) => [fact]));
   });
+
   it('a run sees its test abort through its abort signal', () => {
     const scope = new RunScope();
     const controller = new AbortController();
