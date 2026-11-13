@@ -5,6 +5,13 @@ import { FakeConfigBoundary } from './test/config-boundary.fake.js';
 import { providerRegistry } from '../providers/registry.js';
 import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
+import { ExcerptChars } from './test/excerpt-chars.enum.js';
+import { InvalidExcerptChars } from './test/invalid-excerpt-chars.enum.js';
+import { CustomTimeout } from './test/custom-timeout.enum.js';
+import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
+import { InvalidTimeout } from './test/invalid-timeout.enum.js';
+import { RunCount } from './test/run-count.enum.js';
+import { Threshold } from './test/threshold.enum.js';
 
 describe('ConfigStore with a valid config', () => {
   it('resolves the registered adapter, model, meta, and verbosity', () => {
@@ -66,7 +73,7 @@ describe('ConfigStore rejects invalid configs as config failures', () => {
     ['whitespace model', { provider: 'fake', model: '   ' }],
     ['non-string model', { provider: 'fake', model: 42 }],
     ['non-object meta', { provider: 'fake', model: TestModel.Generic, meta: 'nope' }],
-    ['unknown field', { provider: 'fake', model: TestModel.Generic, testDefaults: {} }],
+    ['unknown field', { provider: 'fake', model: TestModel.Generic, defaults: {} }],
     ['invalid verbosity', { provider: 'fake', model: TestModel.Generic, verbosity: 'quiet' }],
     ['malformed JSON', '{ not json !!!'],
     ['non-object root', '["array"]'],
@@ -119,10 +126,123 @@ describe('ConfigStore verbosity override', () => {
     expect(store.get().effectiveVerbosity).toBe('full');
   });
 
-  it('an invalid override is a config failure', () => {
+  it('an invalid override is a usage failure, since the invocation set it, not the config file', () => {
     expect(
       ConfigHarness.errorKind(
         ConfigHarness.store({ provider: 'fake', model: TestModel.Generic }, 'loud'),
+      ),
+    ).toBe('usage');
+  });
+
+  it('an invalid override fails even when the configured verbosity is valid', () => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store(
+          { provider: 'fake', model: TestModel.Generic, verbosity: 'full' },
+          'loud',
+        ),
+      ),
+    ).toBe('usage');
+  });
+
+  it('an invalid configured verbosity fails even when a valid override is set', () => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store(
+          { provider: 'fake', model: TestModel.Generic, verbosity: 'loud' },
+          'debug',
+        ),
+      ),
+    ).toBe('config');
+  });
+});
+
+describe('ConfigStore testDefaults', () => {
+  it('resolves configured runs and threshold', () => {
+    const testDefaults = { runs: RunCount.Gated, threshold: Threshold.Strict };
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
+    expect(store.get().testDefaults).toEqual(testDefaults);
+  });
+
+  it('resolves configured inference and test timeouts', () => {
+    const testDefaults = {
+      inferenceTimeout: CustomTimeout.Long,
+      testTimeout: CustomTimeout.Longer,
+    };
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
+    expect(store.get().testDefaults).toEqual(testDefaults);
+  });
+
+  it('accepts a single configured field, leaving the other unset', () => {
+    const store = ConfigHarness.store({
+      provider: 'fake',
+      model: TestModel.Generic,
+      testDefaults: { threshold: Threshold.Strict },
+    });
+    expect(store.get().testDefaults).toEqual({ threshold: Threshold.Strict });
+  });
+
+  it('resolves to no defaults when testDefaults is absent', () => {
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
+    expect(store.get().testDefaults).toEqual({});
+  });
+
+  it.each([
+    ['zero threshold', { threshold: InvalidTestDefault.Zero }],
+    ['threshold above one', { threshold: InvalidTestDefault.AboveOne }],
+    ['negative threshold', { threshold: InvalidTestDefault.Negative }],
+    ['string threshold', { threshold: String(Threshold.Strict) }],
+    ['zero runs', { runs: InvalidTestDefault.Zero }],
+    ['negative runs', { runs: InvalidTestDefault.Negative }],
+    ['fractional runs', { runs: InvalidTestDefault.Fractional }],
+    ['string runs', { runs: String(RunCount.Gated) }],
+    ['unknown key', { run: RunCount.Gated }],
+    ['null', null],
+    ['array', [RunCount.Gated]],
+    ['number', RunCount.Gated],
+    ['zero inferenceTimeout', { inferenceTimeout: InvalidTimeout.Zero }],
+    ['fractional inferenceTimeout', { inferenceTimeout: InvalidTimeout.Fractional }],
+    [
+      'inferenceTimeout above the timer maximum',
+      { inferenceTimeout: InvalidTimeout.AboveTimerMax },
+    ],
+    ['negative testTimeout', { testTimeout: InvalidTimeout.Negative }],
+    ['string testTimeout', { testTimeout: String(CustomTimeout.Long) }],
+    ['testTimeout above the timer maximum', { testTimeout: InvalidTimeout.AboveTimerMax }],
+  ])('rejects %s as a config failure at load', (_label, testDefaults) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults }),
+      ),
+    ).toBe('config');
+  });
+});
+
+describe('ConfigStore excerptChars', () => {
+  it('defaults the response excerpt to 500 characters', () => {
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
+    expect(store.get().excerptChars).toBe(ExcerptChars.Default);
+  });
+
+  it('resolves a configured excerpt length', () => {
+    const store = ConfigHarness.store({
+      provider: 'fake',
+      model: TestModel.Generic,
+      excerptChars: ExcerptChars.Short,
+    });
+    expect(store.get().excerptChars).toBe(ExcerptChars.Short);
+  });
+
+  it.each([
+    ['zero', InvalidExcerptChars.Zero],
+    ['negative', InvalidExcerptChars.Negative],
+    ['fractional', InvalidExcerptChars.Fractional],
+    ['string', String(ExcerptChars.Short)],
+    ['null', null],
+  ])('rejects a %s excerpt length as a config failure at load', (_label, excerptChars) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, excerptChars }),
       ),
     ).toBe('config');
   });

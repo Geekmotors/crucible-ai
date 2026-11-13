@@ -1,13 +1,5 @@
 # Deferred Work
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-install-and-configure-crucible.md`
-  summary: Document (Story 3.6 gotchas) that API keys must never be placed inside config `meta` — `meta` is an opaque passthrough per FR-7 and is deliberately not scanned for key-like fields, so a key committed there bypasses the NFR1 config guard.
-  evidence: Review confirmed `meta` contents are never validated (by design, FR-7 opacity); the top-level key-like rejection cannot cover it, making this a real committable-secret hazard only docs can mitigate.
-
-- source_spec: `_bmad-output/planning-artifacts/prds/prd-crucible-ai-2026-08-10/prd.md` (§4.3 assertion-selection doctrine, decided 2026-09-14)
-  summary: Story 3.6 getting-started docs must teach the assertion-selection ladder — plain framework assertions first, `exact()`/`range()` for embedded values (post-MVP), `coherent()` only for inherently semantic claims (prose, reasoning, state consistency, knowledge boundaries).
-  evidence: Doctrine decided with Jack 2026-09-14 and recorded in the PRD; without a docs entry it will be missed when Story 3.6 is drafted from the epic ACs alone.
-
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-reliable-judge-connectivity-via-openrouter.md`
   summary: No per-attempt timeout exists anywhere — a hung provider socket stalls a judge call forever and the retry machinery never engages; decide per-attempt timeout policy when Story 1.4's runner derives test timeouts from run count and provider budget (AD-3).
   evidence: Both reviewers flagged it; the spec matrix lists "timeout" as retryable input but only the caller's signal can currently produce one, and nothing arms such a signal yet.
@@ -17,7 +9,7 @@
   evidence: 60/60 verdicts across three models on the current matrix gives no discrimination between models; docs/judge-models.md flags the same caveat.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-4-first-semantic-verdict-smoke-mode.md`
-  summary: Verify the built artifact's schema loading under CJS and bundler-inlined consumers (import.meta.url package-root walk) in Story 3.3 e2e; and revisit injectGlobals:false Jest support (lazy @jest/globals import) with Story 3.6 docs gotchas.
+  summary: (CJS half closed by Story 3.3 — `e2e/core/cjs-build.test.cts` judges through `dist/index.cjs`.) (Docs half closed by Story 3.6 — `docs/gotchas.md` documents `injectGlobals: false` as unsupported.) Remaining: verify schema loading under bundler-inlined consumers (import.meta.url package-root walk); decide whether to support injectGlobals:false (lazy @jest/globals import).
   evidence: Review flagged both; the walk depends on tsdown's CJS shim and breaks if a consumer bundler inlines the package; the binding currently requires an injected global `it`.
 
 - source_spec: PR #8 review discussion (2026-09-14)
@@ -32,6 +24,151 @@
   summary: Per-test timeout `30000 + (runs-1)×1000` assumes near-perfect parallelism; under provider throttling and retry backoff, Jest may kill a large gate before a verdict report is rendered. Revisit together with the Story 2.5 testDefaults budget note and OQ-3.
   evidence: Runner.timeoutFor; spec "Timeout policy" decision.
 
-- source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
-  summary: The aggregate report renders one section per non-passed run with no bound or grouping, and the headline omits the failed count. Belongs to the Story 3.1 output contract.
-  evidence: Reporter.renderVerdict / headline.
+- source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
+  summary: The per-test abort reaches only crucible's judge calls; the user's own SUT/provider calls in discarded runs keep running (and spending) after the test rejects. AC6 forbids a public signal handle in 2.3; decide whether a public `crucible.signal`-style accessor is wanted (would need an AD-5 amendment).
+  evidence: Blind Hunter + Edge Case Hunter; `RunScope.abortSignal()` is internal only by spec.
+
+## Deferred from: code review of 3-1-read-a-failure-like-a-report.md (2026-11-13)
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: Runner-side discard snapshot (settled runs keep their status, unsettled → discarded at fatal/expiry) is locked only by reporter tests over hand-built results plus the existing "expired deadline cancels every run in flight" runner test. The review removed the public `CrucibleVerdictError.runStatuses` that locked it (test-induced public API). Revisit if a deliberate structured-verdict surface is designed (AD-3/AD-10 amendment) or Story 3.3 e2e can observe it.
+  evidence: Runner.discardUnsettled; review triage log in the 3.1 story file.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: `seq` is taken when a verdict/error is recorded (judge completion), so concurrently awaited assertions in one body (`Promise.all`) are ordered by completion, not source order — "first failure" and "assertion k of n" follow completion order. Decide whether AD-13 wants seq reserved at assertion entry.
+  evidence: RunScope.recordVerdict/recordError take seq after the judge call resolves.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: An errored run's `Judge attempts` comes from its lowest-seq ErrorRecord, not necessarily the record of the terminal cause shown on `Cause:` (pre-existing 2.x behaviour, preserved).
+  evidence: Reporter.erroredSection / lowestSeqError.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: Run-number lists for hidden/discarded runs compress contiguous ranges but are not capped — a large gate with alternating outcomes (e.g. 1000 runs) can still emit hundreds of spans on one line. Cap span count if large gates become common (3.2 `full` remains the escape hatch).
+  evidence: Reporter.ranges.
+
+- source_spec: 3-1-read-a-failure-like-a-report.md (code review 2026-11-13)
+  summary: `Thrown:`/`Cause:` pass error messages through verbatim, so Jest matcher messages carry their own ANSI colour codes into the report. AC4 forbids colour in crucible's markers only; decide whether to strip ANSI from rendered causes.
+  evidence: Reporter.describe.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: An abort that lands during the retry backoff sleep is not traced — `throwIfAborted` at the top of the next attempt throws with no `providerFailure` event, so the trace ends on "retrying in N ms". The run-settle / halt lines still show the outcome.
+  evidence: RetryingCompleter.complete loop head.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: In-flight runs discarded by a fatal abort or deadline keep tracing (aborted provider call, judge error) after the halt/verdict line, possibly inside the next test's trace. Lines are run-tagged, so they are attributable; suppress after batch resolution if it confuses users.
+  evidence: TraceReporter has no per-test lifecycle; RetryingCompleter/Judge trace on abort.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: Trace headlines carry `describe(cause)` and claim text unbounded (only prompt/reply/reasoning use the 2000-char payload bound). Same as the failure report's `Thrown:`/`Cause:`; bound both together if huge provider error bodies appear.
+  evidence: TraceReporter.runSettled/providerFailure/testAborted/judgeRecorded.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: A judge-call deadline timeout is traced as "the call was aborted" (label made neutral in review); distinguishing judge timeout vs run abort needs the per-call deadline reason surfaced to RetryingCompleter.
+  evidence: RetryingCompleter catch (signal.aborted branch); Judge combined signal.
+
+- source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
+  summary: `CRUCIBLE_VERBOSE` is matched exactly (case- and whitespace-sensitive, like the config value). Decide whether to trim/lowercase env input.
+  evidence: ConfigStore.requireVerbosity.
+
+## Deferred from: implementation of 3-3-prove-it-end-to-end-locally.md (2026-11-13)
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: The per-test deadline (30 s + 1 s per extra run) is too tight for bodies with several sequential assertions on a reasoning judge model. `deepseek/deepseek-v4-flash-0731` with default reasoning took ~11 s per call (≈2,200 reasoning tokens); a 3-run body with 3 sequential `coherent` calls expired at 32 s and reported ERRORED with discarded runs. There is no user knob for the budget. Decide timeout policy (per-assertion budget, a `timeoutMs` run option or a config budget) with the existing Runner.timeoutFor item and OQ-3.
+  evidence: First e2e-ext run; e2e configs now pass `meta.reasoning.effort: "low"` (~4–5 s per call) to stay inside the deadline.
+  status: Addressed by Story 4.1 (tune timeouts per test).
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: The failure report's "first failed assertion" is the lowest-`seq` false verdict (AD-13), but a body may legitimately assert a false verdict (`expect(await crucible.coherent(...)).toBe(false)`). In a real failing run the report showed the expected-false step's reasoning as the failure while the actual failing step (a true-expected claim judged false) was not shown. Needs an AD-13 amendment (e.g. attribute by the verdict the thrown assertion consumed, or render all false verdicts of a failed run at default).
+  evidence: e2e/core room-booking run with reasoning disabled; `CRUCIBLE_VERBOSE=full` was needed to find the real failing step.
+  status: Deferred by Jack 2026-11-13. Jack wants to study the problem before choosing a solution, so don't implement it until he picks this up.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: `schemas/coherent.md` defines no rule for conflicting or superseding state facts (e.g. an appended cancellation contradicting a loaded booking, or "later, she opens the envelope"). With reasoning disabled the judge kept the older fact; with low reasoning, temporal knowledge-boundary updates were judged slowly and inconsistently. e2e fixtures were made monotonic (appends add facts, never contradict). Decide whether state is ordered with later facts superseding earlier ones and say so in the schema (adds to the 1.3 "multi-fact state conflicts" item).
+  evidence: room-booking and knowledge-boundary fixture iterations during 3.3.
+  status: Deferred by Jack 2026-11-13. Jack wants to study the problem before choosing a solution, so don't implement it until he picks this up.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md
+  summary: (Main-lane half closed by Story 3.5 — `make e2e-core` on every main push type-checks e2e.) e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
+  evidence: npm run typecheck stays src-only so it needs no build.
+
+## Deferred from: code review of 3-3-prove-it-end-to-end-locally.md (2026-11-13)
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
+  summary: (Closed for CI by Story 3.5 — main lane pins setup-node `24`.) `--use-system-ca` is accepted in `NODE_OPTIONS` only from Node 22.15 / 23.8; `engines` says `>=22`. Story 3.5's ubuntu main lane must pin a Node that accepts it (setup-node `22` resolves to latest 22.x, fine) or override `E2E_NODE_OPTIONS` (now `?=` in the Makefile) to drop it.
+  evidence: Makefile `E2E_NODE_OPTIONS`.
+
+## Deferred from: 3-4-language-agnostic-judge-conformance-spike.md (2026-11-13)
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: A content line `>>>\r` (CRLF input) is not "solely `>>>`", so neither `schemas/coherent.md` nor `PayloadAssembler` neutralises it and the judge may read it as a fence. Decide CRLF normalisation or `\r`-trimmed fence matching (schema rule + assembler, TDD).
+  evidence: Offline sh-vs-TS payload diff with a CRLF edge case (identical output, both un-neutralised).
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: The conformance fixture has no golden assembled payloads, no `schema`/`version` binding and no assembly edge cases; assembler conformance currently needs a TS reference or live calls. Add payload vectors (checked by a TS unit test and `conformance.sh payloads`) — first step of the schema-pack extraction.
+  evidence: Story 3.4 Findings, follow-ups 1–3.
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: `e2e/ext/conformance/conformance.sh` has no retry on 429/5xx (an errored call fails the check) and `alpine:3.22` is not digest-pinned. Harden before running it in any CI lane.
+  evidence: Story 3.4 Review Triage Log.
+
+## Deferred from: 3-5-e2e-core-on-merge-to-main.md (2026-11-13)
+
+- source_spec: 3-5-e2e-core-on-merge-to-main.md
+  summary: (Closed by Story 3.7 — both workflows SHA-pinned to v4.4.0 commits, `.github/dependabot.yml` keeps them fresh.) Workflow actions are pinned by major tag (`actions/checkout@v4`, `actions/setup-node@v4`), not commit SHA. The e2e job now holds `OPENROUTER_API_KEY`, so SHA-pin all actions (with Dependabot for updates) across `ci.yml` and the Story 3.7 publish workflow in one pass.
+  evidence: `.github/workflows/ci.yml` (kept consistent with the existing `unit` job in 3.5).
+
+- source_spec: 3-5-e2e-core-on-merge-to-main.md
+  summary: (format:check half closed by Story 3.7 — added to the `unit` job.) Remaining: the spine's Structural Seed still annotates `e2e/core/ e2e/ext/` as "local-only" — stale since the AD-12 amendment (e2e/core also runs on the main lane).
+  evidence: `.github/workflows/ci.yml` unit job; ARCHITECTURE-SPINE.md Structural Seed.
+
+## Deferred from: 3-6-learn-it-from-the-docs-alone.md (2026-11-13)
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
+  summary: (Closed by Story 3.7 — removed from the public surface before first publish; re-adding with a registration API later is non-breaking.) `ProviderAdapter`, `CompletionRequest` and `FailureClass` were exported as public types, but there is no public way to register an adapter (`providerRegistry` is internal; only `openrouter` resolves). The types suggest an extension point that does not exist. Decide before the first publish (Story 3.7 surface check): drop them from the entry point, or design a registration API (AD-2/AD-9 amendment). `docs/api.md` states the current truth.
+  evidence: `src/index.ts`, `src/providers/registry.ts`; `docs/runs-and-threshold.md` previously said "a custom adapter must not either" (fixed in 3.6).
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
+  summary: `crucible.it` is typed as one permissive signature `(name, optsOrBody: RunOptions | TestBody, maybeBody?)`, so `crucible.it(name, { runs: 5 })` with no body type-checks and only fails at registration (`usage`). Two overloads (`(name, body)`, `(name, options, body)`) would make it a compile error; the docs describe the call forms as overloads. TDD a type-level change if wanted (no runtime change). Story 3.7 decision: stays deferred past first publish — tightening later only rejects calls that already throw `usage` at registration, so it is not a practical breaking change.
+  evidence: `dist/index.d.ts`; `docs/api.md` notes the permissive signature.
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md
+  summary: (Closed by Story 3.7 — README links are absolute `github.com/jackula83/crucible-ai/blob/main/docs/...` URLs and package.json has `repository`/`homepage`/`bugs`.) README linked to `docs/*.md` relatively, but `docs/` is not in the npm tarball and package.json has no `repository` field, so the links break on npmjs.com. Story 3.7 (npm README check) should add `repository` (npm then rewrites relative links to the GitHub repo) or switch README links to absolute GitHub URLs.
+  evidence: package.json `files: [dist, schemas]`, no `repository`.
+
+- source_spec: 3-7-ship-it-with-provenance.md
+  summary: The publish pipeline has never run. The first real release (claim `crucible-ai` with an `NPM_TOKEN` granular token, tag `v0.1.0`, then switch to Trusted Publishing and revoke the token) is Jack's manual action per `RELEASING.md`. Things only that run can confirm: npm's OIDC-first/token-fallback order when both are configured, `origin/main` being present after a `fetch-depth: 0` tag checkout, and `npm install -g npm@11.21.2` on the runner's toolcache Node.
+  evidence: `.github/workflows/publish.yml`; `RELEASING.md`. Validated so far only by actionlint, `npm pack --dry-run` and `verify:pack`.
+
+- source_spec: 3-7-ship-it-with-provenance.md
+  summary: The publish job installs `npm@11.21.2` from the registry by version, without an integrity pin. Once the Node 24 image bundles npm 11.5.1 or later, consider dropping the install and asserting `npm --version` instead.
+  evidence: `.github/workflows/publish.yml` publish job.
+
+## Deferred from: code review of 4-1-tune-timeouts-per-test.md (2026-11-13)
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Jest ceiling margin collapses near the timer maximum. `ceilingFor` = min(2147483647, testTimeout + 5000), so a declared `testTimeout` within 5 s of 2147483647 leaves the Jest backstop at or barely above the runner deadline, and Jest can fail the test before the runner renders its expiry report. Fix options: cap the accepted testTimeout at TIMER_MAX − margin, or document it.
+  evidence: `src/core/runner.ts` `ceilingFor`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: `inferenceTimeout` is armed per reply attempt, not per `coherent()` call. With the one re-ask on an unparseable reply, a single assertion can take up to 2 × inferenceTimeout. This is unchanged from the pre-4.1 30 s behaviour and the docs say "each judge reply attempt" correctly, but AC 2 says "each coherent() judge call". Decide whether to budget the whole call.
+  evidence: `src/core/judge.ts` `judgedReply` / `completeBeforeDeadline` (MAX_REPLY_ATTEMPTS = 2).
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: The public `crucible.it` forwards only four arguments, so `(name, opts, body, ms, extra)` silently drops `extra`; only the body-first form reports a surplus argument. Typed callers can't hit this. It folds into the existing 3.6 overloads item (overloads would also make `(name, opts, 5000)` and `(name, body, body)` compile errors).
+  evidence: `src/api/crucible.ts` `it`, `src/bindings/jest.ts` `declaration`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Two usage messages are misleading even though the error kind is right. `(name, body, undefined, n)` says "argument after the timeout", and `(name, opts, body, fn)` blames `testTimeout` instead of reporting two bodies. The positional slot shift in `normalize`/`declaration` causes both.
+  evidence: `src/bindings/jest.ts`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: The debug trace's `test started` line shows runs, threshold and the deadline but not the resolved `inferenceTimeout`, so a tuned judge budget can't be checked from the trace. `testStarted` takes `RunGate`.
+  evidence: `src/core/trace-reporter.ts` `testStarted`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Test hygiene (pre-existing patterns, extended by 4.1). Runner and binding tests compute expected deadlines with production `TimeBudget.testTimeoutFor` instead of the `TimeoutBudget` enum oracle. Harness helpers repeat `'the response'`/`'the claim'` literals, and `ClaimText.Default` already exists. Sweep both in one pass.
+  evidence: `src/core/runner.test.ts`, `src/bindings/test/jest-harness.util.ts` `runnerBudget`, `src/core/test/judge-harness.util.ts`, `src/core/test/runner-harness.util.ts`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: `RunScope.enterRun(body, signal?, run?, inferenceTimeout?)` keeps growing optional positional parameters, and callers pad with `undefined`. It also has its own inference default, separate from the resolver. Consider one options object.
+  evidence: `src/core/state.ts`, `src/core/test/judge-harness.util.ts`.

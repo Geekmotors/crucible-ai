@@ -43,3 +43,28 @@ assembled per the schema's documented order). Fixtures:
 - Local dev gotcha: Node's fetch rejects the corporate TLS proxy
   (`SELF_SIGNED_CERT_IN_CHAIN`); run harnesses/e2e with `--use-system-ca`.
   The e2e Makefile (Story 3.3) should bake this in.
+
+## Reasoning effort and the per-test deadline (Story 3.3 e2e)
+
+Measured 2026-11-13 against real OpenRouter while building the e2e suite:
+
+| `deepseek/deepseek-v4-flash-0731` with | Latency per call | Cost per call | Reasoning tokens |
+| --- | --- | --- | --- |
+| default reasoning | ~11.7 s | ~$0.0007 | ~2,200 |
+| `"meta": { "reasoning": { "effort": "low" } }` | ~4–5 s | — | — |
+| `"meta": { "reasoning": { "enabled": false } }` | ~2 s | ~$0.0001 | 0 |
+
+- By default Crucible gives a test 30 s plus 1 s per extra run. A body that
+  awaits three `coherent` calls one after another at ~11 s each runs out of
+  time and the test reports `ERRORED` (runs discarded at the deadline). The
+  budget can be raised with `testTimeout` (and the per-call
+  limit with `inferenceTimeout`) — see
+  [Timeout](runs-and-threshold.md#timeout).
+- With reasoning disabled the judge is fast but unreliable on stateful claims:
+  a 3-run gate failed 2 of 3 runs on the e2e room-booking scenario.
+- The e2e configs (`e2e/crucible.config.json` and the child projects) use
+  `"reasoning": { "effort": "low" }`: correct verdicts, inside the deadline.
+  A full `make e2e` is ~23 judge calls.
+- Multi-step e2e bodies start every step's `coherent` call before awaiting
+  any of them (each call judges the state as it stands when it is made), so a
+  run costs about one judge round trip instead of one per step.

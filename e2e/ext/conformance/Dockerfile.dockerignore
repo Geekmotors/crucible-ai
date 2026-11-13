@@ -1,0 +1,6 @@
+*
+!schemas/coherent.md
+!e2e/crucible.config.json
+!e2e/ext/fixtures/coherent-conformance.json
+!e2e/ext/conformance/conformance.sh
+!e2e/ext/conformance/coherent-payload.jq

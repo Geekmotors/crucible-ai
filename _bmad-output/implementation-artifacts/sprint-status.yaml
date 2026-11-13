@@ -58,21 +58,26 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Reliability measurement (stateful pass^k)
-  epic-2: in-progress
+  epic-2: done
   2-1-repeat-and-gate-on-pass-rate: done
-  2-2-arrange-state-per-run: backlog
-  2-3-fail-fast-without-burning-spend: backlog
-  2-4-choose-runs-and-threshold-with-eyes-open: backlog
-  2-5-project-wide-run-defaults: backlog
+  2-2-arrange-state-per-run: done
+  2-3-fail-fast-without-burning-spend: done
+  2-4-choose-runs-and-threshold-with-eyes-open: done
+  2-5-project-wide-run-defaults: done
   epic-2-retrospective: optional
 
   # Epic 3: Diagnose, document & ship
-  epic-3: backlog
-  3-1-read-a-failure-like-a-report: backlog
-  3-2-turn-up-the-volume-when-needed: backlog
-  3-3-prove-it-end-to-end-locally: backlog
-  3-4-language-agnostic-judge-conformance-spike: backlog
-  3-5-e2e-core-on-merge-to-main: backlog
-  3-6-learn-it-from-the-docs-alone: backlog
-  3-7-ship-it-with-provenance: backlog
+  epic-3: done
+  3-1-read-a-failure-like-a-report: done
+  3-2-turn-up-the-volume-when-needed: done
+  3-3-prove-it-end-to-end-locally: done
+  3-4-language-agnostic-judge-conformance-spike: done
+  3-5-e2e-core-on-merge-to-main: done
+  3-6-learn-it-from-the-docs-alone: done
+  3-7-ship-it-with-provenance: done
   epic-3-retrospective: optional
+
+  # Epic 4: Field readiness
+  epic-4: in-progress
+  4-1-tune-timeouts-per-test: done
+  epic-4-retrospective: optional

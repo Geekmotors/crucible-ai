@@ -81,6 +81,9 @@ A developer can arrange per-run state and gate CI on pass rate — full `{runs, 
 A developer can debug a failing CI run from terminal output alone, and the package is publicly consumable — full FR8 output contract, verbosity ladder incl. debug, docs set (incorporating the Epic 2 headroom guidance, OpenRouter reference, schema explainer, unasserted-verdict gotcha), fixture-driven local e2e via Makefile (manual, no pre-commit hook), `e2e-core` on the CI main-merge lane, a language-agnostic judge-conformance spike, and tag-triggered npm publish. The `e2e/core` critical-path test is a self-contained fixture-driven scenario: a checked-in fixture file (txt/json/md) establishes state, the test feeds input prompts and asserts semantic expectations — domain-agnostic, no external project dependency.
 **FRs covered:** FR8, FR9 (+ NFR4/NFR5 docs, AR10/AR13 ops)
 
+### Epic 4: Field readiness
+Field use from real e2e runs and the first consumer project surfaced constraints that block adoption. A developer can tune crucible's time budgets per test and project the way Jest users expect.
+
 ## Epic 1: First semantic assertion (walking skeleton)
 
 A developer can install crucible-ai, configure OpenRouter, and get a real semantic verdict inside a Jest test — smoke mode, schema-driven judge, fail-fast config, retry taxonomy, and a failure print that includes the judge's reasoning. Proves the core bet — schema-driven judging — earliest and cheapest.
@@ -359,3 +362,36 @@ So that every npm release is built, tested, and attested reproducibly.
 **And** the published package exposes one `crucible` namespace, ships `schemas/`, declares Jest as peer dependency, engines `>=22`
 **And** `npm pack` contents verified: no e2e, fixtures, or config with local values leak into the tarball
 **And** README on npm shows the current `crucible.it()` API
+
+## Epic 4: Field readiness
+
+### Story 4.1: Tune timeouts per test
+
+As a developer whose test bodies call my own model and then `coherent()` several times,
+I want to raise or lower crucible's time budgets per test and per project,
+So that slow but healthy runs aren't cut off at 30 s and reported ERRORED.
+
+Jack's decision (2026-11-13): keep 30 s as the default and allow overrides the way Jest does, through a trailing number or through named options.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.it(name, body, 50000)` or `crucible.it(name, { runs, threshold }, body, 50000)`
+**When** the test runs
+**Then** the trailing number is the test timeout in ms (Jest semantics): the runner deadline for the whole multi-run test, and the Jest ceiling is that deadline plus the existing margin
+
+**Given** `crucible.it(name, { inferenceTimeout: 50000, testTimeout: 60000 }, body)`
+**When** the test runs
+**Then** each `coherent()` judge call aborts after `inferenceTimeout` ms (a retryable infra error, as today) and the whole test expires after `testTimeout` ms (the ERRORED expiry report, as today)
+
+**Given** `testDefaults: { inferenceTimeout, testTimeout }` in config
+**When** a test does not declare them
+**Then** they apply with the existing per-field precedence (declared > testDefaults > built-in)
+
+**Given** no overrides
+**Then** behaviour is unchanged: inference 30000 ms and test `30000 + (runs-1)×1000` ms
+
+**Given** a timeout that is not a positive integer (or exceeds the timer maximum), or a trailing number together with `testTimeout`
+**Then** it is a `usage` error at declaration (or a `config` error for testDefaults) — never a silent clamp
+
+**And** docs (`configuration.md`, `api.md`, `gotchas.md`, `runs-and-threshold.md`) document both knobs and note that `testTimeout` caps everything, so an `inferenceTimeout` above it is effectively bounded by it
+

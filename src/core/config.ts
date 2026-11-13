@@ -1,25 +1,38 @@
 import { CrucibleError } from './errors.js';
+import type { CrucibleErrorKind } from './errors.js';
 import { CONFIG_FILE_NAME } from './config-boundary.js';
 import type { ConfigBoundary, ConfigFileRead } from './config-boundary.js';
 import { FileSystemConfigBoundary } from './file-system-config-boundary.js';
+import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
+import { RunOptionsValidator } from './run-options-validator.util.js';
+import type { RunOptions } from './run-options.js';
+import { VERBOSITY_LEVELS } from './verbosity.js';
+import type { Verbosity } from './verbosity.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import type { ProviderAdapter } from '../providers/types.js';
 
-const VERBOSITY_LEVELS = ['default', 'full', 'debug'] as const;
-const KNOWN_FIELDS = ['provider', 'model', 'meta', 'verbosity'] as const;
+const KNOWN_FIELDS = [
+  'provider',
+  'model',
+  'meta',
+  'verbosity',
+  'testDefaults',
+  'excerptChars',
+] as const;
 const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authorization'] as const;
-
-type Verbosity = (typeof VERBOSITY_LEVELS)[number];
 
 type CrucibleConfig = {
   readonly provider: ProviderAdapter;
   readonly model: string;
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly effectiveVerbosity: Verbosity;
+  readonly testDefaults: RunOptions;
+  readonly excerptChars: number;
 };
 
 class ConfigStore {
   private cached?: CrucibleConfig;
+  private readonly validator = new RunOptionsValidator();
 
   constructor(
     private readonly boundary: ConfigBoundary,
@@ -40,6 +53,8 @@ class ConfigStore {
       model: this.requireName(root.model, 'model'),
       meta: this.requireMetaShape(root.meta),
       effectiveVerbosity: this.resolveEffectiveVerbosity(root.verbosity),
+      testDefaults: this.requireTestDefaults(root.testDefaults),
+      excerptChars: this.requireExcerptChars(root.excerptChars),
     });
   }
 
@@ -124,22 +139,45 @@ class ConfigStore {
     return value;
   }
 
-  private resolveEffectiveVerbosity(configured: unknown): Verbosity {
-    const override = this.boundary.readVerbosityOverride();
-    if (override !== undefined && override !== '') {
-      return this.requireVerbosity(override, 'the CRUCIBLE_VERBOSE environment variable');
+  private requireTestDefaults(value: unknown): RunOptions {
+    if (value === undefined) {
+      return Object.freeze({});
     }
-    if (configured !== undefined) {
-      return this.requireVerbosity(configured, `"verbosity" in ${CONFIG_FILE_NAME}`);
+    const violation = this.validator.violation(value, `"testDefaults" in ${CONFIG_FILE_NAME}`);
+    if (violation !== undefined) {
+      throw this.failure(violation);
     }
-    return 'default';
+    return Object.freeze({ ...(value as RunOptions) });
   }
 
-  private requireVerbosity(value: unknown, source: string): Verbosity {
+  private requireExcerptChars(value: unknown): number {
+    if (value === undefined) {
+      return DEFAULT_REPORT_SETTINGS.excerptChars;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw this.failure(`"excerptChars" in ${CONFIG_FILE_NAME} must be an integer of at least 1.`);
+    }
+    return value;
+  }
+
+  private resolveEffectiveVerbosity(configured: unknown): Verbosity {
+    const fromConfig =
+      configured === undefined
+        ? 'default'
+        : this.requireVerbosity(configured, `"verbosity" in ${CONFIG_FILE_NAME}`, 'config');
+    const override = this.boundary.readVerbosityOverride();
+    if (override !== undefined && override !== '') {
+      return this.requireVerbosity(override, 'the CRUCIBLE_VERBOSE environment variable', 'usage');
+    }
+    return fromConfig;
+  }
+
+  private requireVerbosity(value: unknown, source: string, kind: CrucibleErrorKind): Verbosity {
     if (typeof value === 'string' && (VERBOSITY_LEVELS as readonly string[]).includes(value)) {
       return value as Verbosity;
     }
-    throw this.failure(
+    throw new CrucibleError(
+      kind,
       `Invalid verbosity "${String(value)}" from ${source}. ` +
         `Valid levels: ${VERBOSITY_LEVELS.join(', ')}.`,
     );

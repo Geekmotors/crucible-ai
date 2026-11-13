@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
+import { TimeBudget } from './time-budget.util.js';
 
 type VerdictRecord = {
   readonly assertion: string;
@@ -24,18 +25,48 @@ type RunContext = {
 
 type RunStore = {
   readonly context: RunContext;
+  readonly signal: AbortSignal;
+  readonly run?: number;
+  readonly inferenceTimeout: number;
   seq: number;
 };
 
 class RunScope {
   private readonly storage = new AsyncLocalStorage<RunStore>();
 
-  enterRun<T>(body: () => T): T {
-    return this.storage.run({ context: { state: [], verdicts: [], errors: [] }, seq: 0 }, body);
+  enterRun<T>(
+    body: () => T,
+    signal: AbortSignal = new AbortController().signal,
+    run?: number,
+    inferenceTimeout: number = TimeBudget.INFERENCE_MS,
+  ): T {
+    return this.storage.run(
+      { context: { state: [], verdicts: [], errors: [] }, signal, run, inferenceTimeout, seq: 0 },
+      body,
+    );
+  }
+
+  runNumber(): number | undefined {
+    return this.storage.getStore()?.run;
   }
 
   context(): RunContext {
     return this.store().context;
+  }
+
+  abortSignal(): AbortSignal {
+    return this.store().signal;
+  }
+
+  inferenceTimeout(): number {
+    return this.store().inferenceTimeout;
+  }
+
+  appendState(entries: unknown): void {
+    const store = this.store();
+    for (const entry of this.stateEntries(entries)) {
+      store.context.state.push(entry);
+    }
   }
 
   recordVerdict(verdict: Omit<VerdictRecord, 'seq'>): VerdictRecord {
@@ -50,6 +81,17 @@ class RunScope {
     const record = { ...error, seq: this.takeSeq(store) };
     store.context.errors.push(record);
     return record;
+  }
+
+  private stateEntries(entries: unknown): string[] {
+    const candidates: unknown[] = Array.isArray(entries) ? Array.from(entries) : [entries];
+    if (!candidates.every((entry) => typeof entry === 'string')) {
+      throw new CrucibleError(
+        'usage',
+        'crucible.load and crucible.append take a string or an array of strings.',
+      );
+    }
+    return candidates as string[];
   }
 
   private takeSeq(store: RunStore): number {

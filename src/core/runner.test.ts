@@ -1,17 +1,27 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
-import { Runner } from './runner.js';
-import { RunScope } from './state.js';
+import type { RunOptions } from './run-options.js';
+import { BlockingAdapter } from './test/blocking-adapter.fake.js';
+import { ManualTimer } from './test/manual-timer.fake.js';
+import { ProjectDefaults } from './test/project-defaults.util.js';
+import { ProviderFault } from './test/provider-fault.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 import { RunnerHarness } from './test/runner-harness.util.js';
 import { StartGate } from './test/start-gate.util.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
+import { TimeBudget } from './time-budget.util.js';
+import { ReportText } from './test/report-text.enum.js';
+import { TraceHarness } from './test/trace-harness.util.js';
+import { TraceText } from './test/trace-text.enum.js';
+import { VerbosityLevel } from './test/verbosity-level.enum.js';
 import { CrucibleVerdictError } from './verdict-error.js';
+import { Capture } from './test/capture.util.js';
+import { CustomTimeout } from './test/custom-timeout.enum.js';
 
 describe('Runner', () => {
   it('resolves when the run passes', async () => {
-    await expect(new Runner(new RunScope()).execute(() => 'the value')).resolves.toBeUndefined();
+    await expect(RunnerHarness.runner().execute(() => 'the value')).resolves.toBeUndefined();
   });
 
   it('executes the body once per declared run', async () => {
@@ -70,7 +80,7 @@ describe('Runner', () => {
   it('carries the rejection of the first run matching the outcome as the cause', async () => {
     const first = new Error('first miss');
     const behaviors = [
-      RunnerHarness.throwing(new CrucibleError('infra', 'outage')),
+      RunnerHarness.throwing(new CrucibleError('infra', 'outage', { retryable: true })),
       RunnerHarness.throwing(first),
       RunnerHarness.throwing(new Error('second miss')),
     ];
@@ -87,18 +97,6 @@ describe('Runner', () => {
     ];
     const error = await RunnerHarness.executionRejection(behaviors, Threshold.Half);
     expect(error).toBe(usage);
-  });
-
-  it('keeps the 30 second smoke budget for a single run', () => {
-    expect(new Runner(new RunScope()).timeoutFor(RunCount.Single)).toBe(TimeoutBudget.SmokeMs);
-  });
-
-  it('never shrinks the per-test budget as the run count grows', () => {
-    const runner = new Runner(new RunScope());
-    const budgets = Array.from({ length: RunCount.Gated }, (_, index) =>
-      runner.timeoutFor(index + 1),
-    );
-    expect(budgets).toEqual([...budgets].sort((a, b) => a - b));
   });
 
   it('turns a rejection after a false verdict into a failed CrucibleVerdictError', async () => {
@@ -158,5 +156,263 @@ describe('Runner', () => {
       throw inner;
     });
     expect(error).toBe(inner);
+  });
+
+  it.each([
+    ['raw', RunnerHarness.fatal],
+    ['wrapped by user code', new Error('re-thrown by user code', { cause: RunnerHarness.fatal })],
+  ])(
+    'a fatal provider error (%s) throws errored with its cause without waiting for siblings',
+    async (_label, cause) => {
+      const behaviors = [
+        RunnerHarness.throwing(cause),
+        ...Array.from({ length: RunCount.Gated - 1 }, () => RunnerHarness.never),
+      ];
+      const error = await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
+      expect(error).toBeInstanceOf(CrucibleVerdictError);
+      expect((error as CrucibleVerdictError).outcome).toBe('errored');
+      expect((error as CrucibleVerdictError).cause).toBe(cause);
+    },
+  );
+
+  it('aborts every sibling run in flight on the first fatal provider error', async () => {
+    const cancelled = new StartGate(RunCount.Gated);
+    const behaviors = [
+      RunnerHarness.throwing(RunnerHarness.fatal),
+      ...Array.from({ length: RunCount.Gated - 1 }, () => RunnerHarness.awaitingAbort(cancelled)),
+    ];
+    await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
+    await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('a fatal provider error throws even when enough runs already passed', async () => {
+    const gate = new StartGate(RunCount.Single + 1);
+    const behaviors = [
+      RunnerHarness.pass,
+      RunnerHarness.gatedThrowing(gate, RunnerHarness.fatal),
+      RunnerHarness.gated(gate),
+    ];
+    const error = await RunnerHarness.executionRejection(behaviors, Threshold.Minuscule);
+    expect((error as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('an infra error that exhausted its retries errors only its own run — siblings carry on', async () => {
+    const gate = new StartGate(RunCount.Single + 2);
+    const behaviors = [
+      RunnerHarness.gatedThrowing(
+        gate,
+        new CrucibleError('infra', 'kept failing', { retryable: true }),
+      ),
+      RunnerHarness.gated(gate),
+      RunnerHarness.gated(gate),
+    ];
+    await expect(RunnerHarness.execute(behaviors, Threshold.Half)).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ['a usage error', new CrucibleError('usage', 'fix your setup')],
+    ['a config error', new CrucibleError('config', 'fix your setup')],
+    ['a nested verdict error', new CrucibleVerdictError('failed', 'already rendered', undefined)],
+  ])('%s aborts every sibling and is rethrown untouched without waiting', async (_label, cause) => {
+    const cancelled = new StartGate(RunCount.Gated);
+    const behaviors = [
+      RunnerHarness.throwing(cause),
+      ...Array.from({ length: RunCount.Gated - 1 }, () => RunnerHarness.awaitingAbort(cancelled)),
+    ];
+    const error = await RunnerHarness.executionRejection(behaviors, Threshold.Certain);
+    expect(error).toBe(cause);
+    await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('a fatal judge call cancels every sibling judge call still in flight', async () => {
+    const cancelled = new StartGate(RunCount.Gated);
+    const adapter = new BlockingAdapter(cancelled, [new Error(ProviderFault.InvalidKey)]);
+    await RunnerHarness.judgedRejection(adapter, RunCount.Gated);
+    await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('a run rejecting with a cyclic cause chain still settles as failed', async () => {
+    const error = await RunnerHarness.executionRejection(
+      [RunnerHarness.throwing(RunnerHarness.cyclic())],
+      Threshold.Certain,
+    );
+    expect((error as CrucibleVerdictError).outcome).toBe('failed');
+  });
+
+  it('executes the configured run count when the declaration omits runs', async () => {
+    await expect(RunnerHarness.executions({}, ProjectDefaults.strictGate)).resolves.toBe(
+      RunCount.Gated,
+    );
+  });
+
+  it('gates on the configured threshold when the declaration omits it', async () => {
+    const behaviors = RunnerHarness.behaviors(RunCount.StrictNeed, 1, new Error('miss'));
+    await expect(
+      RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, ProjectDefaults.strictGate),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects with the config failure raised while reading the project defaults', async () => {
+    const error = await Capture.rejection(
+      RunnerHarness.failingDefaultsRunner(new CrucibleError('config', 'bad testDefaults')).execute(
+        () => {},
+      ),
+    );
+    expect((error as CrucibleError).kind).toBe('config');
+  });
+
+  it('starts no run when the project defaults cannot be read', async () => {
+    const runner = RunnerHarness.failingDefaultsRunner(new CrucibleError('config', 'bad'));
+    await expect(RunnerHarness.executionsBeforeRejection(runner)).resolves.toBe(0);
+  });
+
+  it('an expired test deadline rejects as an errored verdict', async () => {
+    const timer = new ManualTimer();
+    const behaviors = Array.from({ length: RunCount.Gated }, () => RunnerHarness.never);
+    const pending = Capture.rejection(
+      RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, {}, timer),
+    );
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
+    const error = await pending;
+    expect(error).toBeInstanceOf(CrucibleVerdictError);
+    expect((error as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('an expired test deadline cancels every run still in flight', async () => {
+    const timer = new ManualTimer();
+    const cancelled = new StartGate(RunCount.Gated);
+    const behaviors = Array.from({ length: RunCount.Gated }, () =>
+      RunnerHarness.awaitingAbort(cancelled),
+    );
+    void RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, {}, timer).catch(() => {});
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
+    await expect(cancelled.arrive()).resolves.toBeUndefined();
+  });
+
+  it('expires at the deadline of the configured run count', async () => {
+    const timer = new ManualTimer();
+    const behaviors = Array.from({ length: RunCount.Gated }, () => RunnerHarness.never);
+    const pending = Capture.rejection(
+      RunnerHarness.executeWith(behaviors, {}, ProjectDefaults.strictGate, timer),
+    );
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
+    expect((await pending) as CrucibleVerdictError).toBeInstanceOf(CrucibleVerdictError);
+  });
+
+  it('sizes the deadline from the configured run count, not the single-run budget', async () => {
+    const timer = new ManualTimer();
+    const gate = new StartGate(RunCount.Gated + 1);
+    const behaviors = Array.from({ length: RunCount.Gated }, () => RunnerHarness.gated(gate));
+    const pending = RunnerHarness.executeWith(behaviors, {}, ProjectDefaults.strictGate, timer);
+    timer.advance(TimeoutBudget.SmokeMs);
+    void gate.arrive();
+    await expect(pending).resolves.toBeUndefined();
+  });
+});
+
+describe('Runner — tuned timeouts', () => {
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { testTimeout: CustomTimeout.Short }, {}],
+    ['configured', {}, { testTimeout: CustomTimeout.Short }],
+  ])('expires at a %s test timeout shorter than the built-in', async (_label, opts, defaults) => {
+    const timer = new ManualTimer();
+    const pending = Capture.rejection(
+      RunnerHarness.executeWith([RunnerHarness.never], opts, defaults, timer),
+    );
+    timer.advance(CustomTimeout.Short);
+    expect(((await pending) as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { testTimeout: CustomTimeout.Long }, {}],
+    ['configured', {}, { testTimeout: CustomTimeout.Long }],
+  ])('lets a run outlast 30 s under a longer %s test timeout', async (_label, opts, defaults) => {
+    const timer = new ManualTimer();
+    const gate = new StartGate(RunCount.Single + 1);
+    const pending = RunnerHarness.executeWith([RunnerHarness.gated(gate)], opts, defaults, timer);
+    timer.advance(TimeoutBudget.SmokeMs);
+    void gate.arrive();
+    await expect(pending).resolves.toBeUndefined();
+  });
+
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { inferenceTimeout: CustomTimeout.Short }, {}],
+    ['configured', {}, { inferenceTimeout: CustomTimeout.Short }],
+  ])(
+    'errors a run whose judge call outlives a %s inference timeout',
+    async (_label, opts, defaults) => {
+      const error = await RunnerHarness.judgedExpiry(opts, defaults, CustomTimeout.Short);
+      expect((error as CrucibleVerdictError).outcome).toBe('errored');
+    },
+  );
+});
+
+describe('Runner — verbosity', () => {
+  it('writes nothing at default verbosity, pass or fail', async () => {
+    const traced = new TraceHarness(VerbosityLevel.Default);
+    await RunnerHarness.tracedOutput(traced, [RunnerHarness.pass], Threshold.Certain);
+    await RunnerHarness.tracedOutput(
+      traced,
+      [RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Certain,
+    );
+    expect(traced.output.text).toBe('');
+  });
+
+  it('writes the full report of a passing gate at full verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Full),
+      [RunnerHarness.pass, RunnerHarness.pass],
+      Threshold.Certain,
+    );
+    expect(output).toContain(ReportText.Passed);
+    expect(output).toContain(`${ReportText.PassedRun} Run #2`);
+  });
+
+  it('writes no passing report for a failing gate — the failure carries the report', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Full),
+      [RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Certain,
+    );
+    expect(output).toBe('');
+  });
+
+  it('traces the test start, how every run settled, and the verdict at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Debug),
+      [RunnerHarness.pass, RunnerHarness.throwing(new Error('miss'))],
+      Threshold.Half,
+    );
+    expect(output).toContain(TraceText.TestStarted);
+    expect(output).toContain('run #1 settled passed');
+    expect(output).toContain('run #2 settled failed');
+    expect(output).toContain(TraceText.VerdictPass);
+  });
+
+  it('traces a fatal abort at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedOutput(
+      new TraceHarness(VerbosityLevel.Debug),
+      [RunnerHarness.throwing(RunnerHarness.fatal)],
+      Threshold.Certain,
+    );
+    expect(output).toContain('test aborted');
+    expect(output).toContain(ProviderFault.InvalidKey);
+  });
+
+  it('traces a deadline expiry at debug verbosity', async () => {
+    const output = await RunnerHarness.tracedExpiryOutput(new TraceHarness(VerbosityLevel.Debug));
+    expect(output).toContain(TraceText.ExpiredFragment);
+    expect(output).toContain(TraceText.OneDiscarded);
+  });
+
+  it('tags work inside each run with its run number at debug verbosity', async () => {
+    const traced = new TraceHarness(VerbosityLevel.Debug);
+    const output = await RunnerHarness.tracedOutput(
+      traced,
+      [RunnerHarness.pass, RunnerHarness.recording(traced.trace())],
+      Threshold.Certain,
+    );
+    expect(output).toContain('run #2 judge verdict');
   });
 });

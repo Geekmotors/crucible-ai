@@ -47,6 +47,18 @@ describe('Aggregator', () => {
       'errored',
     ],
     [
+      'a discarded run counts in no zone beside a failed run',
+      ['failed', 'discarded'],
+      Threshold.Half,
+      'fail',
+    ],
+    [
+      'a discarded run counts in no zone beside an errored run',
+      ['errored', 'discarded'],
+      Threshold.Half,
+      'errored',
+    ],
+    [
       'a single failed run at a minuscule threshold still fails',
       ['failed'],
       Threshold.Minuscule,
@@ -60,6 +72,7 @@ describe('Aggregator', () => {
     [RunCount.Gated, Threshold.Lenient, RunCount.LenientNeed],
     [RunCount.Gated, Threshold.Strict, RunCount.StrictNeed],
     [RunCount.Single, Threshold.Certain, RunCount.Single],
+    [RunCount.Hundred, Threshold.FloatBump, RunCount.LenientNeed],
   ])('%i runs at threshold %p need exactly %i passes', (runs, threshold, need) => {
     expect(new Aggregator().tally(StatusMix.of(runs, 0, 0), { runs, threshold }).need).toBe(need);
   });

@@ -1,11 +1,11 @@
-import type { ResolvedRunOptions } from './run-options.js';
+import type { RunGate } from './run-options.js';
 import type { RunStatus, RunTally, VerdictZone } from './run-result.js';
 
 class Aggregator {
   private static readonly NEED_EPSILON = 1e-9;
   private static readonly MIN_NEED = 1;
 
-  tally(statuses: readonly RunStatus[], opts: ResolvedRunOptions): RunTally {
+  tally(statuses: readonly RunStatus[], opts: RunGate): RunTally {
     const need = Math.max(
       Aggregator.MIN_NEED,
       Math.ceil(opts.threshold * opts.runs - Aggregator.NEED_EPSILON),

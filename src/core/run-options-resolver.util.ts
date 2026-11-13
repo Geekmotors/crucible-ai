@@ -1,52 +1,32 @@
 import { CrucibleError } from './errors.js';
+import { RunOptionsValidator } from './run-options-validator.util.js';
 import type { ResolvedRunOptions, RunOptions } from './run-options.js';
+import { TimeBudget } from './time-budget.util.js';
 
 class RunOptionsResolver {
   private static readonly DEFAULT_RUNS = 1;
   private static readonly DEFAULT_THRESHOLD = 1;
-  private static readonly KNOWN_KEYS: ReadonlySet<string> = new Set(['runs', 'threshold']);
+  private static readonly SUBJECT = 'crucible.it options';
+
+  private readonly validator = new RunOptionsValidator();
 
   validate(candidate: unknown): asserts candidate is RunOptions {
-    if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
-      throw new CrucibleError('usage', 'crucible.it options must be an object.');
-    }
-    const opts = candidate as Record<string, unknown>;
-    for (const key of Object.keys(opts)) {
-      if (!RunOptionsResolver.KNOWN_KEYS.has(key)) {
-        throw new CrucibleError(
-          'usage',
-          `Unknown crucible.it option "${key}". Supported options: ${[...RunOptionsResolver.KNOWN_KEYS].join(', ')}.`,
-        );
-      }
-    }
-    if (opts.runs !== undefined && !this.isValidRuns(opts.runs)) {
-      throw new CrucibleError(
-        'usage',
-        `crucible.it option "runs" must be an integer of at least 1; received ${String(opts.runs)}.`,
-      );
-    }
-    if (opts.threshold !== undefined && !this.isValidThreshold(opts.threshold)) {
-      throw new CrucibleError(
-        'usage',
-        `crucible.it option "threshold" must be a number greater than 0 and at most 1; received ${String(opts.threshold)}.`,
-      );
+    const violation = this.validator.violation(candidate, RunOptionsResolver.SUBJECT);
+    if (violation !== undefined) {
+      throw new CrucibleError('usage', violation);
     }
   }
 
-  resolve(opts: RunOptions): ResolvedRunOptions {
+  resolve(opts: RunOptions, defaults: RunOptions = {}): ResolvedRunOptions {
     this.validate(opts);
+    const runs = opts.runs ?? defaults.runs ?? RunOptionsResolver.DEFAULT_RUNS;
     return {
-      runs: opts.runs ?? RunOptionsResolver.DEFAULT_RUNS,
-      threshold: opts.threshold ?? RunOptionsResolver.DEFAULT_THRESHOLD,
+      runs,
+      threshold: opts.threshold ?? defaults.threshold ?? RunOptionsResolver.DEFAULT_THRESHOLD,
+      inferenceTimeout:
+        opts.inferenceTimeout ?? defaults.inferenceTimeout ?? TimeBudget.INFERENCE_MS,
+      testTimeout: opts.testTimeout ?? defaults.testTimeout ?? TimeBudget.testTimeoutFor(runs),
     };
-  }
-
-  private isValidRuns(runs: unknown): boolean {
-    return typeof runs === 'number' && Number.isInteger(runs) && runs >= 1;
-  }
-
-  private isValidThreshold(threshold: unknown): boolean {
-    return typeof threshold === 'number' && threshold > 0 && threshold <= 1;
   }
 }
 

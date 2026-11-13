@@ -1,19 +1,95 @@
+import type { ProviderAdapter } from '../../providers/types.js';
 import { TestModel } from '../../providers/test/test-model.enum.js';
 import { Judge } from '../judge.js';
+import type { Deadline } from '../judge.js';
 import { RetryingCompleter } from '../retry.js';
 import { RunScope } from '../state.js';
+import { TraceReporter } from '../trace-reporter.js';
+import { BlockingAdapter } from './blocking-adapter.fake.js';
 import { Capture } from './capture.util.js';
+import { RunCount } from './run-count.enum.js';
+import { StartGate } from './start-gate.util.js';
 import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { SleepRecorder } from './sleep-recorder.fake.js';
+import { ClaimText } from './claim-text.enum.js';
+import { CustomTimeout } from './custom-timeout.enum.js';
+import { DelayedReplyAdapter } from './delayed-reply-adapter.fake.js';
+import { ManualTimer } from './manual-timer.fake.js';
+import { TimedDeadline } from './timed-deadline.fake.js';
+import { TraceText } from './trace-text.enum.js';
+import { TraceHarness } from './trace-harness.util.js';
 
 class JudgeHarness {
-  static judge(adapter: ScriptedAdapter, scope: RunScope): Judge {
+  static schemaText = (): string => 'judge schema text';
+
+  static judge(adapter: ProviderAdapter, scope: RunScope, deadline?: Deadline): Judge {
     return new Judge(
-      () => 'judge schema text',
-      new RetryingCompleter(new SleepRecorder().sleep),
+      JudgeHarness.schemaText,
+      new RetryingCompleter(new TraceReporter(), new SleepRecorder().sleep),
       () => ({ adapter, model: TestModel.Generic }),
       scope,
+      new TraceReporter(),
+      deadline,
     );
+  }
+
+  static timedJudge(adapter: ProviderAdapter, scope: RunScope, timer: ManualTimer): Judge {
+    return JudgeHarness.judge(adapter, scope, new TimedDeadline(timer).signal);
+  }
+
+  static async slowReply(inferenceTimeout?: number): Promise<boolean> {
+    const timer = new ManualTimer();
+    const scope = new RunScope();
+    const adapter = new DelayedReplyAdapter(timer, CustomTimeout.SlowReply, TraceText.Reply);
+    const judge = JudgeHarness.timedJudge(adapter, scope, timer);
+    const pending = scope.enterRun(
+      () => judge.judgeCoherent('the response', 'the claim'),
+      undefined,
+      undefined,
+      inferenceTimeout,
+    );
+    await adapter.started;
+    timer.advance(CustomTimeout.SlowReply);
+    return pending;
+  }
+
+  static async blockedFailure(inferenceTimeout: number, advanceMs: number): Promise<unknown> {
+    const timer = new ManualTimer();
+    const scope = new RunScope();
+    const judge = JudgeHarness.timedJudge(
+      new BlockingAdapter(new StartGate(RunCount.Single)),
+      scope,
+      timer,
+    );
+    const pending = scope.enterRun(
+      () => Capture.rejection(judge.judgeCoherent('the response', 'the claim')),
+      undefined,
+      undefined,
+      inferenceTimeout,
+    );
+    timer.advance(advanceMs);
+    return pending;
+  }
+
+  static async tracedOutput(replies: string[], traced: TraceHarness): Promise<string> {
+    const trace = traced.trace();
+    const judge = new Judge(
+      JudgeHarness.schemaText,
+      new RetryingCompleter(trace, new SleepRecorder().sleep),
+      () => ({
+        adapter: new ScriptedAdapter(
+          replies.map((reply) => ({ resolve: reply })),
+          'retryable',
+        ),
+        model: TestModel.Generic,
+      }),
+      traced.scope,
+      trace,
+    );
+    await traced.scope
+      .enterRun(() => judge.judgeCoherent('the response', ClaimText.KeepsSecret))
+      .catch(() => undefined);
+    return traced.output.text;
   }
 
   static judgeReplies(replies: string[]): Promise<boolean> {

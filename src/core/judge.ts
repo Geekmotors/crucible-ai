@@ -3,10 +3,10 @@ import { CrucibleError } from './errors.js';
 import { PayloadAssembler } from './payload-assembler.util.js';
 import { RetryingCompleter } from './retry.js';
 import { RunScope, runScope } from './state.js';
+import { TraceReporter } from './trace-reporter.js';
 
 const COHERENT_ASSERTION = 'coherent';
 const MAX_REPLY_ATTEMPTS = 2;
-const JUDGE_CALL_TIMEOUT_MS = 30000;
 
 type CompletionTarget = {
   readonly adapter: ProviderAdapter;
@@ -16,6 +16,7 @@ type CompletionTarget = {
 
 type SchemaTextSupplier = () => string;
 type CompletionTargetSupplier = () => CompletionTarget;
+type Deadline = (ms: number) => AbortSignal;
 
 type ParsedVerdict = {
   readonly verdict: boolean;
@@ -25,11 +26,17 @@ type ParsedVerdict = {
 class Judge {
   private readonly assembler = new PayloadAssembler();
 
+  private static timeoutDeadline(ms: number): AbortSignal {
+    return AbortSignal.timeout(ms);
+  }
+
   constructor(
     private readonly schemaText: SchemaTextSupplier,
     private readonly completer: RetryingCompleter,
     private readonly target: CompletionTargetSupplier,
     private readonly scope: RunScope = runScope,
+    private readonly trace: TraceReporter = new TraceReporter(),
+    private readonly deadline: Deadline = Judge.timeoutDeadline,
   ) {}
 
   async judgeCoherent(response: string, claim: string): Promise<boolean> {
@@ -52,18 +59,20 @@ class Judge {
       },
       classifyFailure: (error) => adapter.classifyFailure(error),
     };
+    const runSignal = this.scope.abortSignal();
     try {
-      const parsed = await this.judgedReply(counted, request);
-      this.scope.recordVerdict({
+      const parsed = await this.judgedReply(counted, request, runSignal);
+      const record = this.scope.recordVerdict({
         assertion: COHERENT_ASSERTION,
         claim,
         verdict: parsed.verdict,
         reasoning: parsed.reasoning,
         response,
       });
+      this.trace.judgeRecorded(record);
       return parsed.verdict;
     } catch (cause) {
-      this.scope.recordError({ cause, attempts });
+      this.trace.judgeRecorded(this.scope.recordError({ cause, attempts }));
       throw cause;
     }
   }
@@ -71,21 +80,43 @@ class Judge {
   private async judgedReply(
     adapter: ProviderAdapter,
     request: Parameters<RetryingCompleter['complete']>[1],
+    runSignal: AbortSignal,
   ): Promise<ParsedVerdict> {
     let lastFailure: CrucibleError | undefined;
     for (let attempt = 1; attempt <= MAX_REPLY_ATTEMPTS; attempt += 1) {
-      const reply = await this.completer.complete(
-        adapter,
-        request,
-        AbortSignal.timeout(JUDGE_CALL_TIMEOUT_MS),
-      );
+      const reply = await this.completeBeforeDeadline(adapter, request, runSignal);
       try {
         return this.parseReply(reply);
       } catch (failure) {
+        this.trace.judgeReplyRejected(attempt, failure);
         lastFailure = failure as CrucibleError;
       }
     }
     throw lastFailure;
+  }
+
+  private async completeBeforeDeadline(
+    adapter: ProviderAdapter,
+    request: Parameters<RetryingCompleter['complete']>[1],
+    runSignal: AbortSignal,
+  ): Promise<string> {
+    const timeoutMs = this.scope.inferenceTimeout();
+    const deadline = this.deadline(timeoutMs);
+    try {
+      return await this.completer.complete(
+        adapter,
+        request,
+        AbortSignal.any([runSignal, deadline]),
+      );
+    } catch (failure) {
+      if (deadline.aborted && !runSignal.aborted) {
+        throw new CrucibleError('infra', `The judge call did not finish within ${timeoutMs} ms.`, {
+          retryable: true,
+          cause: failure,
+        });
+      }
+      throw failure;
+    }
   }
 
   private requireStrings(response: unknown, claim: unknown): void {
@@ -129,5 +160,5 @@ class Judge {
   }
 }
 
-export { Judge, JUDGE_CALL_TIMEOUT_MS };
-export type { CompletionTarget, CompletionTargetSupplier, SchemaTextSupplier };
+export { Judge };
+export type { CompletionTarget, CompletionTargetSupplier, Deadline, SchemaTextSupplier };

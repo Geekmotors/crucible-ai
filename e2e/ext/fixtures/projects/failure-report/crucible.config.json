@@ -1,0 +1,14 @@
+{
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "meta": {
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  "testDefaults": {
+    "runs": 2,
+    "threshold": 1
+  },
+  "excerptChars": 40
+}
