@@ -10,11 +10,13 @@ import { JudgeHarness } from './judge-harness.util.js';
 import { ManualTimer } from './manual-timer.fake.js';
 import { ProviderFault } from './provider-fault.enum.js';
 import { StartGate } from './start-gate.util.js';
+import { BlockingAdapter } from './blocking-adapter.fake.js';
 import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
 import { ReportHarness } from './report-harness.util.js';
 import { RunCount } from './run-count.enum.js';
 import { TraceHarness } from './trace-harness.util.js';
 import { TraceReporter } from '../trace-reporter.js';
+import { TimeBudget } from '../time-budget.util.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
 
@@ -53,7 +55,7 @@ class RunnerHarness {
     const timer = new ManualTimer();
     const runner = RunnerHarness.tracedRunner(traced, timer);
     const pending = runner.execute(() => RunnerHarness.never(traced.scope)).catch(() => undefined);
-    timer.advance(runner.timeoutFor(RunCount.Single));
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Single));
     await pending;
     return traced.output.text;
   }
@@ -173,6 +175,28 @@ class RunnerHarness {
         runs,
       }),
     );
+  }
+
+  static async judgedExpiry(
+    opts: RunOptions,
+    defaults: RunOptions,
+    advanceMs: number,
+  ): Promise<unknown> {
+    const timer = new ManualTimer();
+    const scope = new RunScope();
+    const judge = JudgeHarness.timedJudge(
+      new BlockingAdapter(new StartGate(RunCount.Single)),
+      scope,
+      timer,
+    );
+    const pending = Capture.rejection(
+      RunnerHarness.runner(scope, timer, defaults).execute(
+        () => judge.judgeCoherent('the response', 'the claim'),
+        opts,
+      ),
+    );
+    timer.advance(advanceMs);
+    return pending;
   }
 
   static gated(gate: StartGate): RunBehavior {

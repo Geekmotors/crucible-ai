@@ -21,12 +21,21 @@ pick `runs`/`threshold` so that a red build means something.
 ### Signature
 
 ```ts
-crucible.it(name: string, body: TestBody): void;
-crucible.it(name: string, options: RunOptions, body: TestBody): void;
+crucible.it(name: string, body: TestBody, timeout?: number): void;
+crucible.it(name: string, options: RunOptions, body: TestBody, timeout?: number): void;
 
-type RunOptions = { runs?: number; threshold?: number };
+type RunOptions = {
+  runs?: number;
+  threshold?: number;
+  inferenceTimeout?: number;
+  testTimeout?: number;
+};
 type TestBody = () => unknown; // usually async
 ```
+
+The optional trailing `timeout` is the test timeout in milliseconds, exactly
+as in Jest's own `it(name, fn, timeout)`. It is shorthand for the
+`testTimeout` option; see [Timeout](#timeout).
 
 `crucible.it()` registers exactly one Jest test. The `runs` repetitions are
 not separate Jest test cases; they are executed and judged inside that one
@@ -38,8 +47,10 @@ test.
 | --- | --- | --- | --- |
 | `runs` | `testDefaults.runs`, else `1` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
 | `threshold` | `testDefaults.threshold`, else `1.0` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
+| `inferenceTimeout` | `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` judge reply attempt may take, provider retries included |
+| `testTimeout` | the trailing `timeout` argument, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
 
-With both omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
+With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
 the test is a plain single-shot test ("smoke mode"): one run, and it must
 pass.
 
@@ -50,7 +61,13 @@ kind `usage`:
 - `runs` that is not an integer ≥ 1 (`0`, `2.5`, `'20'`)
 - `threshold` that is not a number in (0, 1] (`0`, `1.5`, `'0.9'`) —
   `threshold: 0` is rejected, so a test can never pass with zero passing runs
-- any option key other than `runs` and `threshold`
+- `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
+  2147483647 (`0`, `2.5`, `'50000'`, `2147483648`) — out-of-range values are
+  rejected, never clamped
+- a trailing `timeout` argument that breaks the same rule, or a trailing
+  `timeout` together with a `testTimeout` option
+- any option key other than `runs`, `threshold`, `inferenceTimeout` and
+  `testTimeout`
 - options that are not an object (including `null` or an array), a missing
   body, or two bodies
 
@@ -71,7 +88,8 @@ Each option is resolved **per field**, in this order:
 
 1. the value passed to `crucible.it()`
 2. the value in `testDefaults`
-3. the built-in default (`runs: 1`, `threshold: 1.0`)
+3. the built-in default (`runs: 1`, `threshold: 1.0`, `inferenceTimeout:
+   30000`, `testTimeout: 30000 + 1000 × (runs − 1)`)
 
 So with the config above:
 
@@ -81,8 +99,12 @@ So with the config above:
 | `crucible.it(name, { runs: 5 }, body)` | 5 | 0.85 |
 | `crucible.it(name, { runs: 5, threshold: 1 }, body)` | 5 | 1.0 |
 
-Both fields are optional; `"testDefaults": {}` or no `testDefaults` at all
+All fields are optional; `"testDefaults": {}` or no `testDefaults` at all
 means the built-ins apply.
+
+A `testDefaults.testTimeout` is a fixed budget: unlike the built-in, it does
+not grow with `runs`. A test that declares many more runs than the project
+default may need its own `testTimeout`.
 
 Because the fields resolve independently, a project threshold tuned for its
 own run count also applies to a smaller declared `runs`. In the second row,
@@ -97,7 +119,10 @@ made:
 
 - `runs` that is not an integer ≥ 1, or `threshold` that is not a number in
   (0, 1]
-- any key other than `runs` and `threshold` inside `testDefaults`
+- `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
+  2147483647
+- any key other than `runs`, `threshold`, `inferenceTimeout` and
+  `testTimeout` inside `testDefaults`
 - `testDefaults` that is not an object (`null`, an array, a number)
 
 Defaults are resolved when a test **executes**, not when Jest collects the
@@ -106,7 +131,7 @@ tests that run, not suite collection. Validation of the options you pass to
 `crucible.it()` itself still happens at registration.
 
 Every `crucible.it()` test loads the config when it executes, even a test
-that passes both options or makes no `coherent()` call. A missing or invalid
+that passes every option or makes no `coherent()` call. A missing or invalid
 `crucible.config.json` therefore fails every `crucible.it()` test as kind
 `config`.
 
@@ -119,7 +144,7 @@ exactly one status:
 | --- | --- |
 | **passed** | The body resolved. Every assertion in it held. |
 | **failed** | The body rejected with anything that is not a Crucible infrastructure error: a failed `expect`, a crash in your system under test, a `TypeError` in your test code. |
-| **errored** | The body rejected with an error whose first `CrucibleError` — the error itself or the nearest one down its `cause` chain — is of kind `infra`: the judge provider kept failing after retries, the judge reply was not valid verdict JSON twice, or a judge reply attempt ran past its 30 s deadline. An infrastructure problem prevented a verdict; it says nothing about your system. |
+| **errored** | The body rejected with an error whose first `CrucibleError` — the error itself or the nearest one down its `cause` chain — is of kind `infra`: the judge provider kept failing after retries, the judge reply was not valid verdict JSON twice, or a judge reply attempt ran past its inference timeout (`inferenceTimeout`, 30 s by default). An infrastructure problem prevented a verdict; it says nothing about your system. |
 | **discarded** | The run was still in flight when the test was aborted by a fatal error (below). It is counted in no zone. |
 
 If your own code catches an infrastructure error and carries on, the run is
@@ -325,18 +350,46 @@ each file).
 
 ### Timeout
 
-Each `crucible.it()` test has a deadline computed from its **resolved** run
-count — the value from `crucible.it()`, `testDefaults`, or the built-in:
+Crucible has two time budgets, both in milliseconds:
 
-```text
-deadline = 30 000 ms + 1 000 ms × (runs − 1)
+| Budget | Covers | Built-in default |
+| --- | --- | --- |
+| `testTimeout` | the whole test: every run, including your arrange and act steps as well as the judge | `30000 + 1000 × (runs − 1)`, at most 2147483647 |
+| `inferenceTimeout` | each `crucible.coherent()` judge reply attempt, including the provider retries inside it | `30000` |
+
+The built-in test timeout uses the **resolved** run count — the value from
+`crucible.it()`, `testDefaults`, or the built-in: 30 s in smoke mode, 49 s for
+`runs: 20`, 79 s for `runs: 50`.
+
+Set either per test, or for the whole project in
+[`testDefaults`](#project-wide-defaults-testdefaults); each resolves per field
+(declared, then `testDefaults`, then the built-in). The test timeout can also
+be passed the Jest way, as a trailing number:
+
+```ts
+crucible.it('summarises a long thread', async () => {
+  const reply = await sut('Summarise the thread');
+  expect(await crucible.coherent(reply, 'The summary names every decision')).toBe(true);
+}, 90000);
+
+crucible.it(
+  'answers within the policy',
+  { runs: 10, threshold: 0.9, inferenceTimeout: 45000, testTimeout: 120000 },
+  async () => {
+    const reply = await sut('Can I export my report?');
+    expect(await crucible.coherent(reply, 'The reply follows the export policy')).toBe(true);
+  },
+);
 ```
 
-That is 30 s in smoke mode, 49 s for `runs: 20`, 79 s for `runs: 50`. It
-covers the whole test — your arrange and act steps as well as the judge — and
-is not configurable in v1. Jest's `testTimeout` setting does not apply.
+`testTimeout` caps everything. The two budgets are independent — Crucible does
+not check one against the other — but a judge call can never outlive the test,
+so an `inferenceTimeout` above the `testTimeout` is in effect bounded by the
+`testTimeout`. Jest's global `testTimeout` setting does not change either
+budget; set them through `crucible.it()` (options or trailing argument) or
+`testDefaults`.
 
-Crucible enforces the deadline itself. When it passes:
+Crucible enforces the test timeout itself. When it passes:
 
 - every run still in flight is aborted — their in-flight judge calls are
   cancelled, so no further judge spend happens;
@@ -349,15 +402,16 @@ Crucible enforces the deadline itself. When it passes:
 Your own code inside a discarded run (for example, a call to your system
 under test) is not cancelled; its result is simply ignored.
 
-Jest still gets a timeout as a backstop that never fires before Crucible's
-deadline: 5 s above the deadline when `runs` is passed to `crucible.it()`,
-and the largest timeout Jest supports (about 24.8 days) when it is not —
-at registration Crucible cannot know the run count `testDefaults` will supply
-without loading the config, so the backstop must not undercut any of them.
+When a judge reply attempt passes the inference timeout, that call fails with
+a retryable `infra` error: the run is *errored*, not failed, and the other
+runs carry on.
 
-Separately, each judge reply attempt — including the provider retries inside
-it — has its own 30 s deadline; when that expires the run is *errored*, not
-failed, and the other runs carry on.
+Jest still gets a timeout as a backstop that never fires before Crucible's
+deadline: 5 s above the test timeout (never above 2147483647) when it is declared (as the trailing
+argument or the `testTimeout` option), and the largest timeout Jest supports
+(about 24.8 days) when it is not — at registration Crucible cannot know the
+test timeout `testDefaults` will supply without loading the config, so the
+backstop must not undercut it.
 
 ### Re-entrancy contract
 

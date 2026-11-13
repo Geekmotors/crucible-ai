@@ -54,9 +54,12 @@ Measured 2026-11-13 against real OpenRouter while building the e2e suite:
 | `"meta": { "reasoning": { "effort": "low" } }` | ~4–5 s | — | — |
 | `"meta": { "reasoning": { "enabled": false } }` | ~2 s | ~$0.0001 | 0 |
 
-- Crucible gives a test 30 s plus 1 s per extra run. A body that awaits three
-  `coherent` calls one after another at ~11 s each runs out of time and the
-  test reports `ERRORED` (runs discarded at the deadline).
+- By default Crucible gives a test 30 s plus 1 s per extra run. A body that
+  awaits three `coherent` calls one after another at ~11 s each runs out of
+  time and the test reports `ERRORED` (runs discarded at the deadline). The
+  budget can be raised with `testTimeout` (and the per-call
+  limit with `inferenceTimeout`) — see
+  [Timeout](runs-and-threshold.md#timeout).
 - With reasoning disabled the judge is fast but unreliable on stateful claims:
   a 3-run gate failed 2 of 3 runs on the e2e room-booking scenario.
 - The e2e configs (`e2e/crucible.config.json` and the child projects) use

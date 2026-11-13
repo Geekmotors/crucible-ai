@@ -1,4 +1,4 @@
-import type { ResolvedRunOptions } from './run-options.js';
+import type { RunGate } from './run-options.js';
 import type { RunContext } from './state.js';
 
 type RunStatus = 'passed' | 'failed' | 'errored' | 'discarded';
@@ -22,7 +22,7 @@ type RunTally = {
 type VerdictSummary = {
   readonly results: readonly RunResult[];
   readonly tally: RunTally;
-  readonly options: ResolvedRunOptions;
+  readonly options: RunGate;
 };
 
 type AbortSummary = Omit<VerdictSummary, 'tally'>;

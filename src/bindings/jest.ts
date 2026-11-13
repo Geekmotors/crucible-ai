@@ -27,26 +27,61 @@ class JestBinding {
     private readonly registrar: Registrar = JestBinding.lazyJestRegistrar,
   ) {}
 
-  register(name: string, optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): void {
-    const { opts, body } = this.normalize(optsOrBody, maybeBody);
+  register(
+    name: string,
+    optsOrBody: RunOptions | TestBody,
+    bodyOrTimeout?: TestBody | number,
+    timeout?: number,
+  ): void {
+    const { opts, body } = this.normalize(optsOrBody, bodyOrTimeout, timeout);
     this.registrar(name, () => this.runner.execute(body, opts), this.runner.ceilingFor(opts));
   }
 
-  private normalize(optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): Declaration {
+  private normalize(
+    optsOrBody: RunOptions | TestBody,
+    bodyOrTimeout?: TestBody | number,
+    timeout?: number,
+  ): Declaration {
     if (typeof optsOrBody === 'function') {
-      if (maybeBody !== undefined) {
+      if (typeof bodyOrTimeout === 'function') {
         throw new CrucibleError(
           'usage',
           'crucible.it received two bodies; pass options first, then the body.',
         );
       }
-      return { opts: {}, body: optsOrBody };
+      return this.declaration({}, optsOrBody, bodyOrTimeout, timeout);
     }
     this.resolver.validate(optsOrBody);
-    if (typeof maybeBody !== 'function') {
+    if (typeof bodyOrTimeout !== 'function') {
       throw new CrucibleError('usage', 'crucible.it needs a test body function.');
     }
-    return { opts: optsOrBody, body: maybeBody };
+    return this.declaration(optsOrBody, bodyOrTimeout, timeout);
+  }
+
+  private declaration(
+    opts: RunOptions,
+    body: TestBody,
+    timeout?: unknown,
+    surplus?: unknown,
+  ): Declaration {
+    if (surplus !== undefined) {
+      throw new CrucibleError(
+        'usage',
+        'crucible.it received an argument after the timeout; the timeout is the last argument.',
+      );
+    }
+    if (timeout === undefined) {
+      return { opts, body };
+    }
+    if (opts.testTimeout !== undefined) {
+      throw new CrucibleError(
+        'usage',
+        'crucible.it received both a trailing timeout and a testTimeout option; pass only one.',
+      );
+    }
+    const withTimeout = { ...opts, testTimeout: timeout };
+    this.resolver.validate(withTimeout);
+    return { opts: withTimeout, body };
   }
 }
 

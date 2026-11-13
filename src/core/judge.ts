@@ -7,7 +7,6 @@ import { TraceReporter } from './trace-reporter.js';
 
 const COHERENT_ASSERTION = 'coherent';
 const MAX_REPLY_ATTEMPTS = 2;
-const JUDGE_CALL_TIMEOUT_MS = 30000;
 
 type CompletionTarget = {
   readonly adapter: ProviderAdapter;
@@ -101,7 +100,8 @@ class Judge {
     request: Parameters<RetryingCompleter['complete']>[1],
     runSignal: AbortSignal,
   ): Promise<string> {
-    const deadline = this.deadline(JUDGE_CALL_TIMEOUT_MS);
+    const timeoutMs = this.scope.inferenceTimeout();
+    const deadline = this.deadline(timeoutMs);
     try {
       return await this.completer.complete(
         adapter,
@@ -110,11 +110,10 @@ class Judge {
       );
     } catch (failure) {
       if (deadline.aborted && !runSignal.aborted) {
-        throw new CrucibleError(
-          'infra',
-          `The judge call did not finish within ${JUDGE_CALL_TIMEOUT_MS} ms.`,
-          { retryable: true, cause: failure },
-        );
+        throw new CrucibleError('infra', `The judge call did not finish within ${timeoutMs} ms.`, {
+          retryable: true,
+          cause: failure,
+        });
       }
       throw failure;
     }
@@ -161,5 +160,5 @@ class Judge {
   }
 }
 
-export { Judge, JUDGE_CALL_TIMEOUT_MS };
+export { Judge };
 export type { CompletionTarget, CompletionTargetSupplier, Deadline, SchemaTextSupplier };

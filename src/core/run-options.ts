@@ -1,11 +1,18 @@
 type RunOptions = {
   readonly runs?: number;
   readonly threshold?: number;
+  readonly inferenceTimeout?: number;
+  readonly testTimeout?: number;
 };
 
-type ResolvedRunOptions = {
+type RunGate = {
   readonly runs: number;
   readonly threshold: number;
 };
 
-export type { ResolvedRunOptions, RunOptions };
+type ResolvedRunOptions = RunGate & {
+  readonly inferenceTimeout: number;
+  readonly testTimeout: number;
+};
+
+export type { ResolvedRunOptions, RunGate, RunOptions };

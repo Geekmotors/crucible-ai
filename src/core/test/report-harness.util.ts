@@ -1,7 +1,7 @@
 import { Aggregator } from '../aggregator.util.js';
 import { Reporter } from '../reporter.util.js';
 import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
-import type { ResolvedRunOptions } from '../run-options.js';
+import type { RunGate } from '../run-options.js';
 import type { RunResult, RunStatus, VerdictSummary } from '../run-result.js';
 import type { Verbosity } from '../verbosity.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
@@ -67,7 +67,7 @@ class ReportHarness {
   }
 
   static summary(results: RunResult[], threshold: number): VerdictSummary {
-    const options: ResolvedRunOptions = { runs: results.length, threshold };
+    const options: RunGate = { runs: results.length, threshold };
     const tally = new Aggregator().tally(
       results.map((result) => result.status),
       options,

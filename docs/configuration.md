@@ -21,8 +21,8 @@ environment variables for anything secret or per-invocation.
   never while Jest collects the file. It is then reused for the rest of that
   test file. Jest loads Crucible afresh for each test file, so each file reads
   it once.
-- **Who needs it:** every `crucible.it()` test, even one that passes both
-  `runs` and `threshold` or makes no `coherent()` call. A missing or invalid
+- **Who needs it:** every `crucible.it()` test, even one that passes every
+  option or makes no `coherent()` call. A missing or invalid
   file fails each `crucible.it()` test that runs; plain Jest `it()` tests are
   unaffected.
 
@@ -34,7 +34,7 @@ environment variables for anything secret or per-invocation.
   "model": "deepseek/deepseek-v4-flash-0731",
   "meta": { "reasoning": { "effort": "low" } },
   "verbosity": "default",
-  "testDefaults": { "runs": 20, "threshold": 0.85 },
+  "testDefaults": { "runs": 20, "threshold": 0.85, "testTimeout": 90000 },
   "excerptChars": 500
 }
 ```
@@ -45,7 +45,7 @@ environment variables for anything secret or per-invocation.
 | `model` | yes | non-empty string (not only whitespace) | — | The provider's model id, passed through as given |
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
-| `testDefaults` | no | object with optional `runs` (integer ≥ 1) and `threshold` (number in (0, 1]) | `{}` | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)) |
+| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647) | `{}` | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)) |
 | `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
 
 No other top-level field is accepted.
@@ -90,7 +90,7 @@ the first problem:
 | `meta` present but not an object (`null`, an array, a string…) | `config` |
 | `verbosity` not one of the three levels — checked even when `CRUCIBLE_VERBOSE` is set | `config` |
 | `CRUCIBLE_VERBOSE` set to anything other than the three levels (an empty value is ignored) | `usage` |
-| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold` | `config` |
+| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout` | `config` |
 | `excerptChars` not an integer ≥ 1 | `config` |
 | `OPENROUTER_API_KEY` missing or blank when a judge call is made | `config` |
 | `meta` not JSON-serializable (for example a `BigInt` value) when a judge call is made | `usage` |
@@ -124,7 +124,7 @@ How provider failures are handled, per judge call:
 | HTTP 408 or 429, any 5xx, a network error | retryable | Retries up to 3 attempts in total with exponential backoff (250–500 ms before the second attempt, 500–1000 ms before the third). If all fail, the run is **errored** — an infrastructure problem, never counted as a semantic failure. |
 | Any other HTTP 4xx (for example 401 bad key, 402 no credit, 400/404 unknown model) | fatal | Stops the whole test at once: other runs' judge calls are cancelled and the test fails as `ERRORED, not failed:` with advice to fix the provider setup. The same mistake would hit every run, so Crucible stops spending. |
 | A reply that is not valid `{ "verdict", "reasoning" }` JSON | non-fatal | Asks once more; a second bad reply makes the run errored. |
-| A reply attempt (including its retries) running past 30 s | non-fatal | The run is errored; other runs carry on. This per-call limit sits inside the test deadline (30 s plus 1 s per extra run), which also stops the test. |
+| A reply attempt (including its retries) running past the inference timeout (30 s unless `inferenceTimeout` is set) | non-fatal | The run is errored; other runs carry on. This per-call limit sits inside the test timeout (30 s plus 1 s per extra run unless `testTimeout` is set), which caps everything and also stops the test. |
 
 An error that OpenRouter embeds in a `200` response body with a numeric code
 is treated as that HTTP status. All runs start together, so a test can have
@@ -141,8 +141,10 @@ The recommended default judge is `deepseek/deepseek-v4-flash-0731` with
   [raw runs](judge-validation-runs.md)). Cost dominates once multi-run gates
   multiply call volume.
 - With default reasoning it takes ~11 s per call, which leaves little room in
-  the test deadline (30 s plus 1 s per extra run) when a body awaits several
-  judgments in sequence.
+  the default test timeout (30 s plus 1 s per extra run) when a body awaits
+  several judgments in sequence; raise `testTimeout` (per test or in
+  `testDefaults`) if your bodies need longer
+  ([Timeout](runs-and-threshold.md#timeout)).
   Low effort brings it to ~4–5 s.
 - Do **not** disable reasoning (`"enabled": false`): it is faster and cheaper
   but was unreliable on claims about state (a 3-run gate failed 2 of 3 runs).

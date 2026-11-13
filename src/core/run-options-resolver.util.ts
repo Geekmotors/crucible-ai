@@ -1,6 +1,7 @@
 import { CrucibleError } from './errors.js';
 import { RunOptionsValidator } from './run-options-validator.util.js';
 import type { ResolvedRunOptions, RunOptions } from './run-options.js';
+import { TimeBudget } from './time-budget.util.js';
 
 class RunOptionsResolver {
   private static readonly DEFAULT_RUNS = 1;
@@ -18,9 +19,13 @@ class RunOptionsResolver {
 
   resolve(opts: RunOptions, defaults: RunOptions = {}): ResolvedRunOptions {
     this.validate(opts);
+    const runs = opts.runs ?? defaults.runs ?? RunOptionsResolver.DEFAULT_RUNS;
     return {
-      runs: opts.runs ?? defaults.runs ?? RunOptionsResolver.DEFAULT_RUNS,
+      runs,
       threshold: opts.threshold ?? defaults.threshold ?? RunOptionsResolver.DEFAULT_THRESHOLD,
+      inferenceTimeout:
+        opts.inferenceTimeout ?? defaults.inferenceTimeout ?? TimeBudget.INFERENCE_MS,
+      testTimeout: opts.testTimeout ?? defaults.testTimeout ?? TimeBudget.testTimeoutFor(runs),
     };
   }
 }

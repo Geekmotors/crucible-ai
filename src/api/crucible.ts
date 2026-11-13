@@ -78,8 +78,13 @@ class CompositionRoot {
 const compositionRoot = new CompositionRoot();
 
 const crucible = Object.freeze({
-  it(name: string, optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): void {
-    compositionRoot.jestBinding().register(name, optsOrBody, maybeBody);
+  it(
+    name: string,
+    optsOrBody: RunOptions | TestBody,
+    bodyOrTimeout?: TestBody | number,
+    timeout?: number,
+  ): void {
+    compositionRoot.jestBinding().register(name, optsOrBody, bodyOrTimeout, timeout);
   },
   coherent(response: string, claim: string): Promise<boolean> {
     return compositionRoot.coherentJudge().judgeCoherent(response, claim);

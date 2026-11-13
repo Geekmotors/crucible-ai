@@ -75,14 +75,17 @@
 - source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
   summary: The per-test deadline (30 s + 1 s per extra run) is too tight for bodies with several sequential assertions on a reasoning judge model. `deepseek/deepseek-v4-flash-0731` with default reasoning took ~11 s per call (≈2,200 reasoning tokens); a 3-run body with 3 sequential `coherent` calls expired at 32 s and reported ERRORED with discarded runs. There is no user knob for the budget. Decide timeout policy (per-assertion budget, a `timeoutMs` run option or a config budget) with the existing Runner.timeoutFor item and OQ-3.
   evidence: First e2e-ext run; e2e configs now pass `meta.reasoning.effort: "low"` (~4–5 s per call) to stay inside the deadline.
+  status: Addressed by Story 4.1 (tune timeouts per test).
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
   summary: The failure report's "first failed assertion" is the lowest-`seq` false verdict (AD-13), but a body may legitimately assert a false verdict (`expect(await crucible.coherent(...)).toBe(false)`). In a real failing run the report showed the expected-false step's reasoning as the failure while the actual failing step (a true-expected claim judged false) was not shown. Needs an AD-13 amendment (e.g. attribute by the verdict the thrown assertion consumed, or render all false verdicts of a failed run at default).
   evidence: e2e/core room-booking run with reasoning disabled; `CRUCIBLE_VERBOSE=full` was needed to find the real failing step.
+  status: Deferred by Jack 2026-11-13. Jack wants to study the problem before choosing a solution, so don't implement it until he picks this up.
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
   summary: `schemas/coherent.md` defines no rule for conflicting or superseding state facts (e.g. an appended cancellation contradicting a loaded booking, or "later, she opens the envelope"). With reasoning disabled the judge kept the older fact; with low reasoning, temporal knowledge-boundary updates were judged slowly and inconsistently. e2e fixtures were made monotonic (appends add facts, never contradict). Decide whether state is ordered with later facts superseding earlier ones and say so in the schema (adds to the 1.3 "multi-fact state conflicts" item).
   evidence: room-booking and knowledge-boundary fixture iterations during 3.3.
+  status: Deferred by Jack 2026-11-13. Jack wants to study the problem before choosing a solution, so don't implement it until he picks this up.
 
 - source_spec: 3-3-prove-it-end-to-end-locally.md
   summary: (Main-lane half closed by Story 3.5 — `make e2e-core` on every main push type-checks e2e.) e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
@@ -139,3 +142,33 @@
 - source_spec: 3-7-ship-it-with-provenance.md
   summary: The publish job installs `npm@11.21.2` from the registry by version, without an integrity pin. Once the Node 24 image bundles npm 11.5.1 or later, consider dropping the install and asserting `npm --version` instead.
   evidence: `.github/workflows/publish.yml` publish job.
+
+## Deferred from: code review of 4-1-tune-timeouts-per-test.md (2026-11-13)
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Jest ceiling margin collapses near the timer maximum. `ceilingFor` = min(2147483647, testTimeout + 5000), so a declared `testTimeout` within 5 s of 2147483647 leaves the Jest backstop at or barely above the runner deadline, and Jest can fail the test before the runner renders its expiry report. Fix options: cap the accepted testTimeout at TIMER_MAX − margin, or document it.
+  evidence: `src/core/runner.ts` `ceilingFor`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: `inferenceTimeout` is armed per reply attempt, not per `coherent()` call. With the one re-ask on an unparseable reply, a single assertion can take up to 2 × inferenceTimeout. This is unchanged from the pre-4.1 30 s behaviour and the docs say "each judge reply attempt" correctly, but AC 2 says "each coherent() judge call". Decide whether to budget the whole call.
+  evidence: `src/core/judge.ts` `judgedReply` / `completeBeforeDeadline` (MAX_REPLY_ATTEMPTS = 2).
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: The public `crucible.it` forwards only four arguments, so `(name, opts, body, ms, extra)` silently drops `extra`; only the body-first form reports a surplus argument. Typed callers can't hit this. It folds into the existing 3.6 overloads item (overloads would also make `(name, opts, 5000)` and `(name, body, body)` compile errors).
+  evidence: `src/api/crucible.ts` `it`, `src/bindings/jest.ts` `declaration`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Two usage messages are misleading even though the error kind is right. `(name, body, undefined, n)` says "argument after the timeout", and `(name, opts, body, fn)` blames `testTimeout` instead of reporting two bodies. The positional slot shift in `normalize`/`declaration` causes both.
+  evidence: `src/bindings/jest.ts`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: The debug trace's `test started` line shows runs, threshold and the deadline but not the resolved `inferenceTimeout`, so a tuned judge budget can't be checked from the trace. `testStarted` takes `RunGate`.
+  evidence: `src/core/trace-reporter.ts` `testStarted`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: Test hygiene (pre-existing patterns, extended by 4.1). Runner and binding tests compute expected deadlines with production `TimeBudget.testTimeoutFor` instead of the `TimeoutBudget` enum oracle. Harness helpers repeat `'the response'`/`'the claim'` literals, and `ClaimText.Default` already exists. Sweep both in one pass.
+  evidence: `src/core/runner.test.ts`, `src/bindings/test/jest-harness.util.ts` `runnerBudget`, `src/core/test/judge-harness.util.ts`, `src/core/test/runner-harness.util.ts`.
+
+- source_spec: 4-1-tune-timeouts-per-test.md
+  summary: `RunScope.enterRun(body, signal?, run?, inferenceTimeout?)` keeps growing optional positional parameters, and callers pad with `undefined`. It also has its own inference default, separate from the resolver. Consider one options object.
+  evidence: `src/core/state.ts`, `src/core/test/judge-harness.util.ts`.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
+import type { RunOptions } from './run-options.js';
 import { BlockingAdapter } from './test/blocking-adapter.fake.js';
 import { ManualTimer } from './test/manual-timer.fake.js';
 import { ProjectDefaults } from './test/project-defaults.util.js';
@@ -9,12 +10,14 @@ import { Threshold } from './test/threshold.enum.js';
 import { RunnerHarness } from './test/runner-harness.util.js';
 import { StartGate } from './test/start-gate.util.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
+import { TimeBudget } from './time-budget.util.js';
 import { ReportText } from './test/report-text.enum.js';
 import { TraceHarness } from './test/trace-harness.util.js';
 import { TraceText } from './test/trace-text.enum.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 import { Capture } from './test/capture.util.js';
+import { CustomTimeout } from './test/custom-timeout.enum.js';
 
 describe('Runner', () => {
   it('resolves when the run passes', async () => {
@@ -94,24 +97,6 @@ describe('Runner', () => {
     ];
     const error = await RunnerHarness.executionRejection(behaviors, Threshold.Half);
     expect(error).toBe(usage);
-  });
-
-  it('keeps the 30 second smoke budget for a single run', () => {
-    expect(RunnerHarness.runner().timeoutFor(RunCount.Single)).toBe(TimeoutBudget.SmokeMs);
-  });
-
-  it('never sizes the test deadline beyond what a timer can hold', () => {
-    expect(RunnerHarness.runner().timeoutFor(RunCount.BeyondTimerMax)).toBeLessThanOrEqual(
-      TimeoutBudget.TimerMaxMs,
-    );
-  });
-
-  it('never shrinks the per-test budget as the run count grows', () => {
-    const runner = RunnerHarness.runner();
-    const budgets = Array.from({ length: RunCount.Gated }, (_, index) =>
-      runner.timeoutFor(index + 1),
-    );
-    expect(budgets).toEqual([...budgets].sort((a, b) => a - b));
   });
 
   it('turns a rejection after a false verdict into a failed CrucibleVerdictError', async () => {
@@ -287,7 +272,7 @@ describe('Runner', () => {
     const pending = Capture.rejection(
       RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, {}, timer),
     );
-    timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Gated));
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
     const error = await pending;
     expect(error).toBeInstanceOf(CrucibleVerdictError);
     expect((error as CrucibleVerdictError).outcome).toBe('errored');
@@ -300,7 +285,7 @@ describe('Runner', () => {
       RunnerHarness.awaitingAbort(cancelled),
     );
     void RunnerHarness.executeWith(behaviors, { runs: RunCount.Gated }, {}, timer).catch(() => {});
-    timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Gated));
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
     await expect(cancelled.arrive()).resolves.toBeUndefined();
   });
 
@@ -310,7 +295,7 @@ describe('Runner', () => {
     const pending = Capture.rejection(
       RunnerHarness.executeWith(behaviors, {}, ProjectDefaults.strictGate, timer),
     );
-    timer.advance(RunnerHarness.runner().timeoutFor(RunCount.Gated));
+    timer.advance(TimeBudget.testTimeoutFor(RunCount.Gated));
     expect((await pending) as CrucibleVerdictError).toBeInstanceOf(CrucibleVerdictError);
   });
 
@@ -323,6 +308,43 @@ describe('Runner', () => {
     void gate.arrive();
     await expect(pending).resolves.toBeUndefined();
   });
+});
+
+describe('Runner — tuned timeouts', () => {
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { testTimeout: CustomTimeout.Short }, {}],
+    ['configured', {}, { testTimeout: CustomTimeout.Short }],
+  ])('expires at a %s test timeout shorter than the built-in', async (_label, opts, defaults) => {
+    const timer = new ManualTimer();
+    const pending = Capture.rejection(
+      RunnerHarness.executeWith([RunnerHarness.never], opts, defaults, timer),
+    );
+    timer.advance(CustomTimeout.Short);
+    expect(((await pending) as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { testTimeout: CustomTimeout.Long }, {}],
+    ['configured', {}, { testTimeout: CustomTimeout.Long }],
+  ])('lets a run outlast 30 s under a longer %s test timeout', async (_label, opts, defaults) => {
+    const timer = new ManualTimer();
+    const gate = new StartGate(RunCount.Single + 1);
+    const pending = RunnerHarness.executeWith([RunnerHarness.gated(gate)], opts, defaults, timer);
+    timer.advance(TimeoutBudget.SmokeMs);
+    void gate.arrive();
+    await expect(pending).resolves.toBeUndefined();
+  });
+
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { inferenceTimeout: CustomTimeout.Short }, {}],
+    ['configured', {}, { inferenceTimeout: CustomTimeout.Short }],
+  ])(
+    'errors a run whose judge call outlives a %s inference timeout',
+    async (_label, opts, defaults) => {
+      const error = await RunnerHarness.judgedExpiry(opts, defaults, CustomTimeout.Short);
+      expect((error as CrucibleVerdictError).outcome).toBe('errored');
+    },
+  );
 });
 
 describe('Runner — verbosity', () => {

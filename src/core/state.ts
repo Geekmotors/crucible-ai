@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
+import { TimeBudget } from './time-budget.util.js';
 
 type VerdictRecord = {
   readonly assertion: string;
@@ -26,15 +27,21 @@ type RunStore = {
   readonly context: RunContext;
   readonly signal: AbortSignal;
   readonly run?: number;
+  readonly inferenceTimeout: number;
   seq: number;
 };
 
 class RunScope {
   private readonly storage = new AsyncLocalStorage<RunStore>();
 
-  enterRun<T>(body: () => T, signal: AbortSignal = new AbortController().signal, run?: number): T {
+  enterRun<T>(
+    body: () => T,
+    signal: AbortSignal = new AbortController().signal,
+    run?: number,
+    inferenceTimeout: number = TimeBudget.INFERENCE_MS,
+  ): T {
     return this.storage.run(
-      { context: { state: [], verdicts: [], errors: [] }, signal, run, seq: 0 },
+      { context: { state: [], verdicts: [], errors: [] }, signal, run, inferenceTimeout, seq: 0 },
       body,
     );
   }
@@ -49,6 +56,10 @@ class RunScope {
 
   abortSignal(): AbortSignal {
     return this.store().signal;
+  }
+
+  inferenceTimeout(): number {
+    return this.store().inferenceTimeout;
   }
 
   appendState(entries: unknown): void {

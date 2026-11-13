@@ -9,6 +9,9 @@ import { RunnerHarness } from '../core/test/runner-harness.util.js';
 import { Threshold } from '../core/test/threshold.enum.js';
 import { TimeoutBudget } from '../core/test/timeout-budget.enum.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
+import { CustomTimeout } from '../core/test/custom-timeout.enum.js';
+import { InvalidTimeout } from '../core/test/invalid-timeout.enum.js';
+import { ManualTimer } from '../core/test/manual-timer.fake.js';
 import { JestBinding } from './jest.js';
 import { InvalidOption } from './test/invalid-option.enum.js';
 import { JestBindingHarness } from './test/jest-harness.util.js';
@@ -180,5 +183,144 @@ describe('JestBinding', () => {
     const error = await Capture.rejection(registration!.fn());
     expect(error).toBeInstanceOf(CrucibleVerdictError);
     expect((error as CrucibleVerdictError).cause).toBe(failure);
+  });
+});
+
+describe('JestBinding — test timeout', () => {
+  it.each<[string, (binding: JestBinding) => void]>([
+    [
+      'a trailing number after the body',
+      (b) => b.register('t', async () => {}, CustomTimeout.Long),
+    ],
+    [
+      'a trailing number after options and body',
+      (b) => b.register('t', { runs: RunCount.Gated }, async () => {}, CustomTimeout.Long),
+    ],
+    [
+      'a declared testTimeout',
+      (b) => b.register('t', { testTimeout: CustomTimeout.Long }, async () => {}),
+    ],
+  ])('%s sets the Jest timeout to the test timeout plus the margin', (_label, declare) => {
+    expect(JestBindingHarness.registeredTimeout(declare)).toBe(
+      CustomTimeout.Long + TimeoutBudget.CeilingMarginMs,
+    );
+  });
+
+  it.each<[string, (binding: JestBinding, body: () => Promise<void>) => void]>([
+    ['after the body', (b, body) => b.register('short', body, CustomTimeout.Short)],
+    [
+      'after options and body',
+      (b, body) => b.register('short', { runs: RunCount.Gated }, body, CustomTimeout.Short),
+    ],
+  ])('a trailing number %s is the runner deadline for the whole test', async (_label, declare) => {
+    const registrar = new RegistrarFake();
+    const timer = new ManualTimer();
+    declare(
+      JestBindingHarness.binding(registrar, new RunScope(), {}, timer),
+      () => new Promise<void>(() => {}),
+    );
+    const pending = Capture.rejection(registrar.registrations[0]!.fn());
+    timer.advance(CustomTimeout.Short);
+    expect(((await pending) as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('declared runs leave Jest room for a longer configured test timeout', () => {
+    const timeout = JestBindingHarness.registeredTimeout(
+      (b) => b.register('gated', { runs: RunCount.Gated }, async () => {}),
+      { testTimeout: CustomTimeout.Longer },
+    );
+    expect(timeout).toBeGreaterThan(CustomTimeout.Longer);
+  });
+
+  it('never registers a Jest timeout beyond the timer maximum for the largest test timeout', () => {
+    expect(
+      JestBindingHarness.registeredTimeout((b) =>
+        b.register('max', async () => {}, TimeoutBudget.TimerMaxMs),
+      ),
+    ).toBeLessThanOrEqual(TimeoutBudget.TimerMaxMs);
+  });
+
+  it.each([
+    InvalidTimeout.Zero,
+    InvalidTimeout.Negative,
+    InvalidTimeout.Fractional,
+    InvalidTimeout.AboveTimerMax,
+  ])('rejects a trailing number of %d as usage, registering nothing', (timeout) => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register('bad', async () => {}, timeout),
+    );
+    expect(error.kind).toBe('usage');
+    expect(registrar.registrations).toHaveLength(0);
+  });
+
+  it.each<[string, unknown]>([
+    ['a numeric string', String(CustomTimeout.Short)],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['null', null],
+  ])('rejects %s as the trailing timeout as usage, registering nothing', (_label, timeout) => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register(
+        'bad',
+        { runs: RunCount.Gated },
+        async () => {},
+        timeout as number,
+      ),
+    );
+    expect(error.kind).toBe('usage');
+    expect(registrar.registrations).toHaveLength(0);
+  });
+
+  it('rejects a timeout after an empty body slot as usage', () => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register(
+        'gap',
+        async () => {},
+        undefined,
+        CustomTimeout.Short,
+      ),
+    );
+    expect(error.kind).toBe('usage');
+  });
+
+  it('rejects a trailing number together with a declared testTimeout as usage', () => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register(
+        'both',
+        { testTimeout: CustomTimeout.Long },
+        async () => {},
+        CustomTimeout.Short,
+      ),
+    );
+    expect(error.kind).toBe('usage');
+  });
+
+  it('rejects an argument after the trailing number as usage', () => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register(
+        'surplus',
+        async () => {},
+        CustomTimeout.Short,
+        CustomTimeout.Long,
+      ),
+    );
+    expect(error.kind).toBe('usage');
+  });
+
+  it('rejects a trailing number in place of the body as usage', () => {
+    const registrar = new RegistrarFake();
+    const error = JestBindingHarness.errorFrom(() =>
+      JestBindingHarness.binding(registrar).register(
+        'no body',
+        {},
+        CustomTimeout.Short as unknown as () => void,
+      ),
+    );
+    expect(error.kind).toBe('usage');
   });
 });

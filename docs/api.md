@@ -17,22 +17,38 @@ and [`append`](#crucibleload-and-crucibleappend). There are no `crucible.it.only
 
 ```ts
 crucible.it(name, body);
-crucible.it(name, { runs, threshold }, body);
+crucible.it(name, body, timeout);
+crucible.it(name, { runs, threshold, inferenceTimeout, testTimeout }, body);
+crucible.it(name, { runs, threshold }, body, timeout);
 ```
 
 Registers one Jest test that executes `body` `runs` times concurrently and
 passes when at least `threshold` of the runs pass. `runs` (integer ≥ 1) and
 `threshold` (number in (0, 1]) default to the config's `testDefaults`, then to
-`1` and `1.0`. Invalid options throw a `CrucibleError` of kind `usage` when the
-file is collected.
+`1` and `1.0`.
+
+Two time budgets, in milliseconds (integers from 1 to 2147483647):
+
+- `testTimeout` — the whole test, every run included. Defaults to
+  `testDefaults.testTimeout`, then `30000 + 1000 × (runs − 1)` (at most 2147483647). A trailing
+  `timeout` number sets it the way Jest's `it(name, fn, timeout)` does;
+  passing both a trailing number and `testTimeout` is a `usage` error.
+- `inferenceTimeout` — each `crucible.coherent()` judge reply attempt.
+  Defaults to `testDefaults.inferenceTimeout`, then `30000`.
+
+`testTimeout` caps everything: an `inferenceTimeout` above it is in effect
+bounded by it. Invalid options or timeouts throw a `CrucibleError` of kind
+`usage` when the file is collected — out-of-range values are rejected, never
+clamped.
 
 The TypeScript signature is a single permissive one,
-`it(name: string, optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): void`,
+`it(name: string, optsOrBody: RunOptions | TestBody, bodyOrTimeout?: TestBody | number, timeout?: number): void`,
 so `crucible.it(name, options)` without a body type-checks; it throws a
 `usage` error at registration.
 
 The full reference — run statuses, the three-zone verdict, the failure
-report, verbosity, the deadline and the re-entrancy contract — is in
+report, verbosity, the [timeouts](runs-and-threshold.md#timeout) and the
+re-entrancy contract — is in
 [Runs and threshold](runs-and-threshold.md#crucibleit-reference).
 
 ## `crucible.coherent()`
@@ -147,7 +163,7 @@ Thrown by a `crucible.it()` test that did not pass. Its `message` is the
 
 | Type | Meaning |
 | --- | --- |
-| `RunOptions` | `{ runs?: number; threshold?: number }` |
+| `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number }` |
 | `TestBody` | `() => unknown` — the body passed to `crucible.it()`, usually `async` |
 | `CrucibleErrorKind` | `'config' \| 'usage' \| 'infra'` |
 | `VerdictOutcome` | `'failed' \| 'errored'` |

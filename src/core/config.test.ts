@@ -7,7 +7,9 @@ import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
 import { InvalidExcerptChars } from './test/invalid-excerpt-chars.enum.js';
+import { CustomTimeout } from './test/custom-timeout.enum.js';
 import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
+import { InvalidTimeout } from './test/invalid-timeout.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 
@@ -162,6 +164,15 @@ describe('ConfigStore testDefaults', () => {
     expect(store.get().testDefaults).toEqual(testDefaults);
   });
 
+  it('resolves configured inference and test timeouts', () => {
+    const testDefaults = {
+      inferenceTimeout: CustomTimeout.Long,
+      testTimeout: CustomTimeout.Longer,
+    };
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
+    expect(store.get().testDefaults).toEqual(testDefaults);
+  });
+
   it('accepts a single configured field, leaving the other unset', () => {
     const store = ConfigHarness.store({
       provider: 'fake',
@@ -189,6 +200,15 @@ describe('ConfigStore testDefaults', () => {
     ['null', null],
     ['array', [RunCount.Gated]],
     ['number', RunCount.Gated],
+    ['zero inferenceTimeout', { inferenceTimeout: InvalidTimeout.Zero }],
+    ['fractional inferenceTimeout', { inferenceTimeout: InvalidTimeout.Fractional }],
+    [
+      'inferenceTimeout above the timer maximum',
+      { inferenceTimeout: InvalidTimeout.AboveTimerMax },
+    ],
+    ['negative testTimeout', { testTimeout: InvalidTimeout.Negative }],
+    ['string testTimeout', { testTimeout: String(CustomTimeout.Long) }],
+    ['testTimeout above the timer maximum', { testTimeout: InvalidTimeout.AboveTimerMax }],
   ])('rejects %s as a config failure at load', (_label, testDefaults) => {
     expect(
       ConfigHarness.errorKind(

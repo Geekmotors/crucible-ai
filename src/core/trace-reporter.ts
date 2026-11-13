@@ -1,6 +1,6 @@
 import type { CompletionRequest } from '../providers/types.js';
 import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
-import type { ResolvedRunOptions, RunOptions } from './run-options.js';
+import type { RunGate, RunOptions } from './run-options.js';
 import type { RunResult, RunTally } from './run-result.js';
 import { RunScope, runScope } from './state.js';
 import type { ErrorRecord, VerdictRecord } from './state.js';
@@ -64,7 +64,7 @@ class TraceReporter {
     }
   }
 
-  testStarted(options: ResolvedRunOptions, deadlineMs: number): void {
+  testStarted(options: RunGate, deadlineMs: number): void {
     if (this.tracing()) {
       this.emit(
         `test started: ${options.runs} run(s) at threshold ${options.threshold}, ` +
@@ -99,7 +99,7 @@ class TraceReporter {
     }
   }
 
-  verdictReached(tally: RunTally, options: ResolvedRunOptions): void {
+  verdictReached(tally: RunTally, options: RunGate): void {
     if (this.tracing()) {
       this.emit(
         `verdict ${tally.zone}: ${tally.passed} passed, ${tally.failed} failed, ` +

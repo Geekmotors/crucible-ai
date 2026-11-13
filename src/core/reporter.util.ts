@@ -10,7 +10,7 @@ import type {
   RunTally,
   VerdictSummary,
 } from './run-result.js';
-import type { ResolvedRunOptions } from './run-options.js';
+import type { RunGate } from './run-options.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
 
 type FirstFailure =
@@ -86,7 +86,7 @@ class Reporter {
     return `${Reporter.PASSED} ${this.rateClause(tally, options)}.`;
   }
 
-  private rateClause(tally: RunTally, options: ResolvedRunOptions): string {
+  private rateClause(tally: RunTally, options: RunGate): string {
     return (
       `${tally.passed}/${options.runs} runs passed (pass rate ${this.passRate(tally.passed, options.runs)}) ` +
       `against threshold ${options.threshold} (need ${tally.need})`

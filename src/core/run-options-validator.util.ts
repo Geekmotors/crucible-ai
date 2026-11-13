@@ -1,5 +1,12 @@
+import { TimeBudget } from './time-budget.util.js';
+
 class RunOptionsValidator {
-  private static readonly KNOWN_KEYS: ReadonlySet<string> = new Set(['runs', 'threshold']);
+  private static readonly KNOWN_KEYS: ReadonlySet<string> = new Set([
+    'runs',
+    'threshold',
+    'inferenceTimeout',
+    'testTimeout',
+  ]);
 
   violation(candidate: unknown, subject: string): string | undefined {
     if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
@@ -15,6 +22,12 @@ class RunOptionsValidator {
     }
     if (opts.threshold !== undefined && !this.isValidThreshold(opts.threshold)) {
       return `"threshold" in ${subject} must be a number greater than 0 and at most 1; received ${String(opts.threshold)}.`;
+    }
+    const badTimeout = ['inferenceTimeout', 'testTimeout'].find(
+      (key) => opts[key] !== undefined && !TimeBudget.isValidTimeout(opts[key]),
+    );
+    if (badTimeout !== undefined) {
+      return `"${badTimeout}" in ${subject} must be an integer number of milliseconds from 1 to ${TimeBudget.TIMER_MAX_MS}; received ${String(opts[badTimeout])}.`;
     }
     return undefined;
   }

@@ -1,11 +1,11 @@
 import { Aggregator } from './aggregator.util.js';
 import { CrucibleError } from './errors.js';
-import { JUDGE_CALL_TIMEOUT_MS } from './judge.js';
 import { Reporter } from './reporter.util.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
 import type { ResolvedRunOptions, RunOptions } from './run-options.js';
 import type { RunResult } from './run-result.js';
 import { RunScope, runScope } from './state.js';
+import { TimeBudget } from './time-budget.util.js';
 import type { RunContext } from './state.js';
 import { TraceReporter } from './trace-reporter.js';
 import { CrucibleVerdictError } from './verdict-error.js';
@@ -29,10 +29,7 @@ type TestDefaultsSupplier = () => RunOptions;
 type DeadlineTimer = (ms: number, onExpire: () => void) => () => void;
 
 class Runner {
-  private static readonly RUN_BUDGET_MS = JUDGE_CALL_TIMEOUT_MS;
-  private static readonly PER_EXTRA_RUN_MS = 1000;
   private static readonly CEILING_MARGIN_MS = 5000;
-  private static readonly TIMER_MAX_MS = 2147483647;
 
   private readonly resolver = new RunOptionsResolver();
   private readonly aggregator = new Aggregator();
@@ -54,25 +51,18 @@ class Runner {
     private readonly timer: DeadlineTimer = Runner.startTimer,
   ) {}
 
-  timeoutFor(runs: number): number {
-    return Math.min(
-      Runner.TIMER_MAX_MS,
-      Runner.RUN_BUDGET_MS + (runs - 1) * Runner.PER_EXTRA_RUN_MS,
-    );
-  }
-
   ceilingFor(declared: RunOptions): number {
-    if (declared.runs === undefined) {
-      return Runner.TIMER_MAX_MS;
+    if (declared.testTimeout === undefined) {
+      return TimeBudget.TIMER_MAX_MS;
     }
-    return Math.min(Runner.TIMER_MAX_MS, this.timeoutFor(declared.runs) + Runner.CEILING_MARGIN_MS);
+    return Math.min(TimeBudget.TIMER_MAX_MS, declared.testTimeout + Runner.CEILING_MARGIN_MS);
   }
 
   async execute(body: () => unknown, opts: RunOptions = {}): Promise<void> {
     const options = this.resolver.resolve(opts, this.testDefaults());
-    const deadlineMs = this.timeoutFor(options.runs);
+    const deadlineMs = options.testTimeout;
     this.trace.testStarted(options, deadlineMs);
-    const batch = await this.runBatch(body, options.runs, deadlineMs);
+    const batch = await this.runBatch(body, options);
     if (batch.halt === 'rethrow') {
       throw batch.cause;
     }
@@ -113,11 +103,11 @@ class Runner {
     );
   }
 
-  private async runBatch(body: () => unknown, count: number, deadlineMs: number): Promise<Batch> {
+  private async runBatch(body: () => unknown, options: ResolvedRunOptions): Promise<Batch> {
     let disarm = (): void => {};
     try {
       return await new Promise<Batch>((resolve) => {
-        disarm = this.collect(body, count, deadlineMs, resolve);
+        disarm = this.collect(body, options, resolve);
       });
     } finally {
       disarm();
@@ -126,23 +116,22 @@ class Runner {
 
   private collect(
     body: () => unknown,
-    count: number,
-    deadlineMs: number,
+    options: ResolvedRunOptions,
     resolve: (batch: Batch) => void,
   ): () => void {
     const controller = new AbortController();
-    const runs = Array.from({ length: count }, (_, index) =>
-      this.start(body, controller.signal, index + 1),
+    const runs = Array.from({ length: options.runs }, (_, index) =>
+      this.start(body, controller.signal, index + 1, options.inferenceTimeout),
     );
     const settled: (RunResult | undefined)[] = runs.map(() => undefined);
-    let pending = count;
-    const disarm = this.timer(deadlineMs, () => {
+    let pending = options.runs;
+    const disarm = this.timer(options.testTimeout, () => {
       if (controller.signal.aborted) {
         return;
       }
       controller.abort();
       const results = this.discardUnsettled(runs, settled);
-      this.trace.testExpired(deadlineMs, results);
+      this.trace.testExpired(options.testTimeout, results);
       resolve({ halt: 'expired', results });
     });
     runs.forEach((run, index) => {
@@ -182,11 +171,17 @@ class Runner {
     );
   }
 
-  private start(body: () => unknown, signal: AbortSignal, run: number): InFlightRun {
+  private start(
+    body: () => unknown,
+    signal: AbortSignal,
+    run: number,
+    inferenceTimeout: number,
+  ): InFlightRun {
     return this.scope.enterRun(
       () => ({ context: this.scope.context(), settled: this.settle(body) }),
       signal,
       run,
+      inferenceTimeout,
     );
   }
 

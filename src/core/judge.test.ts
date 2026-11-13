@@ -9,6 +9,7 @@ import { RunCount } from './test/run-count.enum.js';
 import { ScriptedAdapter } from './test/scripted-adapter.fake.js';
 import { StartGate } from './test/start-gate.util.js';
 import { ClaimText } from './test/claim-text.enum.js';
+import { CustomTimeout } from './test/custom-timeout.enum.js';
 import { TraceHarness } from './test/trace-harness.util.js';
 import { TraceText } from './test/trace-text.enum.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
@@ -156,6 +157,24 @@ describe('Judge', () => {
       Capture.rejection(judge.judgeCoherent('the response', 'the claim')),
     );
     expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('infra');
+    expect((error as CrucibleError).retryable).toBe(true);
+  });
+});
+
+describe('Judge — inference timeout', () => {
+  it('judges a reply slower than 30 s when the run allows a longer inference timeout', async () => {
+    await expect(JudgeHarness.slowReply(CustomTimeout.Long)).resolves.toBe(true);
+  });
+
+  it('keeps the built-in 30 s inference timeout when the run sets none', async () => {
+    const error = await Capture.rejection(JudgeHarness.slowReply());
+    expect((error as CrucibleError).kind).toBe('infra');
+    expect((error as CrucibleError).retryable).toBe(true);
+  });
+
+  it('aborts a judge call at a shorter inference timeout as retryable infra', async () => {
+    const error = await JudgeHarness.blockedFailure(CustomTimeout.Short, CustomTimeout.Short);
     expect((error as CrucibleError).kind).toBe('infra');
     expect((error as CrucibleError).retryable).toBe(true);
   });

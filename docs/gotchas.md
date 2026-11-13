@@ -18,7 +18,7 @@ protect you from.
 
 **Time**
 
-- [Every test has a deadline, and Jest's `testTimeout` does not change it](#every-test-has-a-deadline-and-jests-testtimeout-does-not-change-it)
+- [Every test has a deadline; Jest's global `testTimeout` does not change it](#every-test-has-a-deadline-jests-global-testtimeout-does-not-change-it)
 - [Fake timers stop Crucible's clock](#fake-timers-stop-crucibles-clock)
 
 **Secrets, data and spend**
@@ -147,12 +147,17 @@ an ordering rule, add facts that build on each other rather than overturning
 earlier ones, or phrase the change so it does not contradict ("the booking
 that was confirmed has since been cancelled").
 
-## Every test has a deadline, and Jest's `testTimeout` does not change it
+## Every test has a deadline; Jest's global `testTimeout` does not change it
 
-A `crucible.it()` test must finish within 30 s plus 1 s per extra run — your
-arrange and act steps included. When it does not, in-flight runs are
-discarded and the test fails as *errored*. The deadline is not configurable in
-v1, and Jest's `testTimeout` (or a timeout argument) does not apply.
+By default a `crucible.it()` test must finish within 30 s plus 1 s per extra
+run — your arrange and act steps included — and each judge reply attempt
+within 30 s. When the test runs out of time, in-flight runs are discarded and
+the test fails as *errored*. Jest's global `testTimeout` setting does not
+change these budgets. Raise them per test — a trailing number
+(`crucible.it(name, body, 90000)`) or the `testTimeout` and
+`inferenceTimeout` options — or project-wide in `testDefaults`.
+`testTimeout` caps everything: an `inferenceTimeout` larger than it is in
+effect bounded by it.
 
 What eats the budget is usually judge calls awaited one after another. With a
 reasoning model at default effort a call can take ~11 s, so three sequential
@@ -160,7 +165,8 @@ reasoning model at default effort a call can take ~11 s, so three sequential
 ([recommended config](configuration.md#choosing-a-judge-model)), and start
 independent judgments together and await them at once
 ([pattern](api.md#cruciblecoherent)). Each judge reply attempt also has its
-own 30 s limit. Details: [Timeout](runs-and-threshold.md#timeout).
+own limit (`inferenceTimeout`, 30 s by default). Details:
+[Timeout](runs-and-threshold.md#timeout).
 
 ## Fake timers stop Crucible's clock
 
@@ -170,10 +176,9 @@ scheduled with the global `setTimeout`. With `jest.useFakeTimers()` (or
 are faked too and do not advance on their own:
 
 - the deadline never fires, so a hung body is not stopped by Crucible. If you
-  passed `runs` to `crucible.it()`, Jest's own timeout fails the test a few
-  seconds after the deadline, without a Crucible report; if `runs` comes from
-  `testDefaults` or the default, Jest's fallback timeout is about 24.8 days,
-  so the suite hangs;
+  passed a test timeout to `crucible.it()` (trailing number or `testTimeout`),
+  Jest's own timeout fails the test 5 s after it (capped at 2147483647 ms), without a Crucible report;
+  otherwise Jest's fallback timeout is about 24.8 days, so the suite hangs;
 - a judge call that needs a retry waits in its backoff until the fake clock
   is advanced.
 
