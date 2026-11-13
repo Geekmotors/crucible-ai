@@ -2,13 +2,21 @@ import { CrucibleError } from './errors.js';
 import { CONFIG_FILE_NAME } from './config-boundary.js';
 import type { ConfigBoundary, ConfigFileRead } from './config-boundary.js';
 import { FileSystemConfigBoundary } from './file-system-config-boundary.js';
+import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
 import { RunOptionsValidator } from './run-options-validator.util.js';
 import type { RunOptions } from './run-options.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import type { ProviderAdapter } from '../providers/types.js';
 
 const VERBOSITY_LEVELS = ['default', 'full', 'debug'] as const;
-const KNOWN_FIELDS = ['provider', 'model', 'meta', 'verbosity', 'testDefaults'] as const;
+const KNOWN_FIELDS = [
+  'provider',
+  'model',
+  'meta',
+  'verbosity',
+  'testDefaults',
+  'excerptChars',
+] as const;
 const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authorization'] as const;
 
 type Verbosity = (typeof VERBOSITY_LEVELS)[number];
@@ -19,6 +27,7 @@ type CrucibleConfig = {
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly effectiveVerbosity: Verbosity;
   readonly testDefaults: RunOptions;
+  readonly excerptChars: number;
 };
 
 class ConfigStore {
@@ -45,6 +54,7 @@ class ConfigStore {
       meta: this.requireMetaShape(root.meta),
       effectiveVerbosity: this.resolveEffectiveVerbosity(root.verbosity),
       testDefaults: this.requireTestDefaults(root.testDefaults),
+      excerptChars: this.requireExcerptChars(root.excerptChars),
     });
   }
 
@@ -138,6 +148,16 @@ class ConfigStore {
       throw this.failure(violation);
     }
     return Object.freeze({ ...(value as RunOptions) });
+  }
+
+  private requireExcerptChars(value: unknown): number {
+    if (value === undefined) {
+      return DEFAULT_REPORT_SETTINGS.excerptChars;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw this.failure(`"excerptChars" in ${CONFIG_FILE_NAME} must be an integer of at least 1.`);
+    }
+    return value;
   }
 
   private resolveEffectiveVerbosity(configured: unknown): Verbosity {

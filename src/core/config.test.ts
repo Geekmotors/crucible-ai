@@ -5,6 +5,8 @@ import { FakeConfigBoundary } from './test/config-boundary.fake.js';
 import { providerRegistry } from '../providers/registry.js';
 import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
+import { ExcerptChars } from './test/excerpt-chars.enum.js';
+import { InvalidExcerptChars } from './test/invalid-excerpt-chars.enum.js';
 import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
@@ -169,6 +171,36 @@ describe('ConfigStore testDefaults', () => {
     expect(
       ConfigHarness.errorKind(
         ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults }),
+      ),
+    ).toBe('config');
+  });
+});
+
+describe('ConfigStore excerptChars', () => {
+  it('defaults the response excerpt to 500 characters', () => {
+    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
+    expect(store.get().excerptChars).toBe(ExcerptChars.Default);
+  });
+
+  it('resolves a configured excerpt length', () => {
+    const store = ConfigHarness.store({
+      provider: 'fake',
+      model: TestModel.Generic,
+      excerptChars: ExcerptChars.Short,
+    });
+    expect(store.get().excerptChars).toBe(ExcerptChars.Short);
+  });
+
+  it.each([
+    ['zero', InvalidExcerptChars.Zero],
+    ['negative', InvalidExcerptChars.Negative],
+    ['fractional', InvalidExcerptChars.Fractional],
+    ['string', String(ExcerptChars.Short)],
+    ['null', null],
+  ])('rejects a %s excerpt length as a config failure at load', (_label, excerptChars) => {
+    expect(
+      ConfigHarness.errorKind(
+        ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, excerptChars }),
       ),
     ).toBe('config');
   });

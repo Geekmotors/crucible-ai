@@ -4,7 +4,7 @@ import { JUDGE_CALL_TIMEOUT_MS } from './judge.js';
 import { Reporter } from './reporter.util.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
 import type { ResolvedRunOptions, RunOptions } from './run-options.js';
-import type { RunResult } from './run-result.js';
+import type { RunResult, RunStatus } from './run-result.js';
 import { RunScope, runScope } from './state.js';
 import type { RunContext } from './state.js';
 import { CrucibleVerdictError } from './verdict-error.js';
@@ -80,6 +80,7 @@ class Runner {
         new CrucibleError('infra', `The test did not finish within ${deadlineMs} ms.`, {
           retryable: true,
         }),
+        this.statuses(batch.results),
       );
     }
     if (batch.halt === 'fatal') {
@@ -87,16 +88,14 @@ class Runner {
         'errored',
         this.reporter.renderAborted({ results: batch.results, options }),
         batch.cause,
+        this.statuses(batch.results),
       );
     }
     this.judge(batch.results, options);
   }
 
   private judge(results: RunResult[], options: ResolvedRunOptions): void {
-    const tally = this.aggregator.tally(
-      results.map((result) => result.status),
-      options,
-    );
+    const tally = this.aggregator.tally(this.statuses(results), options);
     if (tally.zone === 'pass') {
       return;
     }
@@ -105,7 +104,12 @@ class Runner {
       outcome,
       this.reporter.renderVerdict({ results, tally, options }),
       results.find((result) => result.status === outcome)?.cause,
+      this.statuses(results),
     );
+  }
+
+  private statuses(results: readonly RunResult[]): RunStatus[] {
+    return results.map((result) => result.status);
   }
 
   private async runBatch(body: () => unknown, count: number, deadlineMs: number): Promise<Batch> {

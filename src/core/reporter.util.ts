@@ -1,113 +1,241 @@
-import type { AbortSummary, ExpirySummary, RunResult, VerdictSummary } from './run-result.js';
+import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
+import type { ReportSettings, ReportSettingsSupplier } from './report-settings.js';
+import type {
+  AbortSummary,
+  ExpirySummary,
+  RunResult,
+  RunStatus,
+  VerdictSummary,
+} from './run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
 
-const RESPONSE_EXCERPT_LIMIT = 500;
-const TRUNCATION_MARKER = '…';
-
 type FirstFailure =
-  { kind: 'verdict'; record: VerdictRecord } | { kind: 'error'; record: ErrorRecord } | undefined;
+  | {
+      readonly kind: 'verdict';
+      readonly record: VerdictRecord;
+      readonly position: number;
+      readonly judged: number;
+    }
+  | { readonly kind: 'error'; readonly record: ErrorRecord }
+  | { readonly kind: 'none' };
+
+type NumberedRun = {
+  readonly result: RunResult;
+  readonly number: number;
+};
 
 class Reporter {
+  private static readonly FULL_SECTIONS_PER_STATUS = 3;
+  private static readonly SMOKE_RUNS = 1;
+  private static readonly RATE_SCALE = 1000;
+  private static readonly RATE_EPSILON = 1e-9;
+  private static readonly FAILED = 'FAILED:';
+  private static readonly ERRORED = 'ERRORED, not failed:';
+  private static readonly SMOKE = 'the smoke run (runs: 1)';
+  private static readonly FIELD_INDENT = '  ';
+  private static readonly CONTINUATION_INDENT = '    ';
+  private static readonly TRUNCATION_MARKER = '…';
+  private static readonly FATAL_ADVICE =
+    'Fix the provider setup (API key, model) or configuration and rerun.';
+  private static readonly EXPIRY_ADVICE =
+    'Check for a slow system under test or a throttled judge provider.';
+
+  private static defaultSettings(): ReportSettings {
+    return DEFAULT_REPORT_SETTINGS;
+  }
+
+  constructor(private readonly settings: ReportSettingsSupplier = Reporter.defaultSettings) {}
+
   renderVerdict(summary: VerdictSummary): string {
-    return [this.headline(summary), ...this.runSections(summary.results)].join('\n\n');
+    return this.compose(this.verdictHeadline(summary), summary);
   }
 
   renderAborted(summary: AbortSummary): string {
-    return [this.abortHeadline(summary), ...this.runSections(summary.results)].join('\n\n');
+    return this.compose(this.abortHeadline(summary), summary);
   }
 
   renderExpired(summary: ExpirySummary): string {
-    return [this.expiryHeadline(summary), ...this.runSections(summary.results)].join('\n\n');
+    return this.compose(this.expiryHeadline(summary), summary);
   }
 
-  renderFailed(context: RunContext, cause: unknown): string {
-    const first = this.firstFailure(context);
-    if (first === undefined) {
-      return `Run failed: ${this.describe(cause)}`;
-    }
-    if (first.kind === 'error') {
-      return [
-        'Run failed after a judge call errored.',
-        `Judge error: ${this.describe(first.record.cause)}`,
-        `Thrown: ${this.describe(cause)}`,
-      ].join('\n');
-    }
-    return [
-      'Coherence check failed.',
-      `Claim: ${first.record.claim}`,
-      `Judge reasoning: ${first.record.reasoning}`,
-      `Response excerpt: ${this.excerpt(first.record.response)}`,
-      `Thrown: ${this.describe(cause)}`,
-    ].join('\n');
+  private compose(headline: string, { results, options }: AbortSummary): string {
+    const top = this.isSmoke(options.runs) ? headline : `${headline}\n${this.countsLine(results)}`;
+    return [top, ...this.runSections(results)].join('\n\n');
   }
 
-  renderErrored(context: RunContext, cause: unknown): string {
-    const lines = [
-      'Run errored, not failed: an infrastructure problem prevented a verdict.',
-      `Cause: ${this.describe(cause)}`,
-    ];
-    const attempts = this.lowestSeqError(context)?.attempts;
-    if (attempts !== undefined) {
-      lines.push(`Judge attempts: ${attempts}`);
+  private verdictHeadline({ tally, options }: VerdictSummary): string {
+    if (this.isSmoke(options.runs)) {
+      return tally.zone === 'errored'
+        ? `${Reporter.ERRORED} ${Reporter.SMOKE} hit an infrastructure problem, so there is no verdict.`
+        : `${Reporter.FAILED} ${Reporter.SMOKE} did not pass.`;
     }
-    return lines.join('\n');
-  }
-
-  private headline({ tally, options }: VerdictSummary): string {
-    const rate = `${tally.passed}/${options.runs} runs passed against threshold ${options.threshold} (need ${tally.need})`;
+    const rate =
+      `${tally.passed}/${options.runs} runs passed (pass rate ${this.passRate(tally.passed, options.runs)}) ` +
+      `against threshold ${options.threshold} (need ${tally.need})`;
     if (tally.zone === 'errored') {
-      return `Verdict errored, not failed: ${rate}; ${tally.errored} errored run(s) left the result inconclusive.`;
+      return `${Reporter.ERRORED} ${rate}; ${tally.errored} errored run(s) left the result inconclusive.`;
     }
-    return `Pass rate below threshold: ${rate}.`;
+    return `${Reporter.FAILED} ${rate}.`;
   }
 
   private abortHeadline({ results, options }: AbortSummary): string {
-    const discarded = results.filter((result) => result.status === 'discarded').length;
-    return `Test aborted on a fatal error after ${results.length - discarded}/${options.runs} runs settled; ${discarded} in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.`;
+    if (this.isSmoke(options.runs)) {
+      return `${Reporter.ERRORED} ${Reporter.SMOKE} aborted on a fatal error. ${Reporter.FATAL_ADVICE}`;
+    }
+    return (
+      `${Reporter.ERRORED} aborted on a fatal error after ${this.settledClause(results, options.runs)}. ` +
+      Reporter.FATAL_ADVICE
+    );
   }
 
   private expiryHeadline({ results, options, deadlineMs }: ExpirySummary): string {
-    const discarded = results.filter((result) => result.status === 'discarded').length;
-    return `Test errored, not failed: it did not finish within its ${deadlineMs} ms deadline. ${results.length - discarded}/${options.runs} runs settled; ${discarded} in-flight run(s) discarded to stop spend. Check for a slow system under test or a throttled judge provider.`;
+    const deadline = `did not finish within its ${deadlineMs} ms deadline`;
+    if (this.isSmoke(options.runs)) {
+      return `${Reporter.ERRORED} ${Reporter.SMOKE} ${deadline}. ${Reporter.EXPIRY_ADVICE}`;
+    }
+    return (
+      `${Reporter.ERRORED} the test ${deadline}; ${this.settledClause(results, options.runs)}. ` +
+      Reporter.EXPIRY_ADVICE
+    );
+  }
+
+  private settledClause(results: readonly RunResult[], runs: number): string {
+    const discarded = this.count(results, 'discarded');
+    const settled = `${results.length - discarded}/${runs} runs settled`;
+    return discarded > 0
+      ? `${settled}; ${discarded} in-flight run(s) discarded to stop spend`
+      : settled;
+  }
+
+  private countsLine(results: readonly RunResult[]): string {
+    return (
+      `Runs: ${this.count(results, 'passed')} passed, ${this.count(results, 'failed')} failed, ` +
+      `${this.count(results, 'errored')} errored, ${this.count(results, 'discarded')} discarded.`
+    );
   }
 
   private runSections(results: readonly RunResult[]): string[] {
     const numbered = results.map((result, index) => ({ result, number: index + 1 }));
-    const sections = numbered
-      .filter(({ result }) => result.status === 'failed' || result.status === 'errored')
-      .map(({ result, number }) => this.renderRunSection(result, number));
-    const discarded = numbered
-      .filter(({ result }) => result.status === 'discarded')
-      .map(({ number }) => `Run #${number}`);
+    const failed = this.withStatus(numbered, 'failed');
+    const errored = this.withStatus(numbered, 'errored');
+    const discarded = this.withStatus(numbered, 'discarded');
+    const sections = [
+      ...this.shown(failed).map((run) => this.failedSection(run)),
+      ...this.hiddenSummary(failed, 'failed'),
+      ...this.claimTally(failed),
+      ...this.shown(errored).map((run) => this.erroredSection(run)),
+      ...this.hiddenSummary(errored, 'errored'),
+    ];
     if (discarded.length > 0) {
-      sections.push(`Discarded (aborted in flight, counted in no zone): ${discarded.join(', ')}`);
+      sections.push(
+        `[DISCARDED] Run(s) ${this.ranges(discarded)}: still in flight when the test was cut off; counted in no zone.`,
+      );
     }
     return sections;
   }
 
-  private renderRunSection(result: RunResult, number: number): string {
-    const body =
-      result.status === 'errored'
-        ? this.renderErrored(result.context, result.cause)
-        : this.renderFailed(result.context, result.cause);
-    return `--- Run #${number} (${result.status}) ---\n${body}`;
+  private shown(runs: readonly NumberedRun[]): readonly NumberedRun[] {
+    return runs.slice(0, Reporter.FULL_SECTIONS_PER_STATUS);
+  }
+
+  private hidden(runs: readonly NumberedRun[]): readonly NumberedRun[] {
+    return runs.slice(Reporter.FULL_SECTIONS_PER_STATUS);
+  }
+
+  private hiddenSummary(runs: readonly NumberedRun[], status: RunStatus): string[] {
+    const hidden = this.hidden(runs);
+    if (hidden.length === 0) {
+      return [];
+    }
+    return [`+ ${hidden.length} more ${status} run(s) not shown in full: ${this.ranges(hidden)}.`];
+  }
+
+  private claimTally(failed: readonly NumberedRun[]): string[] {
+    if (this.hidden(failed).length === 0) {
+      return [];
+    }
+    const counts = new Map<string, number>();
+    for (const { result } of failed) {
+      const label = this.failureLabel(this.firstFailure(result.context));
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    const lines = [...counts.entries()]
+      .sort(([, left], [, right]) => right - left)
+      .map(([label, count]) => `${Reporter.FIELD_INDENT}${count} run(s): ${label}`);
+    return [
+      [
+        `Failing claims (first failure of each of the ${failed.length} failed runs):`,
+        ...lines,
+      ].join('\n'),
+    ];
+  }
+
+  private failureLabel(first: FirstFailure): string {
+    if (first.kind === 'verdict') {
+      return this.indented(`${first.record.assertion} "${first.record.claim}"`);
+    }
+    if (first.kind === 'error') {
+      return 'a judge call errored';
+    }
+    return 'thrown without a false verdict';
+  }
+
+  private failedSection({ result, number }: NumberedRun): string {
+    return [`[FAILED] Run #${number}`, ...this.failureFields(result)].join('\n');
+  }
+
+  private failureFields(result: RunResult): string[] {
+    const first = this.firstFailure(result.context);
+    const thrown = this.field('Thrown', this.describe(result.cause));
+    if (first.kind === 'none') {
+      return [this.field('First failure', 'no assertion returned false; the body threw'), thrown];
+    }
+    if (first.kind === 'error') {
+      return [
+        this.field(
+          'First failure',
+          `a judge call errored after ${first.record.attempts} attempt(s)`,
+        ),
+        this.field('Judge error', this.describe(first.record.cause)),
+        thrown,
+      ];
+    }
+    return [
+      this.field(
+        'First failed assertion',
+        `${first.record.assertion} (assertion ${first.position} of ${first.judged} judged in this run)`,
+      ),
+      this.field('Claim', first.record.claim),
+      this.field('Judge reasoning', first.record.reasoning),
+      this.excerptField(first.record.response),
+      thrown,
+    ];
+  }
+
+  private erroredSection({ result, number }: NumberedRun): string {
+    const lines = [
+      `[ERRORED] Run #${number} (infrastructure, not a semantic failure)`,
+      this.field('Cause', this.describe(result.cause)),
+    ];
+    const attempts = this.lowestSeqError(result.context)?.attempts;
+    if (attempts !== undefined) {
+      lines.push(this.field('Judge attempts', String(attempts)));
+    }
+    return lines.join('\n');
   }
 
   private firstFailure(context: RunContext): FirstFailure {
-    const verdict = context.verdicts
-      .filter((record) => record.verdict === false)
-      .reduce<VerdictRecord | undefined>(
-        (lowest, record) => (lowest === undefined || record.seq < lowest.seq ? record : lowest),
-        undefined,
-      );
+    const judged = [...context.verdicts].sort((left, right) => left.seq - right.seq);
+    const index = judged.findIndex((record) => !record.verdict);
     const error = this.lowestSeqError(context);
-    if (verdict === undefined && error === undefined) {
-      return undefined;
+    const verdict = index === -1 ? undefined : judged[index];
+    if (verdict !== undefined && (error === undefined || verdict.seq < error.seq)) {
+      return { kind: 'verdict', record: verdict, position: index + 1, judged: judged.length };
     }
-    if (error === undefined || (verdict !== undefined && verdict.seq < error.seq)) {
-      return { kind: 'verdict', record: verdict as VerdictRecord };
+    if (error !== undefined) {
+      return { kind: 'error', record: error };
     }
-    return { kind: 'error', record: error };
+    return { kind: 'none' };
   }
 
   private lowestSeqError(context: RunContext): ErrorRecord | undefined {
@@ -117,12 +245,63 @@ class Reporter {
     );
   }
 
-  private excerpt(response: string): string {
-    if (response.length <= RESPONSE_EXCERPT_LIMIT) {
-      return response;
+  private excerptField(response: string): string {
+    const limit = this.settings().excerptChars;
+    if (response.length <= limit) {
+      return this.field('Response excerpt', response);
     }
-    const cut = response.slice(0, RESPONSE_EXCERPT_LIMIT).replace(/[\uD800-\uDBFF]$/, '');
-    return cut + TRUNCATION_MARKER;
+    const cut = response.slice(0, limit).replace(/[\uD800-\uDBFF]$/, '');
+    return this.field(
+      `Response excerpt (first ${limit} of ${response.length} chars)`,
+      cut + Reporter.TRUNCATION_MARKER,
+    );
+  }
+
+  private field(label: string, value: string): string {
+    return `${Reporter.FIELD_INDENT}${label}: ${this.indented(value)}`;
+  }
+
+  private indented(value: string): string {
+    return value
+      .split(/\r?\n/)
+      .map((line, index) =>
+        index === 0 || line.length === 0 ? line : Reporter.CONTINUATION_INDENT + line,
+      )
+      .join('\n');
+  }
+
+  private ranges(runs: readonly NumberedRun[]): string {
+    const spans: [number, number][] = [];
+    for (const { number } of runs) {
+      const last = spans.at(-1);
+      if (last !== undefined && last[1] + 1 === number) {
+        last[1] = number;
+      } else {
+        spans.push([number, number]);
+      }
+    }
+    return spans
+      .map(([start, end]) => (start === end ? `#${start}` : `#${start}-#${end}`))
+      .join(', ');
+  }
+
+  private passRate(passed: number, runs: number): number {
+    return (
+      Math.floor((passed / runs) * Reporter.RATE_SCALE + Reporter.RATE_EPSILON) /
+      Reporter.RATE_SCALE
+    );
+  }
+
+  private withStatus(runs: readonly NumberedRun[], status: RunStatus): NumberedRun[] {
+    return runs.filter(({ result }) => result.status === status);
+  }
+
+  private count(results: readonly RunResult[], status: RunStatus): number {
+    return results.filter((result) => result.status === status).length;
+  }
+
+  private isSmoke(runs: number): boolean {
+    return runs === Reporter.SMOKE_RUNS;
   }
 
   private describe(cause: unknown): string {

@@ -177,11 +177,68 @@ Worked examples:
 | 100 | 0.07 | 7 (not 8) | 7 passed | pass |
 | 1 | 1.0 | 1 | 1 errored | errored |
 
-The failure message leads with the measured rate, e.g.
-`Pass rate below threshold: 18/20 runs passed against threshold 0.95 (need 19).`,
-followed by a section per failed or errored run (claim, judge reasoning,
-response excerpt, or the infrastructure cause) and a single line listing any
-discarded runs.
+### Reading the failure report
+
+The `CrucibleVerdictError` message is a report rendered from the run records
+when the verdict is reached; nothing is printed while runs are in flight. For
+`{ runs: 20, threshold: 0.95 }` with mixed outcomes it reads:
+
+```text
+FAILED: 14/20 runs passed (pass rate 0.7) against threshold 0.95 (need 19).
+Runs: 14 passed, 5 failed, 1 errored, 0 discarded.
+
+[FAILED] Run #2
+  First failed assertion: coherent (assertion 2 of 3 judged in this run)
+  Claim: the reply never reveals the meeting location
+  Judge reasoning: The reply names the Blue Door cafe on 5th street,
+    which is the secret meeting location.
+  Response excerpt (first 60 of 116 chars): Sure — Bob said he would meet Jane at the Blue Door cafe on …
+  Thrown: Error: expect(received).toBe(expected)
+
+[FAILED] Run #9
+  …
+
+[FAILED] Run #12
+  …
+
++ 2 more failed run(s) not shown in full: #14, #18.
+
+Failing claims (first failure of each of the 5 failed runs):
+  4 run(s): coherent "the reply never reveals the meeting location"
+  1 run(s): coherent "Jane does not know about the contract"
+
+[ERRORED] Run #5 (infrastructure, not a semantic failure)
+  Cause: CrucibleError: OpenRouter returned 503 after 3 attempts
+  Judge attempts: 3
+```
+
+- **Headline.** `FAILED:` is a semantic failure; `ERRORED, not failed:` means
+  infrastructure (the errored zone, a fatal provider error, or the deadline)
+  left no evidence either way. The pass rate is rounded down, so it never
+  displays as meeting a threshold it missed; `need` is the exact criterion.
+  The `Runs:` line counts every status. A single-run test says
+  `the smoke run (runs: 1)` instead and has no `Runs:` line.
+- **Per failed run** (`[FAILED]`): the run's *first* failure — its
+  lowest-sequence false verdict — with the assertion name and which of the
+  run's judged assertions it was, the claim, the judge's reasoning, a bounded
+  excerpt of the judged response, and the error your test threw. If a judge
+  call errored before any false verdict, that error is shown instead.
+- **Per errored run** (`[ERRORED]`): the infrastructure cause and the judge
+  attempts made.
+- **Discarded runs** (`[DISCARDED]`): one line of run numbers; counted in no
+  zone.
+- **Bounded output.** At most three failed and three errored runs are shown
+  in full (lowest run number first). The rest are listed by number, and when
+  failed runs are hidden a `Failing claims` tally groups every failed run by
+  its first failing assertion and claim, so you can see whether the failures
+  share one cause.
+- **Response excerpt length.** 500 characters by default. Set
+  `"excerptChars"` (an integer ≥ 1) in `crucible.config.json` to change it; an
+  invalid value fails at config load as a `CrucibleError` of kind `config`.
+
+The thrown error also carries `runStatuses` — every run's status
+(`'passed' | 'failed' | 'errored' | 'discarded'`) in run order — for tooling
+that wants the outcome without parsing the message.
 
 ### Timeout
 
@@ -204,7 +261,7 @@ Crucible enforces the deadline itself. When it passes:
   *discarded*;
 - the test fails with a `CrucibleVerdictError` whose `outcome` is
   `'errored'` — an infrastructure problem, never a semantic failure — and the
-  message names the deadline and lists the settled and discarded runs.
+  report headline names the deadline and the settled and discarded runs.
 
 Your own code inside a discarded run (for example, a call to your system
 under test) is not cancelled; its result is simply ignored.
@@ -316,7 +373,7 @@ measurement run with `threshold: 1` reports its count when any run fails:
 
 ```ts
 crucible.it('Jane looks for Bob', { runs: 100, threshold: 1 }, body);
-// Pass rate below threshold: 95/100 runs passed against threshold 1 (need 100).
+// FAILED: 95/100 runs passed (pass rate 0.95) against threshold 1 (need 100).
 ```
 
 Treat the result as a range, not a point: 95/100 gives a 95% interval of
@@ -367,7 +424,7 @@ again with more runs before lowering the threshold or blaming the judge.
 ### 5. Reading a red near the edge
 
 The failure headline gives you everything needed to judge whether a red is
-noise: `18/20 runs passed against threshold 0.95 (need 19)` on a system
+noise: `18/20 runs passed (pass rate 0.9) against threshold 0.95 (need 19)` on a system
 measured at 0.95 is exactly the 26% case above. Read the per-run judge
 reasoning before re-running: if the failing runs show a real defect, the
 gate did its job.
