@@ -1,4 +1,7 @@
+import { Aggregator } from '../aggregator.util.js';
 import { Reporter } from '../reporter.util.js';
+import type { ResolvedRunOptions } from '../run-options.js';
+import type { RunResult, RunStatus } from '../run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
 
 class ReportHarness {
@@ -24,6 +27,19 @@ class ReportHarness {
     errors: ErrorRecord[] = [],
   ): string {
     return new Reporter().renderFailed(ReportHarness.context(verdicts, errors), cause);
+  }
+
+  static run(status: RunStatus, cause?: unknown, verdicts: VerdictRecord[] = []): RunResult {
+    return { status, cause, context: ReportHarness.context(verdicts) };
+  }
+
+  static renderedVerdict(results: RunResult[], threshold: number): string {
+    const options: ResolvedRunOptions = { runs: results.length, threshold };
+    const tally = new Aggregator().tally(
+      results.map((result) => result.status),
+      options,
+    );
+    return new Reporter().renderVerdict({ results, tally, options });
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { Reporter } from './reporter.util.js';
+import { Threshold } from './test/threshold.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
 
 const EXCERPT_LIMIT = 500;
@@ -129,5 +130,63 @@ describe('Reporter', () => {
   it('keeps failed-run wording free of the errored-run marker', () => {
     const failed = ReportHarness.renderedFailure([ReportHarness.falseVerdict()]);
     expect(failed).not.toMatch(/not failed/i);
+  });
+
+  it('headlines the pass rate with passed count, run count, need, and threshold', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run('passed'),
+        ReportHarness.run('failed', new Error('first miss')),
+        ReportHarness.run('failed', new Error('second miss')),
+      ],
+      Threshold.Half,
+    );
+    expect(message).toContain('1/3');
+    expect(message).toContain('need 2');
+    expect(message).toContain(String(Threshold.Half));
+  });
+
+  it('marks an inconclusive verdict as errored, not failed, naming every errored run cause', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run('passed'),
+        ReportHarness.run('errored', new CrucibleError('infra', 'provider unreachable')),
+        ReportHarness.run('errored', new CrucibleError('infra', 'rate limited')),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toMatch(/not failed/i);
+    expect(message).toContain('provider unreachable');
+    expect(message).toContain('rate limited');
+  });
+
+  it("renders a failed run's claim and judge reasoning in its section", () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.run('failed', new Error('thrown'), [
+          ReportHarness.falseVerdict({ claim: 'stays on topic', reasoning: 'it drifted' }),
+        ]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain('stays on topic');
+    expect(message).toContain('it drifted');
+  });
+
+  it('gives passed runs no section of their own', () => {
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.run('passed'), ReportHarness.run('failed', new Error('the miss'))],
+      Threshold.Certain,
+    );
+    expect(message).not.toContain('Run #1');
+    expect(message).toContain('Run #2');
+  });
+
+  it('keeps a failing verdict free of the errored-run marker', () => {
+    const message = ReportHarness.renderedVerdict(
+      [ReportHarness.run('failed', new Error('the miss'))],
+      Threshold.Certain,
+    );
+    expect(message).not.toMatch(/not failed/i);
   });
 });

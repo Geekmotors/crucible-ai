@@ -1,3 +1,4 @@
+import type { RunResult, VerdictSummary } from './run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
 
 const RESPONSE_EXCERPT_LIMIT = 500;
@@ -7,6 +8,14 @@ type FirstFailure =
   { kind: 'verdict'; record: VerdictRecord } | { kind: 'error'; record: ErrorRecord } | undefined;
 
 class Reporter {
+  renderVerdict(summary: VerdictSummary): string {
+    const sections = summary.results
+      .map((result, index) => ({ result, number: index + 1 }))
+      .filter(({ result }) => result.status !== 'passed')
+      .map(({ result, number }) => this.renderRunSection(result, number));
+    return [this.headline(summary), ...sections].join('\n\n');
+  }
+
   renderFailed(context: RunContext, cause: unknown): string {
     const first = this.firstFailure(context);
     if (first === undefined) {
@@ -38,6 +47,22 @@ class Reporter {
       lines.push(`Judge attempts: ${attempts}`);
     }
     return lines.join('\n');
+  }
+
+  private headline({ tally, options }: VerdictSummary): string {
+    const rate = `${tally.passed}/${options.runs} runs passed against threshold ${options.threshold} (need ${tally.need})`;
+    if (tally.zone === 'errored') {
+      return `Verdict errored, not failed: ${rate}; ${tally.errored} errored run(s) left the result inconclusive.`;
+    }
+    return `Pass rate below threshold: ${rate}.`;
+  }
+
+  private renderRunSection(result: RunResult, number: number): string {
+    const body =
+      result.status === 'errored'
+        ? this.renderErrored(result.context, result.cause)
+        : this.renderFailed(result.context, result.cause);
+    return `--- Run #${number} (${result.status}) ---\n${body}`;
   }
 
   private firstFailure(context: RunContext): FirstFailure {
