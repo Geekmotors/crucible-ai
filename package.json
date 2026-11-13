@@ -1,15 +1,15 @@
 {
   "name": "crucible-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Coherence testing for LLM-integrated code",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jackula83/crucible-ai.git"
+    "url": "git+https://github.com/Geekmotors/crucible-ai.git"
   },
-  "homepage": "https://github.com/jackula83/crucible-ai#readme",
+  "homepage": "https://github.com/Geekmotors/crucible-ai#readme",
   "bugs": {
-    "url": "https://github.com/jackula83/crucible-ai/issues"
+    "url": "https://github.com/Geekmotors/crucible-ai/issues"
   },
   "keywords": [
     "llm",
