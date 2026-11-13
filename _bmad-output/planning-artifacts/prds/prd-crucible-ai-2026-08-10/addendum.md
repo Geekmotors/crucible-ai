@@ -22,7 +22,7 @@ Two-part split (illustrated with the final API: `crucible.it('...', { runs: 20, 
 ## Runs semantics — test-level repetition (decided 2026-08-10)
 
 - Rejected: `{runs, threshold}` on the assertion (`coherent(...)`) — would either judge one response 20× (measures the judge, not the SUT) or require re-invoking act inside the assertion, which breaks when state mutates after input.
-- Decided: repetition wraps the whole test — `crucible.it('name', { runs: 20, threshold: 0.95 }, async () => { arrange; act; assert })`. Each run re-arranges state fresh; assertions inside are single-shot; pass rate across runs ≥ threshold → green. Matches τ-bench pass^k measurement of SUT reliability. (Runner named `crucible.it()` — decided 2026-08-10, replacing the earlier `inferenceIt` working name — so the whole surface hangs off one `crucible` namespace.)
+- Decided: repetition wraps the whole test — `crucible.it('name', { runs: 20, threshold: 0.95 }, async () => { arrange; act; assert })`. Each run re-arranges state fresh; assertions inside are single-shot; pass rate across runs ≥ threshold → green. Measures SUT reliability as a pass rate across runs (τ-bench pass^k is the stricter all-k-runs-pass case, i.e. `threshold: 1`). (Runner named `crucible.it()` — decided 2026-08-10, replacing the earlier `inferenceIt` working name — so the whole surface hangs off one `crucible` namespace.)
 - Per-language binding sketches (each ecosystem's idiomatic test-repetition mechanism):
   - **Jest/Vitest (TS)** — `crucible.it(name, { runs, threshold }, body)`: plain function that registers `it()` and loops/aggregates internally. No framework extension API needed.
   - **xUnit (.NET)** — `[CrucibleFact(Runs = 20, Threshold = 0.95)]` custom attribute on the test method; implemented via xUnit's extensible `FactAttribute`/test-case discovery (prior art: xRetry, NUnit `[Repeat]`/`[Retry]`).
@@ -56,5 +56,5 @@ Two-part split (illustrated with the final API: `crucible.it('...', { runs: 20, 
 - promptfoo: config-first vs Crucible code-first; acquired by OpenAI Mar 2026, roadmap → enterprise security/red-teaming under Frontier. Passing state via template vars is a workaround there, not a concept.
 - DeepEval: strongest metric library (G-Eval); TS SDK follows Python, judge metrics + local eval Python-first; stateless input triple, no first-class state concept.
 - semantic-expect: prior art on N-run probabilistic matchers in Jest/Vitest — stateless, OpenAI-only. Cite in docs/positioning.
-- τ-bench pass^k: industry-standard vocabulary for runs/threshold semantics — adopt terminology.
+- τ-bench pass^k: industry vocabulary for multi-run reliability, but it means all k runs pass. Crucible's threshold is a pass rate, so call it a "pass-rate threshold", not pass^k (corrected 2026-11-14).
 - Full digest: research-landscape.md.

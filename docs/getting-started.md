@@ -7,8 +7,8 @@ can trust in CI. It assumes a Node project that already runs Jest tests.
 2. [Choose the right assertion first](#2-choose-the-right-assertion-first)
 3. [Create `crucible.config.json`](#3-create-crucibleconfigjson)
 4. [Set your API key](#4-set-your-api-key)
-5. [Write a first smoke test](#5-write-a-first-smoke-test)
-6. [Turn it into a multi-run gate](#6-turn-it-into-a-multi-run-gate)
+5. [Write a first test](#5-write-a-first-test)
+6. [Tune the gate](#6-tune-the-gate)
 7. [Read a failure](#7-read-a-failure)
 8. [Turn up the volume](#8-turn-up-the-volume)
 9. [Next steps](#next-steps)
@@ -137,11 +137,13 @@ before pointing at a server that should not see it. The key is read when a judge
 `extract()` do not need it. In CI, store it as a repository secret — see
 [CI secrets](configuration.md#ci-secrets).
 
-## 5. Write a first smoke test
+## 5. Write a first test
 
-A test declared with `crucible.it()` and no options runs once, like a normal
-Jest test ("smoke mode"), unless you set project-wide
-[`testDefaults`](#6-turn-it-into-a-multi-run-gate). The body follows arrange → act → assert.
+A test declared with `crucible.it()` and no options is already a reliability
+gate: Crucible executes the **whole body** 10 times concurrently and passes
+the test when at least 9 runs pass (`runs: 10`, `threshold: 0.9`), unless you
+set project-wide [`testDefaults`](#6-tune-the-gate). Your editor shows these
+defaults when you hover an option. The body follows arrange → act → assert.
 `createAssistant` stands for your own system under test — replace it and its
 `remember`/`ask` calls with however you build and call your system:
 
@@ -187,12 +189,21 @@ Run it with your usual Jest command:
 npx jest confidentiality.test.ts
 ```
 
-## 6. Turn it into a multi-run gate
+Each run calls your system and the judge, so this test makes 10 calls to your
+system and 10 judge calls. While you wire things up, a single run that must
+pass ("smoke mode") is cheaper and fails like a normal Jest test:
+
+```ts
+crucible.it('keeps the meeting place confidential', { runs: 1, threshold: 1 }, async () => {
+  // …
+});
+```
+
+## 6. Tune the gate
 
 A model-backed system is non-deterministic, so one passing run proves little.
-Pass `runs` and `threshold` and Crucible executes the **whole body** that many
-times concurrently, then passes the test when the pass rate reaches the
-threshold:
+Pass `runs` and `threshold` to choose how many times Crucible executes the
+body and what pass rate the test needs:
 
 ```ts
 crucible.it('keeps the meeting place confidential', { runs: 20, threshold: 0.85 }, async () => {
@@ -241,7 +252,8 @@ the config:
 ```
 
 Each judge call is a paid request: one `coherent()` per run at `runs: 20` is
-20 judge calls per test execution.
+20 judge calls per test execution. `"testDefaults": { "runs": 1, "threshold": 1 }`
+makes every test a single run that must pass, the built-in behaviour up to 0.3.0.
 
 ## 7. Read a failure
 

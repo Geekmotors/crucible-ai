@@ -1,5 +1,6 @@
 enum RunCount {
   Single = 1,
+  BuiltIn = 10,
   Smaller = 5,
   LenientNeed = 7,
   StrictNeed = 19,

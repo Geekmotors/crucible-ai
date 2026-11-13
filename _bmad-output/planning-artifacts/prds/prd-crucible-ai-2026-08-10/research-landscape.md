@@ -23,7 +23,7 @@
 
 **4. State-as-input / probabilistic prior art**
 - Nothing treats system state as first-class assertion input in a test lib. Closest = research benchmarks: STATE-Bench (MSFT May 2026, agent memory, pass^5), NARRA-Gym (interactive-narrative agent eval, academic — watch), WorldMemArena.
-- Probabilistic assertion: τ-bench pass^k metric = industry-standard vocabulary (in Anthropic model cards). Consensus: run N, pass rate, threshold per stakes; some argue baseline-relative gates > fixed thresholds. semantic-expect = only unit-test-framework impl found.
+- Probabilistic assertion: τ-bench pass^k metric (all k runs succeed) = industry-standard vocabulary (in Anthropic model cards); Crucible's threshold is a pass rate, a different measure. Consensus: run N, pass rate, threshold per stakes; some argue baseline-relative gates > fixed thresholds. semantic-expect = only unit-test-framework impl found.
 
 **5. Positioning matrix**
 - Config-first: promptfoo. Code-first: Braintrust, evalite, vitest-evals, DeepEval(Py), semantic-expect.
@@ -32,6 +32,6 @@
 
 **Threats/gaps vs Crucible**
 - Threats: vitest-evals/evalite could add N-run thresholds cheaply; DeepEval TS parity landing; semantic-expect = concept prior art (cite it).
-- Gap Crucible owns: system state as typed first-class assertion input + in-process SUT + pass^k thresholds as one coherent TS API. No incumbent does this.
+- Gap Crucible owns: system state as typed first-class assertion input + in-process SUT + pass-rate thresholds as one coherent TS API. No incumbent does this.
 
 Sources: OpenAI×Promptfoo announcement, promptfoo blog, Forbes, Futurum, DeepEval 4.0 blog, DeepEval TS monorepo blog, deepeval-ts npm, Braintrust vs LangSmith (morphllm), LangSmith vitest/jest docs, evalite GitHub, InfoQ evalite, vitest-evals GitHub, Sentry blog, semantic-expect GitHub, llm-assert GitHub, τ-bench arXiv 2406.12045, STATE-Bench (MSFT blog), NARRA-Gym arXiv 2605.08503, OpenAI Evals deprecation (therouter.ai), promptfoo jest docs, MarkTechPost 2026-08 platform comparison.

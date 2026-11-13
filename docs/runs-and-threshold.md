@@ -21,8 +21,10 @@ pick `runs`/`threshold` so that a red build means something.
 ### Signature
 
 ```ts
-crucible.it(name: string, body: TestBody, timeout?: number): void;
-crucible.it(name: string, options: RunOptions, body: TestBody, timeout?: number): void;
+crucible.it(name: string, body: TestBody): void;
+crucible.it(name: string, body: TestBody, timeout: number): void;
+crucible.it(name: string, options: RunOptions, body: TestBody): void;
+crucible.it(name: string, options: RunOptions, body: TestBody, timeout: number): void;
 
 type RunOptions = {
   runs?: number;
@@ -32,6 +34,13 @@ type RunOptions = {
 };
 type TestBody = () => unknown; // usually async
 ```
+
+These four forms are TypeScript overloads, so a call without a body, such as
+`crucible.it(name, options)`, is a compile error. Editors show each option's
+meaning and default on hover. The types check the argument shape only;
+option values and a trailing timeout combined with `testTimeout` are checked
+at registration, and JavaScript callers get the shape checks there too, as
+`usage` errors (below).
 
 The optional trailing `timeout` is the test timeout in milliseconds, exactly
 as in Jest's own `it(name, fn, timeout)`. It is shorthand for the
@@ -45,14 +54,24 @@ test.
 
 | Option | Default | Valid values | Meaning |
 | --- | --- | --- | --- |
-| `runs` | `testDefaults.runs`, else `1` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
-| `threshold` | `testDefaults.threshold`, else `1.0` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
+| `runs` | `testDefaults.runs`, else `10` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
+| `threshold` | `testDefaults.threshold`, else `0.9` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
 | `inferenceTimeout` | `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
 | `testTimeout` | the trailing `timeout` argument, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
 
 With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
-the test is a plain single-shot test ("smoke mode"): one run, and it must
-pass.
+the test is a reliability gate: 10 runs, and at least 9 must pass. Each run
+executes the whole body, so an unconfigured test runs your system under test
+10 times and makes 10 judge calls per `coherent()` or `extract()` assertion
+(see [Cost](#cost)); its built-in test timeout is 39 s.
+
+The built-ins fill each field you leave out, so `{ runs: 5 }` alone takes
+threshold 0.9 and, rounded up, needs all 5 runs to pass: 0.9 tolerates a
+failed run only from 10 runs up. `{ threshold: 1 }` alone takes 10 runs.
+
+For a plain single-shot test ("smoke mode": one run, and it must pass, the
+built-in behaviour up to 0.3.0), declare `{ runs: 1, threshold: 1 }` on the test, or set it in
+[`testDefaults`](#project-wide-defaults-testdefaults) for the whole project.
 
 Options are validated when the test is registered (while Jest collects the
 file), not when it runs. Each of the following throws a `CrucibleError` of
@@ -88,7 +107,7 @@ Each option is resolved **per field**, in this order:
 
 1. the value passed to `crucible.it()`
 2. the value in `testDefaults`
-3. the built-in default (`runs: 1`, `threshold: 1.0`, `inferenceTimeout:
+3. the built-in default (`runs: 10`, `threshold: 0.9`, `inferenceTimeout:
    30000`, `testTimeout: 30000 + 1000 × (runs − 1)`)
 
 So with the config above:
@@ -382,7 +401,8 @@ Crucible has two time budgets, both in milliseconds:
 | `inferenceTimeout` | each `crucible.coherent()` or `crucible.extract()` judge reply attempt, including the provider retries inside it | `30000` |
 
 The built-in test timeout uses the **resolved** run count — the value from
-`crucible.it()`, `testDefaults`, or the built-in: 30 s in smoke mode, 49 s for
+`crucible.it()`, `testDefaults`, or the built-in: 30 s in smoke mode, 39 s for
+the built-in 10 runs, 49 s for
 `runs: 20`, 79 s for `runs: 50`.
 
 Set either per test, or for the whole project in
@@ -606,6 +626,11 @@ judge calls = (coherent() + extract() calls) per run × runs   (plus any retries
 - All runs start together, so a test can have up to `runs` judge calls in
   flight at once — mind your provider's rate limits.
 - No judge traffic happens outside test execution.
+
+With no options and no `testDefaults`, a test is 10 runs: 10 executions of
+your system under test and 10 judge calls per assertion. Declare
+`{ runs: 1, threshold: 1 }` (or set it in `testDefaults`) where one run is
+enough.
 
 Example: two `coherent()` assertions at `{ runs: 50 }` is 100 judge calls per
 execution — about $0.004 with `deepseek/deepseek-v4-flash-0731`

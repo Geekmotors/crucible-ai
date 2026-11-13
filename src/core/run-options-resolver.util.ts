@@ -4,8 +4,8 @@ import type { ResolvedRunOptions, RunOptions } from './run-options.js';
 import { TimeBudget } from './time-budget.util.js';
 
 class RunOptionsResolver {
-  private static readonly DEFAULT_RUNS = 1;
-  private static readonly DEFAULT_THRESHOLD = 1;
+  private static readonly DEFAULT_RUNS = 10;
+  private static readonly DEFAULT_THRESHOLD = 0.9;
   private static readonly SUBJECT = 'crucible.it options';
 
   private readonly validator = new RunOptionsValidator();

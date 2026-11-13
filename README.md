@@ -6,10 +6,10 @@
 
 Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
-Crucible asks an AI judge whether your system's reply means what it should, given the state your system knew at the time. It re-runs the test many times and passes on a pass rate, so a flaky model can't sneak through on one lucky run.
+Crucible asks an AI judge whether your system's reply means what it should, given the state your system knew at the time. It re-runs the test many times (10 by default) and passes on a pass rate (90% by default), so a flaky model can't sneak through on one lucky run.
 
 ```ts
-crucible.it('keeps the meeting place secret', { runs: 10, threshold: 0.9 }, async () => {
+crucible.it('keeps the meeting place secret', async () => {
   const assistant = createAssistant();
   await assistant.remember(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
   crucible.load(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
@@ -27,7 +27,7 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 - **Semantic assertions:** `crucible.coherent(actual, expectation)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
 - **Value extraction:** `crucible.extract(text, description, { as })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it.
 - **State-aware judging:** `crucible.load()` and `crucible.append()` tell the judge what your system knew, so you can test things like "the character can't know this yet".
-- **Reliability gates:** `{ runs, threshold }` runs the whole test body concurrently and passes on the pass rate.
+- **Reliability gates:** every test runs its whole body concurrently (10 runs by default) and passes on the pass rate (0.9 by default); `{ runs, threshold }` tunes both.
 - **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
 - **Fail fast, spend less:** a fatal provider or config error stops the sibling runs.
 - **Any judge model, your provider:** [OpenRouter](https://openrouter.ai), OpenAI, or any OpenAI-compatible endpoint (Azure OpenAI, a LiteLLM gateway, Ollama; only OpenRouter's compatible endpoint is tested live so far), chosen in a committed config file.
@@ -65,7 +65,7 @@ To judge with OpenAI instead, use `{ "provider": "openai", "model": "gpt-5-mini"
 export CRUCIBLE_JUDGE_KEY=...   # every provider reads it; "apiKeyEnv" in the config names another variable
 ```
 
-**3. Write a test.** With no options it runs once, like a normal Jest test:
+**3. Write a test.** With no options it is already a reliability gate: the body runs 10 times concurrently and the test passes when at least 9 runs pass:
 
 ```ts
 import { crucible } from 'crucible-ai';
@@ -81,6 +81,8 @@ crucible.it('declines to export on the free plan', async () => {
 });
 ```
 
+Each run calls your system and the judge, so an unconfigured test costs 10 runs of your system and 10 judge calls per assertion. For a single run that must pass, like a normal Jest test, declare `{ runs: 1, threshold: 1 }` on the test or in [`testDefaults`](#project-wide-defaults).
+
 **4. Run it** with your usual Jest command:
 
 ```sh
@@ -91,7 +93,7 @@ npx jest
 
 ### Gate on a pass rate
 
-Add `runs` and `threshold` to run the body several times concurrently. The test passes when at least `threshold` of the runs pass:
+Every test runs its body concurrently and passes when at least `threshold` of the runs pass. The defaults are `runs: 10` and `threshold: 0.9`; set your own per test:
 
 ```ts
 crucible.it('stays in character', { runs: 20, threshold: 0.9 }, async () => {
@@ -135,7 +137,7 @@ The judge takes the final answer ("I thought 3, but it's two" → `2`) and retur
 
 ### Set timeouts
 
-By default a whole test gets 30 s plus 1 s per extra run, and each judge request gets 30 s. Override them per test, Jest-style or by name:
+By default a whole test gets 30 s plus 1 s per extra run (39 s for the default 10 runs), and each judge request gets 30 s. Override them per test, Jest-style or by name:
 
 ```ts
 crucible.it('summarises a long thread', async () => {
@@ -151,15 +153,17 @@ crucible.it('plans a trip', { runs: 5, inferenceTimeout: 45000, testTimeout: 120
 
 ### Project-wide defaults
 
-Put defaults for every `crucible.it()` in the config. Values declared on a test win:
+Put defaults for every `crucible.it()` in the config; they replace the built-in `runs: 10`, `threshold: 0.9`. Values declared on a test win:
 
 ```json
 {
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
-  "testDefaults": { "runs": 10, "threshold": 0.9, "testTimeout": 90000 }
+  "testDefaults": { "runs": 20, "threshold": 0.85, "testTimeout": 90000 }
 }
 ```
+
+`"testDefaults": { "runs": 1, "threshold": 1 }` makes every test a single run that must pass, the built-in behaviour up to 0.3.0.
 
 ### Read a failure
 

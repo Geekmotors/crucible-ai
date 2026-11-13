@@ -73,7 +73,7 @@ FR9: Epic 3 — verbosity ladder incl. debug
 A developer can install crucible-ai, configure OpenRouter, and get a real semantic verdict inside a Jest test — `crucible.it()` smoke mode (single run), `crucible.coherent()`, schema-driven judge, fail-fast config, core retry taxonomy, and a minimal failure print that includes the judge's reasoning (not just the boolean). Proves the core bet — schema-driven judging — earliest and cheapest.
 **FRs covered:** FR1 (declare + smoke), FR5, FR6, FR7
 
-### Epic 2: Reliability measurement (stateful pass^k)
+### Epic 2: Reliability measurement (stateful pass-rate gates)
 A developer can arrange per-run state and gate CI on pass rate — full `{runs, threshold}` semantics, parallel execution, ALS state isolation (`load`/`append`), three-zone verdict, sibling abort on fatal. Runs/threshold binomial-headroom guidance (NFR4) is authored alongside `threshold` in this epic — load-bearing math, not deferred documentation.
 **FRs covered:** FR1 (runs/threshold aggregation), FR2, FR3, FR4
 
@@ -172,7 +172,7 @@ So that I can fix my engine or my claim without re-running blind.
 **Then** output renders the run as *errored, not failed*, naming the infrastructure cause (FR7)
 **And** no module outside `core/report` writes to stdout/stderr (AR12)
 
-## Epic 2: Reliability measurement (stateful pass^k)
+## Epic 2: Reliability measurement (stateful pass-rate gates)
 
 A developer can arrange per-run state and gate CI on pass rate — full `{runs, threshold}` semantics, parallel execution, ALS state isolation, three-zone verdict, sibling abort on fatal, config-level defaults, and the load-bearing headroom math authored alongside.
 
@@ -490,3 +490,93 @@ So that I set the judge key once, the same way, whichever provider I judge with.
 **Then** Crucible warns once per process that the key travels unencrypted, without ever including the key; the call is not rejected
 
 **And** e2e, the conformance harness (`make conformance`), the Makefile, CI workflows (the `CRUCIBLE_JUDGE_KEY` repo secret), README and docs use `CRUCIBLE_JUDGE_KEY` and describe `apiKeyEnv` for every provider
+
+## Epic 6: Ergonomics
+
+Make the common case need no options, make settings declarable once per group of tests, and let extraction match how loosely LLMs answer. Design rule for every story: the settings chain and `describe` logic stay runner-neutral; anything that touches Jest lives in one replaceable layer, so a Vitest adapter (next epic) reuses it unchanged.
+
+### Story 6.1: Sensible defaults with IDE hints
+
+As a developer writing my first Crucible test,
+I want useful run and threshold defaults that my editor shows me,
+So that a test with no options is already a meaningful reliability gate and I never have to look the defaults up.
+
+**Acceptance Criteria:**
+
+**Given** a `crucible.it()` with no `runs`/`threshold` and no `testDefaults`
+**Then** it executes 10 runs and passes when at least 90% (9 of 10) pass (was 1 run, threshold 1.0; breaking, pre-1.0)
+**And** the default `testTimeout` formula is unchanged (`30000 + 1000 × (runs − 1)`, so 39000 for 10 runs)
+
+**Given** an editor with TypeScript support
+**When** the user hovers or autocompletes `RunOptions` fields, `crucible.it`, `crucible.coherent` or `crucible.extract`
+**Then** JSDoc shows each option's meaning and `@default`
+**And** `crucible.it` is typed as its four supported forms (overloads), so `crucible.it(name, options)` without a body is a type error
+
+**And** README, docs and CHANGELOG (Unreleased) state the new defaults, the cost (10 judge calls and 10 runs of the system under test per unconfigured test) and how to get the old behaviour (`{ runs: 1, threshold: 1 }` or `testDefaults`)
+**And** `CHANGELOG.md` is included in the published package
+
+### Story 6.2: A commented config file and `crucible-ai init`
+
+As a developer setting up Crucible,
+I want a generated config file that lists every setting and its default as a commented line, with editor autocomplete,
+So that I can see and change any default without reading the docs.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.config.json` or `crucible.config.jsonc` in the directory Jest runs from
+**Then** either is read, and both accept `//` and `/* */` comments and trailing commas (comment markers inside strings are text)
+**And** both files present is a `config` error; malformed content is a `config` error with no key echoed
+
+**Given** the package
+**Then** it ships a JSON Schema for the config (`schemas/crucible.config.schema.json`) describing every field with its description and default
+**And** a `"$schema"` field in the config is accepted and ignored by validation
+
+**Given** `npx crucible-ai init` in a directory with no config file
+**Then** it writes `crucible.config.jsonc` with `$schema` pointing at the installed schema, `provider` and `model` set to the documented defaults, and every other setting (`apiKeyEnv`, `meta`, every `testDefaults` field) present as a commented line showing its default
+**And** with either config file already present it changes nothing and exits non-zero
+**And** the runtime still has no dependencies (the JSONC reader is in-house)
+
+**And** README and docs use the generated file in Quick start
+
+### Story 6.3: Group settings with `crucible.describe`
+
+As a developer with many tests that share run settings,
+I want to declare them once on a group,
+So that each `crucible.it()` only states what differs.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.describe(name, fn)` or `crucible.describe(name, options, fn)` where `options` takes the same fields as `crucible.it()` options
+**Then** it registers a Jest `describe` block and every `crucible.it()` inside inherits its options
+
+**Given** nested settings
+**Then** each field resolves independently, last wins: built-in default → config `testDefaults` → outer `describe` → inner `describe` → the `it`'s own options (a trailing timeout number counts as the `it`'s `testTimeout`)
+**And** plain Jest `describe` blocks may be nested inside or around `crucible.describe` without breaking inheritance
+
+**Given** invalid `describe` options, a missing callback or an async callback
+**Then** a `usage` error at collection, with the same validation as `crucible.it()`
+
+**And** the settings chain is runner-neutral; the Jest binding is one replaceable layer
+**And** docs (API reference, runs and threshold, README) cover `describe` and the precedence
+
+### Story 6.4: Lenient extraction by default, strict on request
+
+As a developer asserting values in loosely worded LLM replies,
+I want extraction to take the value a reply leans to unless I ask for strictness,
+So that "I think so" counts as yes while I can still demand a firm commitment where it matters.
+
+**Acceptance Criteria:**
+
+**Given** lenient extraction (the default)
+**Then** colloquial and mildly hedged answers commit to the value they lean to ("I think so" → `true`, "nah" → `false`, "probably two" → `2`)
+**And** `null` remains for no answer, a genuine split ("two or three") and a bare negation ("not two")
+
+**Given** strict extraction
+**Then** today's rules apply unchanged (any hedge → `null`)
+
+**Given** `strict: boolean` in config `testDefaults`, `crucible.describe` options, `crucible.it` options and `crucible.extract` options
+**Then** it resolves last-wins in that order; default `false`; it applies to every assertion that supports it (today only `extract`)
+
+**And** the extract schema defines both modes; the conformance harness covers both with cases on each side of the line
+**And** the failure report shows which mode each extraction used
+**And** docs and CHANGELOG state the default change (breaking, pre-1.0)

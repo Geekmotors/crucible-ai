@@ -8,7 +8,7 @@ Releases are staged by `.github/workflows/publish.yml` when a `v*` tag is pushed
    - fails unless the tag is exactly `v` + the `package.json` version
    - fails unless the tagged commit is on `main`
    - `npm ci`, lint, format check, typecheck, unit tests, build
-   - `npm run verify:pack`: the tarball may contain only `dist/`, `schemas/*.md`, `README.md`, `LICENSE` and `package.json`
+   - `npm run verify:pack`: the tarball may contain only `dist/`, `schemas/*.md`, `README.md`, `CHANGELOG.md`, `LICENSE` and `package.json`
 2. **publish** (needs verify; GitHub environment `npm`; the only job with `id-token: write`)
    - installs npm 11.21.2 (staged publishing needs npm 11.15.0 or later and Node 22.14.0 or later)
    - `npm ci --ignore-scripts`, build, pack check again
@@ -57,7 +57,7 @@ Check these before tagging, or the publish fails with an auth or provenance erro
    set -a; . ./.env.dev.local; set +a
    make e2e
    ```
-3. Bump the version in a PR and merge it to `main`:
+3. Bump the version in a PR and merge it to `main`. In the same PR, rename `## Unreleased` in `CHANGELOG.md` to the new version (the changelog ships in the tarball):
    ```sh
    npm version 0.2.0 --no-git-tag-version   # edits package.json and package-lock.json
    ```

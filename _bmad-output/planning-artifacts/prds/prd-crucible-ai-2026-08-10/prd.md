@@ -26,7 +26,7 @@ Long-term, Crucible is language-agnostic. The semantics of each assertion live i
 - promptfoo — the nearest neighbour — was acquired by OpenAI (March 2026); the team has committed to open-source continuity, but its roadmap centres on enterprise security/red-teaming inside the Frontier platform. App-level semantic testing is not where it is heading — a real need, and a different one.
 - OpenAI Evals is deprecated (read-only October 2026). Consolidation into the OpenAI ecosystem leaves whitespace for a provider-neutral tool.
 - DeepEval's TypeScript support explicitly trails its Python package; TypeScript-first teams have no first-class option.
-- pass^k (τ-bench) has become standard industry vocabulary for run/threshold reliability measurement — the concept Crucible ships as a test primitive. Nothing in the landscape treats system state as a first-class assertion input (see `research-landscape.md`).
+- pass^k (τ-bench: all k runs succeed) has become standard industry vocabulary for multi-run reliability. Crucible ships the related pass-rate threshold as a test primitive; `threshold: 1` over k runs is the pass^k case. Nothing in the landscape treats system state as a first-class assertion input (see `research-landscape.md`).
 
 ## 2. Target User
 
@@ -65,7 +65,7 @@ Primary personas: developers of AI storytellers, book-writing assistants, rolepl
 - **Instruction schema** — language-agnostic markdown rule files defining *how* the judge evaluates each assertion type; the portable, non-deterministic core of Crucible.
 - **Run** — one full execution of an inference test's body (arrange → act → assert).
 - **Inference test** — a test declared with `crucible.it()`, executed as one or more runs.
-- **Threshold** — minimum pass rate (passed runs ÷ total runs) for the inference test to be green, expressed as a decimal fraction in [0, 1] (e.g. `0.95`) everywhere; pass^k-style semantics.
+- **Threshold** — minimum pass rate (passed runs ÷ total runs) for the inference test to be green, expressed as a decimal fraction in [0, 1] (e.g. `0.95`) everywhere. This is a pass-rate threshold, not τ-bench pass^k (which requires all k runs to pass; `threshold: 1` is that special case).
 - **Provider** — the API service the judge is called through (MVP: OpenRouter), set in the config file.
 - **Config file** — `crucible.config.json` at project root: provider, model, provider-specific `meta` passthrough, verbosity defaults.
 

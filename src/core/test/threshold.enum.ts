@@ -3,6 +3,7 @@ enum Threshold {
   FloatBump = 0.07,
   Lenient = 0.35,
   Half = 0.5,
+  BuiltIn = 0.9,
   Strict = 0.95,
   Certain = 1,
 }

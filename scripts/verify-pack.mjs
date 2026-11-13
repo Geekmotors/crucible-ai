@@ -5,6 +5,7 @@ class PackVerifier {
   static allowed = [
     /^package\.json$/,
     /^README\.md$/,
+    /^CHANGELOG\.md$/,
     /^LICENSE$/,
     /^dist\/[\w.-]+\.(js|cjs|d\.ts|d\.cts)$/,
     /^schemas\/[\w-]+\.md$/,
@@ -13,6 +14,7 @@ class PackVerifier {
   static required = [
     'package.json',
     'README.md',
+    'CHANGELOG.md',
     'LICENSE',
     'dist/index.js',
     'dist/index.cjs',
