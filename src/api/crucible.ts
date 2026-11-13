@@ -51,10 +51,10 @@ const crucible = Object.freeze({
   coherent(response: string, claim: string): Promise<boolean> {
     return compositionRoot.coherentJudge().judgeCoherent(response, claim);
   },
-  load(state: string | string[]): void {
+  load(state: string | readonly string[]): void {
     runScope.appendState(state);
   },
-  append(state: string | string[]): void {
+  append(state: string | readonly string[]): void {
     runScope.appendState(state);
   },
 });

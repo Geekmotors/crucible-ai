@@ -4,7 +4,7 @@ baseline_commit: dbeeb5d
 
 # Story 2.2: Arrange state per run
 
-Status: review
+Status: done
 
 ## Story
 
@@ -143,7 +143,6 @@ Claude Opus 5.5 (claude-opus-5-5) via bmad-dev-story (unattended)
 ### File List
 
 New:
-- src/core/test/fact-aware-adapter.fake.ts
 - src/core/test/state-fact.enum.ts
 - src/core/test/state-isolation-harness.util.ts
 - _bmad-output/implementation-artifacts/2-2-arrange-state-per-run.md
@@ -151,11 +150,30 @@ New:
 Modified:
 - src/core/state.ts
 - src/core/state.test.ts
-- src/core/judge.test.ts
-- src/core/test/judge-harness.util.ts
 - src/api/crucible.ts
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 
 - 2026-11-13: Story 2.2 implemented — `crucible.load`/`crucible.append` append per-run state through `RunScope.appendState`; judge payload carries the run's accumulated state; stateless mode unchanged.
+
+### Review Triage Log
+
+Review 2026-11-13 (bmad-code-review, unattended; diff `story-2-1-repeat-and-gate-on-pass-rate...HEAD`).
+
+**Ruling — `FactAwareAdapter` fake: VIOLATES CLAUDE.md.** Its verdict is a function of `request.prompt.includes(fact)`, so every judge test built on it is a payload-content assertion laundered through the verdict — captured-request inspection by another name. CLAUDE.md: "no captured-request inspection … Wire-shape correctness belongs to e2e against the real provider, not unit fakes"; Story 1.4 spec: "No payload-capture unit tests — payload assembly correctness is proven by e2e (Story 3.3), not by inspecting fake-adapter arguments." Removed the fake and its 4 `Judge` tests; reverted the `JudgeHarness.judge` parameter widening (no longer needed). Coverage after removal: per-run isolation and accumulation are proven at `RunScope` (the AC-2 interleave unit test the epic asks for); STATE-section assembly and stateless omission are proven by `PayloadAssembler`'s pure-formatter tests (pre-existing); the judge→payload wiring (`judge.ts` reads `scope.context().state`) is deferred to Story 3.3 e2e against the real provider. Snapshot semantics (AC-3) are structural: the prompt string is assembled before the first `await` and `VerdictRecord` carries no state.
+
+| # | Severity | Finding | Disposition |
+| --- | --- | --- | --- |
+| 1 | high | `FactAwareAdapter` + 4 judge tests = payload inspection via fake (CLAUDE.md / 1.4 precedent) | **fixed** — removed; see ruling |
+| 2 | medium | Sparse array (`new Array(1)`, `['a', , 'b']`) passed validation (`every` skips holes) then `for…of` pushed `undefined` into state | **fixed** test-first — red row added to the `usage` table; `stateEntries` now snapshots with `Array.from` (holes → `undefined` → rejected) |
+| 3 | low | Accessor/Proxy element could read as string during validation and differently on push (double read) | **fixed** by the same `Array.from` single snapshot |
+| 4 | low | Public signature `string \| string[]` rejected `readonly string[]` (`as const` arrays) at type level | **fixed** — `string \| readonly string[]` (type-only; typecheck) |
+| 5 | low | Caller mutating its array after `load` could leak into state | **rejected (not a bug)** — elements are copied; locked with a new outcome test |
+| 6 | — | `new String('x')` rejected | **rejected (by design)** — contract is string primitives; row added to the `usage` table to lock it |
+| 7 | — | Frozen arrays / Array subclasses | **rejected** — read-only access + `Array.isArray`/`Array.from` handle both |
+| 8 | — | `load` ≡ `append` (no replace) | **rejected** — documented decision; spine AD-5 append-only state |
+| 9 | — | Outside-scope with invalid input reports `usage` from scope check first | **rejected** — both are `usage`; order intended per Task 1.2 |
+| 10 | — | Regressions to 2.1 / 1.x | none found; `judge.ts`, runner, binding untouched |
+
+Final: 209 tests / 14 suites; lint, format:check, typecheck, test, build green; no `console.` in `src/`.

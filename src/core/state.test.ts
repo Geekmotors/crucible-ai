@@ -108,6 +108,8 @@ describe('RunScope', () => {
     ['null', null],
     ['an object', { fact: StateFact.Casino }],
     ['an array holding a non-string', [StateFact.Casino, 42]],
+    ['an array with a hole', new Array<string>(1)],
+    ['a String object', new String(StateFact.Casino)],
   ])('rejects %s as a usage error and leaves the state unchanged', async (_label, entries) => {
     const scope = new RunScope();
     const outcome = await scope.enterRun(async () => {
@@ -118,6 +120,17 @@ describe('RunScope', () => {
     expect(outcome.error).toBeInstanceOf(CrucibleError);
     expect((outcome.error as CrucibleError).kind).toBe('usage');
     expect(outcome.state).toEqual([StateFact.Home]);
+  });
+
+  it('keeps the state it was given when the caller later mutates its array', async () => {
+    const scope = new RunScope();
+    const state = await scope.enterRun(async () => {
+      const facts = [StateFact.Casino];
+      scope.appendState(facts);
+      facts.push(StateFact.Home);
+      return scope.context().state;
+    });
+    expect(state).toEqual([StateFact.Casino]);
   });
 
   it('appending state outside a run scope is a usage error', () => {

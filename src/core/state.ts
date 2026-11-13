@@ -60,7 +60,7 @@ class RunScope {
   }
 
   private stateEntries(entries: unknown): string[] {
-    const candidates = Array.isArray(entries) ? (entries as unknown[]) : [entries];
+    const candidates: unknown[] = Array.isArray(entries) ? Array.from(entries) : [entries];
     if (!candidates.every((entry) => typeof entry === 'string')) {
       throw new CrucibleError(
         'usage',
