@@ -193,3 +193,6 @@ Code review 2026-11-13 (bmad-code-review, unattended; Blind Hunter, Edge Case Hu
 
 Result: 229 tests / 14 suites green; lint, format:check, typecheck, build green; no `console.` in `src/`.
 
+
+### Post-review fix (orchestrator, 2026-11-13)
+- `[medium]` resolved instead of deferred: a judge call outliving its per-call deadline (run signal not aborted) now rejects as `CrucibleError('infra', …, { retryable: true })`, so the run classifies `errored`, never `failed` (AD-4). Deadline source injected into `Judge` (clock boundary; `ExpiredDeadline` fake), test-first.

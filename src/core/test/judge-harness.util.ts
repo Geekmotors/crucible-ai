@@ -1,6 +1,7 @@
 import type { ProviderAdapter } from '../../providers/types.js';
 import { TestModel } from '../../providers/test/test-model.enum.js';
 import { Judge } from '../judge.js';
+import type { Deadline } from '../judge.js';
 import { RetryingCompleter } from '../retry.js';
 import { RunScope } from '../state.js';
 import { Capture } from './capture.util.js';
@@ -8,12 +9,13 @@ import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { SleepRecorder } from './sleep-recorder.fake.js';
 
 class JudgeHarness {
-  static judge(adapter: ProviderAdapter, scope: RunScope): Judge {
+  static judge(adapter: ProviderAdapter, scope: RunScope, deadline?: Deadline): Judge {
     return new Judge(
       () => 'judge schema text',
       new RetryingCompleter(new SleepRecorder().sleep),
       () => ({ adapter, model: TestModel.Generic }),
       scope,
+      deadline,
     );
   }
 

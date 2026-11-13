@@ -37,10 +37,6 @@
   evidence: Reporter.renderVerdict / headline.
 
 - source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
-  summary: A per-call judge timeout (`AbortSignal.timeout(JUDGE_CALL_TIMEOUT_MS)`) surfaces as a raw `TimeoutError`/adapter abort error with no `CrucibleError` in its chain, so the runner classifies the run `failed` (semantic) instead of `errored` — violates AD-4 "infra never semantic". Fix: wrap a timeout-only abort (run signal not aborted) as `CrucibleError('infra', …, { retryable: true })` in `Judge`; needs an injectable per-call timeout source to test without real timers.
-  evidence: Pre-existing since Story 1.4 (`judge.ts` timeout; `retry.ts` rethrows raw on `signal.aborted`); 2.3's `AbortSignal.any` keeps it reachable. Flagged by Edge Case Hunter and orchestrator review.
-
-- source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
   summary: The per-test abort reaches only crucible's judge calls; the user's own SUT/provider calls in discarded runs keep running (and spending) after the test rejects. AC6 forbids a public signal handle in 2.3; decide whether a public `crucible.signal`-style accessor is wanted (would need an AD-5 amendment).
   evidence: Blind Hunter + Edge Case Hunter; `RunScope.abortSignal()` is internal only by spec.
 

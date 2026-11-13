@@ -16,6 +16,7 @@ type CompletionTarget = {
 
 type SchemaTextSupplier = () => string;
 type CompletionTargetSupplier = () => CompletionTarget;
+type Deadline = (ms: number) => AbortSignal;
 
 type ParsedVerdict = {
   readonly verdict: boolean;
@@ -25,11 +26,16 @@ type ParsedVerdict = {
 class Judge {
   private readonly assembler = new PayloadAssembler();
 
+  private static timeoutDeadline(ms: number): AbortSignal {
+    return AbortSignal.timeout(ms);
+  }
+
   constructor(
     private readonly schemaText: SchemaTextSupplier,
     private readonly completer: RetryingCompleter,
     private readonly target: CompletionTargetSupplier,
     private readonly scope: RunScope = runScope,
+    private readonly deadline: Deadline = Judge.timeoutDeadline,
   ) {}
 
   async judgeCoherent(response: string, claim: string): Promise<boolean> {
@@ -76,11 +82,7 @@ class Judge {
   ): Promise<ParsedVerdict> {
     let lastFailure: CrucibleError | undefined;
     for (let attempt = 1; attempt <= MAX_REPLY_ATTEMPTS; attempt += 1) {
-      const reply = await this.completer.complete(
-        adapter,
-        request,
-        AbortSignal.any([runSignal, AbortSignal.timeout(JUDGE_CALL_TIMEOUT_MS)]),
-      );
+      const reply = await this.completeBeforeDeadline(adapter, request, runSignal);
       try {
         return this.parseReply(reply);
       } catch (failure) {
@@ -88,6 +90,30 @@ class Judge {
       }
     }
     throw lastFailure;
+  }
+
+  private async completeBeforeDeadline(
+    adapter: ProviderAdapter,
+    request: Parameters<RetryingCompleter['complete']>[1],
+    runSignal: AbortSignal,
+  ): Promise<string> {
+    const deadline = this.deadline(JUDGE_CALL_TIMEOUT_MS);
+    try {
+      return await this.completer.complete(
+        adapter,
+        request,
+        AbortSignal.any([runSignal, deadline]),
+      );
+    } catch (failure) {
+      if (deadline.aborted && !runSignal.aborted) {
+        throw new CrucibleError(
+          'infra',
+          `The judge call did not finish within ${JUDGE_CALL_TIMEOUT_MS} ms.`,
+          { retryable: true, cause: failure },
+        );
+      }
+      throw failure;
+    }
   }
 
   private requireStrings(response: unknown, claim: unknown): void {
@@ -132,4 +158,4 @@ class Judge {
 }
 
 export { Judge, JUDGE_CALL_TIMEOUT_MS };
-export type { CompletionTarget, CompletionTargetSupplier, SchemaTextSupplier };
+export type { CompletionTarget, CompletionTargetSupplier, Deadline, SchemaTextSupplier };
