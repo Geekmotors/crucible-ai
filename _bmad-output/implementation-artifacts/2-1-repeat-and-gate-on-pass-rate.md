@@ -4,7 +4,7 @@ baseline_commit: 5765f193403d46127904989006da349632eac6d0
 
 # Story 2.1: Repeat and gate on pass rate
 
-Status: review
+Status: done
 
 ## Story
 
@@ -290,3 +290,39 @@ Modified:
 ### Change Log
 
 - 2026-11-13: Story 2.1 implemented — multi-run concurrent execution, three-zone gating, aggregate report, declaration validation, run-count timeout budget.
+
+### Review Triage Log
+
+Code review (bmad-code-review, 2026-11-13, unattended) — layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor (all completed). 31 raw findings → after dedupe: 1 medium, 4 low patches applied; 3 deferred; 16 dismissed. No `decision_needed`.
+
+**Addressed (patch, test-first where behaviour changed):**
+- [Medium] `need` could reach 0 when `threshold × runs < 1e-9` (e.g. threshold `1e-12`), so a gate with zero passed runs went green. `Aggregator` now clamps `need` to at least 1 (`MIN_NEED`). Red test: "a single failed run at a minuscule threshold still fails" (`Threshold.Minuscule`). [edge+blind]
+- [Low] `RunOptionsResolver.validate` was typed `RunOptions` while it defends against non-objects, which forced `as unknown as` casts in tests. It is now `validate(candidate: unknown): asserts candidate is RunOptions`, and the cast is removed. [blind]
+- [Low] Binding tests used enum members with the wrong meaning (`threshold: RunCount.Gated`, `runs: Threshold.Half`). Replaced with `src/bindings/test/invalid-option.enum.ts`. [auditor+blind]
+- [Low] The `RunnerHarness.verdict` return type was inferred. It now explicitly returns `Omit<VerdictRecord, 'seq'>`. [auditor+blind]
+- [Low] Validation table gap: added `Infinity` cases for both `runs` and `threshold`. Both were already rejected; the tests now lock that in. [hunt]
+
+**Deferred** (recorded in deferred-work.md):
+- No upper bound on `runs`; absurd counts surface a RangeError or overflow the setTimeout maximum. Concurrency caps are an out-of-scope non-goal.
+- The timeout budget assumes parallelism; throttling can trip the Jest timeout before a verdict renders. Paired with the Story 2.5 note and OQ-3.
+- The report is unbounded for many failing runs, and the headline omits the failed count. Story 3.1 output contract.
+
+**Dismissed:**
+- No concurrency cap: an explicit non-goal.
+- Fatal runs wait for siblings: sibling abort is Story 2.3, per spec.
+- `execute` returns void: mandated by Task 3.1, and there are no consumers.
+- Smoke message gained a headline and section wrapper: disclosed; AC 8 requires the same outcome and cause, which holds.
+- Registration resolves options for the timeout: by spec Task 5.1; raw opts still reach `execute`.
+- Validation runs multiple times: cheap, and keeps direct `execute` safe.
+- Binding timeout test is tautological: the binding's contract is to delegate the budget to the runner (AD-3).
+- Monotonic budget test is weak: spec-prescribed; the 30 000 smoke value is pinned separately.
+- StartGate hangs rather than fails on regression: spec-prescribed timer-free design.
+- Harness `next` ordering and the `!` assertion: the runner starts bodies synchronously in index order; a test-helper nit.
+- `RunCount` holds need values: they are run counts (passes needed).
+- Smoke budget coupled to `JUDGE_CALL_TIMEOUT_MS`: mandated by spec.
+- Mutable static `RunnerHarness.pass`: CLAUDE.md forbids `readonly` in test helpers.
+- Resolver and aggregator not injected: spec plus CLAUDE.md prefer real pure collaborators.
+- `RunTally.failed` used only in tests: a natural tally field, and the reporter will consume it in Story 3.1.
+- Removed binding exports: internal module, no remaining importers.
+
+Re-verified: lint, format:check, typecheck, test (195 passed / 14 suites), build all green; `grep console.` in `src/` is empty.

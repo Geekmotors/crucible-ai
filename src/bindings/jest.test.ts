@@ -8,6 +8,7 @@ import { Threshold } from '../core/test/threshold.enum.js';
 import { TimeoutBudget } from '../core/test/timeout-budget.enum.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
 import { JestBinding } from './jest.js';
+import { InvalidOption } from './test/invalid-option.enum.js';
 import { JestBindingHarness } from './test/jest-harness.util.js';
 import { RegistrarFake } from './test/registrar.fake.js';
 
@@ -79,11 +80,11 @@ describe('JestBinding', () => {
   });
 
   it.each<[RunOptions]>([
-    [{ threshold: 0 }],
-    [{ threshold: RunCount.Gated }],
+    [{ threshold: InvalidOption.Zero }],
+    [{ threshold: InvalidOption.ThresholdAboveOne }],
     [{ threshold: Number.NaN }],
-    [{ runs: 0 }],
-    [{ runs: Threshold.Half }],
+    [{ runs: InvalidOption.Zero }],
+    [{ runs: InvalidOption.FractionalRuns }],
   ])('rejects invalid options %j as usage at registration, registering nothing', (opts) => {
     const registrar = new RegistrarFake();
     const error = JestBindingHarness.errorFrom(() =>

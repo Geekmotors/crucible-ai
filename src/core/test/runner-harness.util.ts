@@ -1,6 +1,7 @@
 import { Runner } from '../runner.js';
 import type { RunOptions } from '../run-options.js';
 import { RunScope } from '../state.js';
+import type { VerdictRecord } from '../state.js';
 import { Capture } from './capture.util.js';
 import { StartGate } from './start-gate.util.js';
 
@@ -78,7 +79,7 @@ class RunnerHarness {
     scope.recordVerdict(RunnerHarness.verdict(verdict));
   }
 
-  private static verdict(verdict: boolean) {
+  private static verdict(verdict: boolean): Omit<VerdictRecord, 'seq'> {
     return {
       assertion: 'coherent',
       claim: 'the claim',

@@ -23,3 +23,15 @@
 - source_spec: PR #8 review discussion (2026-09-14)
   summary: When recommended judge-model guidance ships (OQ-6, docs epic), promote a model enum into src as its home — until then model identifiers stay user-supplied config data with the test enum in providers/test/test-model.enum.ts.
   evidence: Jack asked whether the test model enum should be usable by implementation; today src has no consumer for it (FR-7 keeps provider params opaque), but OQ-6's recommended-model docs would create one.
+
+- source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
+  summary: No upper bound on `runs`. Absurd counts (> 2^32-1) make `Array.from` throw a RangeError rather than a usage error, and runs above ~2.1M push `timeoutFor` past the setTimeout maximum. Choose a product cap when concurrency caps / serial mode are designed.
+  evidence: RunOptionsResolver.isValidRuns accepts any integer ≥ 1; concurrency caps are an explicit deferred non-goal in the story.
+
+- source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
+  summary: Per-test timeout `30000 + (runs-1)×1000` assumes near-perfect parallelism; under provider throttling and retry backoff, Jest may kill a large gate before a verdict report is rendered. Revisit together with the Story 2.5 testDefaults budget note and OQ-3.
+  evidence: Runner.timeoutFor; spec "Timeout policy" decision.
+
+- source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
+  summary: The aggregate report renders one section per non-passed run with no bound or grouping, and the headline omits the failed count. Belongs to the Story 3.1 output contract.
+  evidence: Reporter.renderVerdict / headline.

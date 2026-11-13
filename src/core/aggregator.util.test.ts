@@ -46,6 +46,12 @@ describe('Aggregator', () => {
       Threshold.Half,
       'errored',
     ],
+    [
+      'a single failed run at a minuscule threshold still fails',
+      ['failed'],
+      Threshold.Minuscule,
+      'fail',
+    ],
   ])('%s', (_label, statuses, threshold, zone) => {
     expect(new Aggregator().tally(statuses, { runs: statuses.length, threshold }).zone).toBe(zone);
   });

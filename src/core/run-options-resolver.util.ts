@@ -6,10 +6,11 @@ class RunOptionsResolver {
   private static readonly DEFAULT_THRESHOLD = 1;
   private static readonly KNOWN_KEYS: ReadonlySet<string> = new Set(['runs', 'threshold']);
 
-  validate(opts: RunOptions): void {
-    if (typeof opts !== 'object' || opts === null || Array.isArray(opts)) {
+  validate(candidate: unknown): asserts candidate is RunOptions {
+    if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
       throw new CrucibleError('usage', 'crucible.it options must be an object.');
     }
+    const opts = candidate as Record<string, unknown>;
     for (const key of Object.keys(opts)) {
       if (!RunOptionsResolver.KNOWN_KEYS.has(key)) {
         throw new CrucibleError(

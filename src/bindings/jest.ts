@@ -8,7 +8,7 @@ type Registrar = (name: string, fn: () => Promise<void>, timeout?: number) => vo
 type Declaration = { readonly opts: RunOptions; readonly body: TestBody };
 
 class JestBinding {
-  private readonly resolver = new RunOptionsResolver();
+  private readonly resolver: RunOptionsResolver = new RunOptionsResolver();
 
   private static lazyJestRegistrar(name: string, fn: () => Promise<void>, timeout?: number): void {
     const registrar = (globalThis as { it?: Registrar }).it;

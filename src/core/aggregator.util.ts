@@ -3,9 +3,13 @@ import type { RunStatus, RunTally, VerdictZone } from './run-result.js';
 
 class Aggregator {
   private static readonly NEED_EPSILON = 1e-9;
+  private static readonly MIN_NEED = 1;
 
   tally(statuses: readonly RunStatus[], opts: ResolvedRunOptions): RunTally {
-    const need = Math.ceil(opts.threshold * opts.runs - Aggregator.NEED_EPSILON);
+    const need = Math.max(
+      Aggregator.MIN_NEED,
+      Math.ceil(opts.threshold * opts.runs - Aggregator.NEED_EPSILON),
+    );
     const passed = this.count(statuses, 'passed');
     const failed = this.count(statuses, 'failed');
     const errored = this.count(statuses, 'errored');

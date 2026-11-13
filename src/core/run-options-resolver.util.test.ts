@@ -1,7 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
-import type { RunOptions } from './run-options.js';
 import { Capture } from './test/capture.util.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
@@ -28,12 +27,12 @@ describe('RunOptionsResolver', () => {
     [{ runs: 2.5 }],
     [{ runs: Number.NaN }],
     [{ runs: '5' }],
+    [{ runs: Number.POSITIVE_INFINITY }],
+    [{ threshold: Number.POSITIVE_INFINITY }],
     [{ run: 5 }],
     [null],
   ])('rejects %j as a usage error', (opts) => {
-    const error = Capture.thrown(() =>
-      new RunOptionsResolver().validate(opts as unknown as RunOptions),
-    );
+    const error = Capture.thrown(() => new RunOptionsResolver().validate(opts));
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('usage');
   });
