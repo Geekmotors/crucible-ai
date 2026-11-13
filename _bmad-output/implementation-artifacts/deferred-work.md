@@ -113,3 +113,17 @@
 - source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
   summary: `crucible.coherent` judges the run state as it stands when the call is made (payload assembled before the first await), so later `append`s do not leak into an in-flight judgment. The e2e bodies now rely on it to issue step judgments concurrently (deadline headroom), but no doc states it. Document it in the API docs (Story 3.6).
   evidence: Judge.judgeCoherent; e2e/core/stateful-coherence.test.ts.
+
+## Deferred from: 3-4-language-agnostic-judge-conformance-spike.md (2026-11-13)
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: A content line `>>>\r` (CRLF input) is not "solely `>>>`", so neither `schemas/coherent.md` nor `PayloadAssembler` neutralises it and the judge may read it as a fence. Decide CRLF normalisation or `\r`-trimmed fence matching (schema rule + assembler, TDD).
+  evidence: Offline sh-vs-TS payload diff with a CRLF edge case (identical output, both un-neutralised).
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: The conformance fixture has no golden assembled payloads, no `schema`/`version` binding and no assembly edge cases; assembler conformance currently needs a TS reference or live calls. Add payload vectors (checked by a TS unit test and `conformance.sh payloads`) — first step of the schema-pack extraction.
+  evidence: Story 3.4 Findings, follow-ups 1–3.
+
+- source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  summary: `e2e/ext/conformance/conformance.sh` has no retry on 429/5xx (an errored call fails the check) and `alpine:3.22` is not digest-pinned. Harden before running it in any CI lane.
+  evidence: Story 3.4 Review Triage Log.
