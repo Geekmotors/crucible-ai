@@ -1,0 +1,6 @@
+{
+  "description": "Stateless smoke case judged through the CommonJS build, proving the CJS entry locates and loads the shipped coherent schema.",
+  "response": "The package was delivered to the front desk at 09:15 and signed for by the receptionist.",
+  "claim": "The reply says the package was delivered.",
+  "expected": true
+}

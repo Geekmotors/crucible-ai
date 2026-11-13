@@ -17,7 +17,7 @@
   evidence: 60/60 verdicts across three models on the current matrix gives no discrimination between models; docs/judge-models.md flags the same caveat.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-4-first-semantic-verdict-smoke-mode.md`
-  summary: Verify the built artifact's schema loading under CJS and bundler-inlined consumers (import.meta.url package-root walk) in Story 3.3 e2e; and revisit injectGlobals:false Jest support (lazy @jest/globals import) with Story 3.6 docs gotchas.
+  summary: (CJS half closed by Story 3.3 — `e2e/core/cjs-build.test.cts` judges through `dist/index.cjs`.) Remaining: verify schema loading under bundler-inlined consumers (import.meta.url package-root walk); and revisit injectGlobals:false Jest support (lazy @jest/globals import) with Story 3.6 docs gotchas.
   evidence: Review flagged both; the walk depends on tsdown's CJS shim and breaks if a consumer bundler inlines the package; the binding currently requires an injected global `it`.
 
 - source_spec: PR #8 review discussion (2026-09-14)
@@ -81,3 +81,25 @@
 - source_spec: 3-2-turn-up-the-volume-when-needed.md (code review 2026-11-13)
   summary: `CRUCIBLE_VERBOSE` is matched exactly (case- and whitespace-sensitive, like the config value). Decide whether to trim/lowercase env input.
   evidence: ConfigStore.requireVerbosity.
+
+## Deferred from: implementation of 3-3-prove-it-end-to-end-locally.md (2026-11-13)
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: The per-test deadline (30 s + 1 s per extra run) is too tight for bodies with several sequential assertions on a reasoning judge model. `deepseek/deepseek-v4-flash-0731` with default reasoning took ~11 s per call (≈2,200 reasoning tokens); a 3-run body with 3 sequential `coherent` calls expired at 32 s and reported ERRORED with discarded runs. There is no user knob for the budget. Decide timeout policy (per-assertion budget, a `timeoutMs` run option or a config budget) with the existing Runner.timeoutFor item and OQ-3.
+  evidence: First e2e-ext run; e2e configs now pass `meta.reasoning.effort: "low"` (~4–5 s per call) to stay inside the deadline.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: The failure report's "first failed assertion" is the lowest-`seq` false verdict (AD-13), but a body may legitimately assert a false verdict (`expect(await crucible.coherent(...)).toBe(false)`). In a real failing run the report showed the expected-false step's reasoning as the failure while the actual failing step (a true-expected claim judged false) was not shown. Needs an AD-13 amendment (e.g. attribute by the verdict the thrown assertion consumed, or render all false verdicts of a failed run at default).
+  evidence: e2e/core room-booking run with reasoning disabled; `CRUCIBLE_VERBOSE=full` was needed to find the real failing step.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: `schemas/coherent.md` defines no rule for conflicting or superseding state facts (e.g. an appended cancellation contradicting a loaded booking, or "later, she opens the envelope"). With reasoning disabled the judge kept the older fact; with low reasoning, temporal knowledge-boundary updates were judged slowly and inconsistently. e2e fixtures were made monotonic (appends add facts, never contradict). Decide whether state is ordered with later facts superseding earlier ones and say so in the schema (adds to the 1.3 "multi-fact state conflicts" item).
+  evidence: room-booking and knowledge-boundary fixture iterations during 3.3.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
+  summary: Disabling reasoning (`meta.reasoning.enabled: false`) on the default judge model makes it ~5× faster and ~7× cheaper but unreliable on stateful claims (a 3-run gate failed 2/3 on the room-booking scenario). Judge-model guidance (OQ-6, docs) should recommend low reasoning effort, not none.
+  evidence: docs/judge-models.md "Reasoning effort and the per-test deadline" section.
+
+- source_spec: 3-3-prove-it-end-to-end-locally.md
+  summary: e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
+  evidence: npm run typecheck stays src-only so it needs no build.

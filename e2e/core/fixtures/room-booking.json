@@ -1,0 +1,27 @@
+{
+  "description": "Self-contained stateful scenario: a booking assistant's replies are judged against the room schedule loaded for the run, then against the schedule accumulated after more of it is appended. The first and last steps judge the same response and claim against different state and expect opposite verdicts.",
+  "state": [
+    "Meeting room Lyra is free all afternoon.",
+    "Meeting room Vega is booked all afternoon."
+  ],
+  "steps": [
+    {
+      "append": [],
+      "response": "Good news — you can have Orion at 14:30.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time.",
+      "expected": false
+    },
+    {
+      "append": [],
+      "response": "Lyra is free at 14:30 — it's yours.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time.",
+      "expected": true
+    },
+    {
+      "append": ["Meeting room Orion is free all afternoon."],
+      "response": "Good news — you can have Orion at 14:30.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time.",
+      "expected": true
+    }
+  ]
+}
