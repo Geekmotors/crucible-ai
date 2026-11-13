@@ -54,7 +54,9 @@ class RunnerHarness {
   static async tracedExpiryOutput(traced: TraceHarness): Promise<string> {
     const timer = new ManualTimer();
     const runner = RunnerHarness.tracedRunner(traced, timer);
-    const pending = runner.execute(() => RunnerHarness.never(traced.scope)).catch(() => undefined);
+    const pending = runner
+      .execute(() => RunnerHarness.never(traced.scope), { runs: RunCount.Single })
+      .catch(() => undefined);
     timer.advance(TimeBudget.testTimeoutFor(RunCount.Single));
     await pending;
     return traced.output.text;
@@ -83,7 +85,9 @@ class RunnerHarness {
 
   static async rejection(body: (scope: RunScope) => Promise<never>): Promise<unknown> {
     const scope = new RunScope();
-    return Capture.rejection(RunnerHarness.runner(scope).execute(() => body(scope)));
+    return Capture.rejection(
+      RunnerHarness.runner(scope).execute(() => body(scope), { runs: RunCount.Single }),
+    );
   }
 
   static async falseVerdictRejection(cause: unknown): Promise<unknown> {
@@ -192,7 +196,7 @@ class RunnerHarness {
     const pending = Capture.rejection(
       RunnerHarness.runner(scope, timer, defaults).execute(
         () => judge.judgeCoherent('the response', 'the claim'),
-        opts,
+        { runs: RunCount.Single, ...opts },
       ),
     );
     timer.advance(advanceMs);

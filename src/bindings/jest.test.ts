@@ -84,15 +84,15 @@ describe('JestBinding', () => {
     expect(ran).toBe(false);
   });
 
-  it('body runs once inside a run scope — smoke mode is a single run', async () => {
+  it('runs the body 10 times when the test declares no options', async () => {
     const registrar = new RegistrarFake();
     const scope = new RunScope();
     let runs = 0;
-    JestBindingHarness.binding(registrar, scope).register('smoke', async () => {
+    JestBindingHarness.binding(registrar, scope).register('unconfigured', async () => {
       runs += 1;
     });
     await registrar.registrations[0]?.fn();
-    expect(runs).toBe(1);
+    expect(runs).toBe(RunCount.BuiltIn);
   });
 
   it('accepts an empty options object between name and body', async () => {

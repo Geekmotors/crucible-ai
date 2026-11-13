@@ -54,25 +54,31 @@ describe('RunOptionsResolver', () => {
     expect((error as CrucibleError).kind).toBe('usage');
   });
 
-  it('defaults to a single run at threshold 1.0 when no options are given', () => {
+  it('defaults to 10 runs at threshold 0.9 when no options are given', () => {
     expect(new RunOptionsResolver().resolve({})).toMatchObject({
-      runs: RunCount.Single,
-      threshold: Threshold.Certain,
+      runs: RunCount.BuiltIn,
+      threshold: Threshold.BuiltIn,
     });
   });
 
-  it('defaults the threshold to 1.0 when only runs is given', () => {
+  it('defaults the threshold to 0.9 when only runs is given', () => {
     expect(new RunOptionsResolver().resolve({ runs: RunCount.Gated })).toMatchObject({
       runs: RunCount.Gated,
-      threshold: Threshold.Certain,
+      threshold: Threshold.BuiltIn,
     });
   });
 
-  it('defaults runs to 1 when only the threshold is given', () => {
+  it('defaults runs to 10 when only the threshold is given', () => {
     expect(new RunOptionsResolver().resolve({ threshold: Threshold.Strict })).toMatchObject({
-      runs: RunCount.Single,
+      runs: RunCount.BuiltIn,
       threshold: Threshold.Strict,
     });
+  });
+
+  it('keeps the old single run at threshold 1.0 when declared', () => {
+    expect(
+      new RunOptionsResolver().resolve({ runs: RunCount.Single, threshold: Threshold.Certain }),
+    ).toMatchObject({ runs: RunCount.Single, threshold: Threshold.Certain });
   });
 
   it('refuses to resolve invalid options', () => {
@@ -103,13 +109,17 @@ describe('RunOptionsResolver', () => {
 
   it('falls back to built-ins for a field the configured defaults leave unset', () => {
     expect(new RunOptionsResolver().resolve({}, { threshold: Threshold.Strict })).toMatchObject({
-      runs: RunCount.Single,
+      runs: RunCount.BuiltIn,
       threshold: Threshold.Strict,
     });
   });
 
   it('uses the built-in 30 s inference timeout when nothing declares one', () => {
     expect(new RunOptionsResolver().resolve({}).inferenceTimeout).toBe(TimeoutBudget.SmokeMs);
+  });
+
+  it('gives an unconfigured test 39 s: 30 s plus 1 s per extra built-in run', () => {
+    expect(new RunOptionsResolver().resolve({}).testTimeout).toBe(TimeoutBudget.BuiltInTestMs);
   });
 
   it('sizes the built-in test timeout from the resolved run count', () => {

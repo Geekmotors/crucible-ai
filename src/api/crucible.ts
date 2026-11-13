@@ -18,10 +18,12 @@ import type { ReportSettings } from '../core/report-settings.js';
 import { Runner } from '../core/runner.js';
 import { TraceReporter } from '../core/trace-reporter.js';
 import type { TraceSettings } from '../core/trace-reporter.js';
-import type { RunOptions } from '../core/run-options.js';
+import type { RunOptions as ResolvableRunOptions } from '../core/run-options.js';
 import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
+import type { CrucibleSurface } from './crucible-surface.js';
+import type { RunOptions } from './run-options.js';
 
 class CompositionRoot {
   private judge?: Judge;
@@ -89,7 +91,7 @@ class CompositionRoot {
     };
   }
 
-  private static testDefaults(): RunOptions {
+  private static testDefaults(): ResolvableRunOptions {
     return config.get().testDefaults;
   }
 
@@ -106,7 +108,7 @@ class CompositionRoot {
 
 const compositionRoot = new CompositionRoot();
 
-const crucible = Object.freeze({
+const crucible: Readonly<CrucibleSurface> = Object.freeze({
   it(
     name: string,
     optsOrBody: RunOptions | TestBody,

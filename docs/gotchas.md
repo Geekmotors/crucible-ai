@@ -141,8 +141,9 @@ one is a paid judge call.
 
 ## Bodies must be re-entrant
 
-All runs of a test execute **at the same time**. Anything the body shares
-with other runs is shared by all of them concurrently:
+All runs of a test execute **at the same time** — and a test with no options
+has 10 runs. Anything the body shares with other runs is shared by all of
+them concurrently:
 
 ```ts
 const assistant = createAssistant(); // module scope: shared by every run of every test
@@ -190,7 +191,8 @@ that was confirmed has since been cancelled").
 ## Every test has a deadline; Jest's global `testTimeout` does not change it
 
 By default a `crucible.it()` test must finish within 30 s plus 1 s per extra
-run — your arrange and act steps included — and each judge reply attempt
+run (39 s for the default 10 runs) — your arrange and act steps included, all
+runs concurrently — and each judge reply attempt
 within 30 s. When the test runs out of time, in-flight runs are discarded and
 the test fails as *errored*. Jest's global `testTimeout` setting does not
 change these budgets. Raise them per test — a trailing number

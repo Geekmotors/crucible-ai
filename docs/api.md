@@ -34,12 +34,17 @@ crucible.it(name, { runs, threshold }, body, timeout);
 Registers one Jest test that executes `body` `runs` times concurrently and
 passes when at least `threshold` of the runs pass. `runs` (integer ≥ 1) and
 `threshold` (number in (0, 1]) default to the config's `testDefaults`, then to
-`1` and `1.0`.
+`10` and `0.9`: with no options, the body runs 10 times and 9 runs must pass.
+Each run calls your system under test and the judge, so an unconfigured test
+costs 10 runs of your system and 10 judge calls per assertion. For a single
+run that must pass, declare `{ runs: 1, threshold: 1 }` on the test or in
+[`testDefaults`](runs-and-threshold.md#project-wide-defaults-testdefaults).
 
 Two time budgets, in milliseconds (integers from 1 to 2147483647):
 
 - `testTimeout` — the whole test, every run included. Defaults to
-  `testDefaults.testTimeout`, then `30000 + 1000 × (runs − 1)` (at most 2147483647). A trailing
+  `testDefaults.testTimeout`, then `30000 + 1000 × (runs − 1)` (39000 for
+  the default 10 runs; at most 2147483647). A trailing
   `timeout` number sets it the way Jest's `it(name, fn, timeout)` does;
   passing both a trailing number and `testTimeout` is a `usage` error.
 - `inferenceTimeout` — each `crucible.coherent()` or `crucible.extract()`
@@ -51,10 +56,14 @@ bounded by it. Invalid options or timeouts throw a `CrucibleError` of kind
 `usage` when the file is collected — out-of-range values are rejected, never
 clamped.
 
-The TypeScript signature is a single permissive one,
-`it(name: string, optsOrBody: RunOptions | TestBody, bodyOrTimeout?: TestBody | number, timeout?: number): void`,
-so `crucible.it(name, options)` without a body type-checks; it throws a
-`usage` error at registration.
+The four forms above are TypeScript overloads, so a call that matches none of
+them — `crucible.it(name, options)` without a body, two bodies, a timeout
+before the body — is a compile error. Editors show each option's meaning and
+default (`@default`) on hover and in autocomplete. The types check the
+argument shape only: option values (`runs: 0`, `threshold: 2`), unknown keys
+in an options variable, and a trailing timeout together with `testTimeout`
+still compile and throw a `usage` error at registration. JavaScript callers
+get the shape checks at runtime too, as `usage` errors.
 
 The full reference — run statuses, the three-zone verdict, the failure
 report, verbosity, the [timeouts](runs-and-threshold.md#timeout) and the

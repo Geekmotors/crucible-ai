@@ -279,3 +279,21 @@
 - source_spec: 5-2-judge-key-source.md
   summary: `TransportSecurity.exposesKey` calls `new URL(baseUrl)` in `create()`; a direct registry/factory call with an unparseable `baseUrl` throws a raw `TypeError` (ConfigStore validates first, so normal use is unaffected). A throwing warning sink would likewise surface as an unclassified error.
   evidence: `src/providers/transport-security.util.ts`, `src/providers/openai-compatible.ts`.
+
+## Deferred from: code review of 6-1-sensible-defaults.md (2026-11-14)
+
+- source_spec: 6-1-sensible-defaults.md
+  summary: `CHANGELOG.md` ships in the tarball, but nothing fails a release whose changelog still says `## Unreleased` or lacks the tagged version; RELEASING.md relies on a manual rename.
+  evidence: `scripts/verify-pack.mjs`, `RELEASING.md` step 3.
+
+- source_spec: 6-1-sensible-defaults.md
+  summary: `Parameters<typeof crucible.it>` resolves to the last overload only, and `CrucibleSurface` is not exported, so users cannot derive wrapper types from the overload set.
+  evidence: `src/api/crucible-surface.ts`, `src/index.ts`.
+
+- source_spec: 6-1-sensible-defaults.md
+  summary: Public JSDoc'd `RunOptions` mirrors core `RunOptions` field by field; a field added in core would not appear on the public type and the compiler would not flag it.
+  evidence: `src/api/run-options.ts`.
+
+- source_spec: 6-1-sensible-defaults.md
+  summary: No live e2e exercises the new 10-run default end to end (all fixtures pin runs or use `testDefaults`); `failure-report` scenarios would become 10 real judge calls each if their `testDefaults` were removed.
+  evidence: `e2e/ext/fixtures/projects/failure-report/`.

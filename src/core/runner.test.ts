@@ -28,8 +28,14 @@ describe('Runner', () => {
     await expect(RunnerHarness.executions({ runs: RunCount.Gated })).resolves.toBe(RunCount.Gated);
   });
 
+  it('executes the body 10 times when nothing declares runs', async () => {
+    await expect(RunnerHarness.executions({})).resolves.toBe(RunCount.BuiltIn);
+  });
+
   it('executes the body once in smoke mode', async () => {
-    await expect(RunnerHarness.executions({})).resolves.toBe(RunCount.Single);
+    await expect(RunnerHarness.executions({ runs: RunCount.Single })).resolves.toBe(
+      RunCount.Single,
+    );
   });
 
   it('runs every body concurrently — all runs are in flight at once', async () => {
@@ -312,8 +318,8 @@ describe('Runner', () => {
 
 describe('Runner — tuned timeouts', () => {
   it.each<[string, RunOptions, RunOptions]>([
-    ['declared', { testTimeout: CustomTimeout.Short }, {}],
-    ['configured', {}, { testTimeout: CustomTimeout.Short }],
+    ['declared', { runs: RunCount.Single, testTimeout: CustomTimeout.Short }, {}],
+    ['configured', { runs: RunCount.Single }, { testTimeout: CustomTimeout.Short }],
   ])('expires at a %s test timeout shorter than the built-in', async (_label, opts, defaults) => {
     const timer = new ManualTimer();
     const pending = Capture.rejection(
@@ -324,8 +330,8 @@ describe('Runner — tuned timeouts', () => {
   });
 
   it.each<[string, RunOptions, RunOptions]>([
-    ['declared', { testTimeout: CustomTimeout.Long }, {}],
-    ['configured', {}, { testTimeout: CustomTimeout.Long }],
+    ['declared', { runs: RunCount.Single, testTimeout: CustomTimeout.Long }, {}],
+    ['configured', { runs: RunCount.Single }, { testTimeout: CustomTimeout.Long }],
   ])('lets a run outlast 30 s under a longer %s test timeout', async (_label, opts, defaults) => {
     const timer = new ManualTimer();
     const gate = new StartGate(RunCount.Single + 1);

@@ -1,5 +1,7 @@
 {
   "description": "Passing scenario judged through the generic openai-compatible provider pointed at OpenRouter's OpenAI-compatible endpoint, with the key read from CRUCIBLE_JUDGE_KEY (no apiKeyEnv). Run with CRUCIBLE_VERBOSE=debug so the trace shows which provider carried the calls.",
+  "runs": 1,
+  "threshold": 1,
   "name": "judges through an openai-compatible endpoint",
   "state": ["The library closes at 18:00 on weekdays."],
   "response": "Sorry, it's 19:30 on a Tuesday, so the library is already closed.",

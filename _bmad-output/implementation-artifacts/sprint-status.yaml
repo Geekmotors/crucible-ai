@@ -57,7 +57,7 @@ development_status:
   1-5-see-why-it-failed: done
   epic-1-retrospective: optional
 
-  # Epic 2: Reliability measurement (stateful pass^k)
+  # Epic 2: Reliability measurement (stateful pass-rate gates)
   epic-2: done
   2-1-repeat-and-gate-on-pass-rate: done
   2-2-arrange-state-per-run: done
@@ -86,5 +86,13 @@ development_status:
   # Epic 5: Bring your own provider
   epic-5: in-progress
   5-1-openai-compatible-provider: done
-  5-2-judge-key-source: review
+  5-2-judge-key-source: done
   epic-5-retrospective: optional
+
+  # Epic 6: Ergonomics
+  epic-6: in-progress
+  6-1-sensible-defaults: done
+  6-2-commented-config-and-init: backlog
+  6-3-describe-group-settings: backlog
+  6-4-lenient-strict-extract: backlog
+  epic-6-retrospective: optional

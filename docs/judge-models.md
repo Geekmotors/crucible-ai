@@ -24,7 +24,7 @@ assembled per the schema's documented order). Fixtures:
 ## Recommendation (feeds OQ-6)
 
 - **Default judge:** `deepseek/deepseek-v4-flash-0731` — indistinguishable
-  accuracy on this matrix at a fraction of the cost; pass^k multi-run testing
+  accuracy on this matrix at a fraction of the cost; multi-run pass-rate testing
   multiplies call volume, so cost dominates.
 - **When failure diagnostics matter most:** `anthropic/claude-sonnet-5` —
   fastest verdicts and the most state-aware reasoning.

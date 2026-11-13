@@ -48,7 +48,7 @@ environment variables for anything secret or per-invocation.
 | `apiKeyEnv` | no; every provider | environment variable **name**: letters, digits and `_`, not starting with a digit | `CRUCIBLE_JUDGE_KEY` | The variable that holds the judge's API key ([Judge key](#judge-key)) |
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
-| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647) | `{}` | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)) |
+| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647) | `{}` (built-ins: `runs` 10, `threshold` 0.9) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)). With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass |
 | `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
 
 No other top-level field is accepted.
@@ -283,7 +283,7 @@ How provider failures are handled, per judge call, for every provider:
 | HTTP 408 or 429, any 5xx, a network error | retryable | Retries up to 3 attempts in total with exponential backoff (250–500 ms before the second attempt, 500–1000 ms before the third). If all fail, the run is **errored** — an infrastructure problem, never counted as a semantic failure. |
 | Any other HTTP 4xx (for example 401 bad key, 402 no credit, 400/404 unknown model) | fatal | Stops the whole test at once: other runs' judge calls are cancelled and the test fails as `ERRORED, not failed:` with advice to fix the provider setup. The same mistake would hit every run, so Crucible stops spending. |
 | A reply that is not valid `{ "verdict", "reasoning" }` JSON | non-fatal | Asks once more; a second bad reply makes the run errored. |
-| A reply attempt (including its retries) running past the inference timeout (30 s unless `inferenceTimeout` is set) | non-fatal | The run is errored; other runs carry on. This per-call limit sits inside the test timeout (30 s plus 1 s per extra run unless `testTimeout` is set), which caps everything and also stops the test. |
+| A reply attempt (including its retries) running past the inference timeout (30 s unless `inferenceTimeout` is set) | non-fatal | The run is errored; other runs carry on. This per-call limit sits inside the test timeout (30 s plus 1 s per extra run, 39 s for the default 10 runs, unless `testTimeout` is set), which caps everything and also stops the test. |
 
 An error embedded in a `200` response body (as OpenRouter does) with a
 numeric code is treated as that HTTP status; without one, it is retryable,
@@ -302,7 +302,8 @@ The recommended default judge is `deepseek/deepseek-v4-flash-0731` with
   [raw runs](judge-validation-runs.md)). Cost dominates once multi-run gates
   multiply call volume.
 - With default reasoning it takes ~11 s per call, which leaves little room in
-  the default test timeout (30 s plus 1 s per extra run) when a body awaits
+  the default test timeout (30 s plus 1 s per extra run; 39 s for the
+  default 10 runs) when a body awaits
   several judgments in sequence; raise `testTimeout` (per test or in
   `testDefaults`) if your bodies need longer
   ([Timeout](runs-and-threshold.md#timeout)).

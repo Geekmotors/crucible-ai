@@ -33,6 +33,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run verify:pack
+      - run: npx tsc --noEmit -p e2e
 
   e2e-core:
     name: e2e-core (real OpenRouter, main only)

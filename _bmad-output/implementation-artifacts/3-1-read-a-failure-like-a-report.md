@@ -73,7 +73,7 @@ Headlines:
 - Pass rate = `passed / runs` floored to 3 decimals (never displays ≥ threshold for a failing rate; `need` is the exact criterion).
 - Counts line on multi-run outcomes only; counts are taken from the results (single source).
 - Multi-line values (reasoning, excerpt, thrown messages) have continuation lines indented under their section so the `[MARKER]` lines stay scannable.
-- `N = 3` full sections per status (failed, errored separately — an outage never hides the semantic failures and vice versa). Justification: Jest prints the message per test; 3 sections ≈ 2–3 KB fit one screen; pass^k failures usually share a cause, so three samples show the pattern and the claim tally shows the distribution; Story 3.2 `full` is the escape hatch for everything.
+- `N = 3` full sections per status (failed, errored separately — an outage never hides the semantic failures and vice versa). Justification: Jest prints the message per test; 3 sections ≈ 2–3 KB fit one screen; pass-rate gate failures usually share a cause, so three samples show the pattern and the claim tally shows the distribution; Story 3.2 `full` is the escape hatch for everything.
 
 ### Designed for Story 3.2 (do NOT implement the ladder)
 
