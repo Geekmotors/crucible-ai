@@ -3,6 +3,7 @@ import { CrucibleError } from './errors.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
 import { Capture } from './test/capture.util.js';
 import { RunCount } from './test/run-count.enum.js';
+import { ProjectDefaults } from './test/project-defaults.util.js';
 import { Threshold } from './test/threshold.enum.js';
 
 describe('RunOptionsResolver', () => {
@@ -61,5 +62,33 @@ describe('RunOptionsResolver', () => {
   it('refuses to resolve invalid options', () => {
     const error = Capture.thrown(() => new RunOptionsResolver().resolve({ runs: 0 }));
     expect((error as CrucibleError).kind).toBe('usage');
+  });
+
+  it('takes every omitted field from the configured defaults', () => {
+    expect(new RunOptionsResolver().resolve({}, ProjectDefaults.strictGate)).toEqual(
+      ProjectDefaults.strictGate,
+    );
+  });
+
+  it('overrides per field — a declared runs keeps the configured threshold', () => {
+    expect(
+      new RunOptionsResolver().resolve({ runs: RunCount.Smaller }, ProjectDefaults.strictGate),
+    ).toEqual({ runs: RunCount.Smaller, threshold: Threshold.Strict });
+  });
+
+  it('uses the declared values entirely when both are declared', () => {
+    expect(
+      new RunOptionsResolver().resolve(
+        { runs: RunCount.Smaller, threshold: Threshold.Half },
+        ProjectDefaults.strictGate,
+      ),
+    ).toEqual({ runs: RunCount.Smaller, threshold: Threshold.Half });
+  });
+
+  it('falls back to built-ins for a field the configured defaults leave unset', () => {
+    expect(new RunOptionsResolver().resolve({}, { threshold: Threshold.Strict })).toEqual({
+      runs: RunCount.Single,
+      threshold: Threshold.Strict,
+    });
   });
 });

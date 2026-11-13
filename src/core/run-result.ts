@@ -27,4 +27,16 @@ type VerdictSummary = {
 
 type AbortSummary = Omit<VerdictSummary, 'tally'>;
 
-export type { AbortSummary, RunResult, RunStatus, RunTally, VerdictSummary, VerdictZone };
+type ExpirySummary = AbortSummary & {
+  readonly deadlineMs: number;
+};
+
+export type {
+  AbortSummary,
+  ExpirySummary,
+  RunResult,
+  RunStatus,
+  RunTally,
+  VerdictSummary,
+  VerdictZone,
+};

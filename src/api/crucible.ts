@@ -27,13 +27,19 @@ class CompositionRoot {
   }
 
   jestBinding(): JestBinding {
-    this.binding ??= new JestBinding(new Runner(runScope, new Reporter()));
+    this.binding ??= new JestBinding(
+      new Runner(runScope, new Reporter(), CompositionRoot.testDefaults),
+    );
     return this.binding;
   }
 
   private static coherentSchemaSupplier(): () => string {
     const source = new SchemaSource();
     return () => source.load('coherent');
+  }
+
+  private static testDefaults(): RunOptions {
+    return config.get().testDefaults;
   }
 
   private static completionTarget(): CompletionTarget {

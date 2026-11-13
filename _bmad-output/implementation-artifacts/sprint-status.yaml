@@ -58,12 +58,12 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Reliability measurement (stateful pass^k)
-  epic-2: in-progress
+  epic-2: done
   2-1-repeat-and-gate-on-pass-rate: done
   2-2-arrange-state-per-run: done
   2-3-fail-fast-without-burning-spend: done
   2-4-choose-runs-and-threshold-with-eyes-open: done
-  2-5-project-wide-run-defaults: backlog
+  2-5-project-wide-run-defaults: done
   epic-2-retrospective: optional
 
   # Epic 3: Diagnose, document & ship

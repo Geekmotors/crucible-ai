@@ -2,6 +2,7 @@ import { Aggregator } from '../aggregator.util.js';
 import { Reporter } from '../reporter.util.js';
 import type { ResolvedRunOptions } from '../run-options.js';
 import type { RunResult, RunStatus } from '../run-result.js';
+import { Threshold } from './threshold.enum.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from '../state.js';
 
 class ReportHarness {
@@ -35,6 +36,14 @@ class ReportHarness {
 
   static renderedAbort(results: RunResult[], threshold: number): string {
     return new Reporter().renderAborted({ results, options: { runs: results.length, threshold } });
+  }
+
+  static renderedExpiry(results: RunResult[], deadlineMs: number): string {
+    return new Reporter().renderExpired({
+      results,
+      options: { runs: results.length, threshold: Threshold.Certain },
+      deadlineMs,
+    });
   }
 
   static renderedVerdict(results: RunResult[], threshold: number): string {

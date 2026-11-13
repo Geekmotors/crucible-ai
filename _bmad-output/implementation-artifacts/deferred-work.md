@@ -43,3 +43,7 @@
 - source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
   summary: Story 3.1 output contract — (a) smoke-mode (1-run) fatal now renders the abort headline ("0 in-flight run(s) discarded") instead of the pass-rate headline; (b) runner-side snapshot (settled runs keep status, unsettled → discarded) is only locked by reporter tests over hand-built results, because asserting the thrown report text from runner tests is forbidden (no error-message assertions, no reporter-call capture). Revisit when 3.1 defines a structured report surface.
   evidence: Acceptance Auditor; `Runner.discardUnsettled`, `Reporter.renderAborted`.
+
+- source_spec: 2-5-project-wide-run-defaults.md (code review 2026-11-13)
+  summary: Jest fake timers in a user's test file. With `jest.useFakeTimers()`, the runner-owned deadline (and the judge-call deadline) use the faked global `setTimeout`. An omitted-`runs` declaration now has a ~24.8-day Jest backstop rather than 30 s, so a hung body can hang the suite. Decide on a timer boundary that is immune to fake timers, or document it as a gotcha in Story 3.6.
+  evidence: Runner.startTimer resolves `setTimeout` at call time; Runner.ceilingFor returns TIMER_MAX_MS when runs are omitted.

@@ -1,4 +1,4 @@
-import type { AbortSummary, RunResult, VerdictSummary } from './run-result.js';
+import type { AbortSummary, ExpirySummary, RunResult, VerdictSummary } from './run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
 
 const RESPONSE_EXCERPT_LIMIT = 500;
@@ -14,6 +14,10 @@ class Reporter {
 
   renderAborted(summary: AbortSummary): string {
     return [this.abortHeadline(summary), ...this.runSections(summary.results)].join('\n\n');
+  }
+
+  renderExpired(summary: ExpirySummary): string {
+    return [this.expiryHeadline(summary), ...this.runSections(summary.results)].join('\n\n');
   }
 
   renderFailed(context: RunContext, cause: unknown): string {
@@ -60,6 +64,11 @@ class Reporter {
   private abortHeadline({ results, options }: AbortSummary): string {
     const discarded = results.filter((result) => result.status === 'discarded').length;
     return `Test aborted on a fatal error after ${results.length - discarded}/${options.runs} runs settled; ${discarded} in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.`;
+  }
+
+  private expiryHeadline({ results, options, deadlineMs }: ExpirySummary): string {
+    const discarded = results.filter((result) => result.status === 'discarded').length;
+    return `Test errored, not failed: it did not finish within its ${deadlineMs} ms deadline. ${results.length - discarded}/${options.runs} runs settled; ${discarded} in-flight run(s) discarded to stop spend. Check for a slow system under test or a throttled judge provider.`;
   }
 
   private runSections(results: readonly RunResult[]): string[] {
