@@ -1,13 +1,5 @@
 # Deferred Work
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-install-and-configure-crucible.md`
-  summary: Document (Story 3.6 gotchas) that API keys must never be placed inside config `meta` — `meta` is an opaque passthrough per FR-7 and is deliberately not scanned for key-like fields, so a key committed there bypasses the NFR1 config guard.
-  evidence: Review confirmed `meta` contents are never validated (by design, FR-7 opacity); the top-level key-like rejection cannot cover it, making this a real committable-secret hazard only docs can mitigate.
-
-- source_spec: `_bmad-output/planning-artifacts/prds/prd-crucible-ai-2026-08-10/prd.md` (§4.3 assertion-selection doctrine, decided 2026-09-14)
-  summary: Story 3.6 getting-started docs must teach the assertion-selection ladder — plain framework assertions first, `exact()`/`range()` for embedded values (post-MVP), `coherent()` only for inherently semantic claims (prose, reasoning, state consistency, knowledge boundaries).
-  evidence: Doctrine decided with Jack 2026-09-14 and recorded in the PRD; without a docs entry it will be missed when Story 3.6 is drafted from the epic ACs alone.
-
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-reliable-judge-connectivity-via-openrouter.md`
   summary: No per-attempt timeout exists anywhere — a hung provider socket stalls a judge call forever and the retry machinery never engages; decide per-attempt timeout policy when Story 1.4's runner derives test timeouts from run count and provider budget (AD-3).
   evidence: Both reviewers flagged it; the spec matrix lists "timeout" as retryable input but only the caller's signal can currently produce one, and nothing arms such a signal yet.
@@ -17,7 +9,7 @@
   evidence: 60/60 verdicts across three models on the current matrix gives no discrimination between models; docs/judge-models.md flags the same caveat.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-4-first-semantic-verdict-smoke-mode.md`
-  summary: (CJS half closed by Story 3.3 — `e2e/core/cjs-build.test.cts` judges through `dist/index.cjs`.) Remaining: verify schema loading under bundler-inlined consumers (import.meta.url package-root walk); and revisit injectGlobals:false Jest support (lazy @jest/globals import) with Story 3.6 docs gotchas.
+  summary: (CJS half closed by Story 3.3 — `e2e/core/cjs-build.test.cts` judges through `dist/index.cjs`.) (Docs half closed by Story 3.6 — `docs/gotchas.md` documents `injectGlobals: false` as unsupported.) Remaining: verify schema loading under bundler-inlined consumers (import.meta.url package-root walk); decide whether to support injectGlobals:false (lazy @jest/globals import).
   evidence: Review flagged both; the walk depends on tsdown's CJS shim and breaks if a consumer bundler inlines the package; the binding currently requires an injected global `it`.
 
 - source_spec: PR #8 review discussion (2026-09-14)
@@ -35,10 +27,6 @@
 - source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
   summary: The per-test abort reaches only crucible's judge calls; the user's own SUT/provider calls in discarded runs keep running (and spending) after the test rejects. AC6 forbids a public signal handle in 2.3; decide whether a public `crucible.signal`-style accessor is wanted (would need an AD-5 amendment).
   evidence: Blind Hunter + Edge Case Hunter; `RunScope.abortSignal()` is internal only by spec.
-
-- source_spec: 2-5-project-wide-run-defaults.md (code review 2026-11-13)
-  summary: Jest fake timers in a user's test file. With `jest.useFakeTimers()`, the runner-owned deadline (and the judge-call deadline) use the faked global `setTimeout`. An omitted-`runs` declaration now has a ~24.8-day Jest backstop rather than 30 s, so a hung body can hang the suite. Decide on a timer boundary that is immune to fake timers, or document it as a gotcha in Story 3.6.
-  evidence: Runner.startTimer resolves `setTimeout` at call time; Runner.ceilingFor returns TIMER_MAX_MS when runs are omitted.
 
 ## Deferred from: code review of 3-1-read-a-failure-like-a-report.md (2026-11-13)
 
@@ -96,10 +84,6 @@
   summary: `schemas/coherent.md` defines no rule for conflicting or superseding state facts (e.g. an appended cancellation contradicting a loaded booking, or "later, she opens the envelope"). With reasoning disabled the judge kept the older fact; with low reasoning, temporal knowledge-boundary updates were judged slowly and inconsistently. e2e fixtures were made monotonic (appends add facts, never contradict). Decide whether state is ordered with later facts superseding earlier ones and say so in the schema (adds to the 1.3 "multi-fact state conflicts" item).
   evidence: room-booking and knowledge-boundary fixture iterations during 3.3.
 
-- source_spec: 3-3-prove-it-end-to-end-locally.md (real OpenRouter e2e, 2026-11-13)
-  summary: Disabling reasoning (`meta.reasoning.enabled: false`) on the default judge model makes it ~5× faster and ~7× cheaper but unreliable on stateful claims (a 3-run gate failed 2/3 on the room-booking scenario). Judge-model guidance (OQ-6, docs) should recommend low reasoning effort, not none.
-  evidence: docs/judge-models.md "Reasoning effort and the per-test deadline" section.
-
 - source_spec: 3-3-prove-it-end-to-end-locally.md
   summary: (Main-lane half closed by Story 3.5 — `make e2e-core` on every main push type-checks e2e.) e2e TypeScript is type-checked only by the Makefile (`tsc --noEmit -p e2e` after build) because it resolves `crucible-ai` to `dist/*.d.ts`; the PR lane (lint + typecheck + unit) lints e2e but does not type-check it. Story 3.5 (main lane runs `make e2e-core`) covers it on merge; add a build + e2e typecheck step to the PR lane if e2e type errors slip through.
   evidence: npm run typecheck stays src-only so it needs no build.
@@ -109,10 +93,6 @@
 - source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
   summary: (Closed for CI by Story 3.5 — main lane pins setup-node `24`.) `--use-system-ca` is accepted in `NODE_OPTIONS` only from Node 22.15 / 23.8; `engines` says `>=22`. Story 3.5's ubuntu main lane must pin a Node that accepts it (setup-node `22` resolves to latest 22.x, fine) or override `E2E_NODE_OPTIONS` (now `?=` in the Makefile) to drop it.
   evidence: Makefile `E2E_NODE_OPTIONS`.
-
-- source_spec: 3-3-prove-it-end-to-end-locally.md (code review 2026-11-13)
-  summary: `crucible.coherent` judges the run state as it stands when the call is made (payload assembled before the first await), so later `append`s do not leak into an in-flight judgment. The e2e bodies now rely on it to issue step judgments concurrently (deadline headroom), but no doc states it. Document it in the API docs (Story 3.6).
-  evidence: Judge.judgeCoherent; e2e/core/stateful-coherence.test.ts.
 
 ## Deferred from: 3-4-language-agnostic-judge-conformance-spike.md (2026-11-13)
 
@@ -137,3 +117,17 @@
 - source_spec: 3-5-e2e-core-on-merge-to-main.md
   summary: The PR lane does not run `npm run format:check` (local gate does); add it to the `unit` job if formatting drift reaches main. The spine's Structural Seed still annotates `e2e/core/ e2e/ext/` as "local-only" — stale since the AD-12 amendment (e2e/core also runs on the main lane).
   evidence: `.github/workflows/ci.yml` unit job; ARCHITECTURE-SPINE.md Structural Seed.
+
+## Deferred from: 3-6-learn-it-from-the-docs-alone.md (2026-11-13)
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
+  summary: `ProviderAdapter`, `CompletionRequest` and `FailureClass` are exported as public types, but there is no public way to register an adapter (`providerRegistry` is internal; only `openrouter` resolves). The types suggest an extension point that does not exist. Decide before the first publish (Story 3.7 surface check): drop them from the entry point, or design a registration API (AD-2/AD-9 amendment). `docs/api.md` states the current truth.
+  evidence: `src/index.ts`, `src/providers/registry.ts`; `docs/runs-and-threshold.md` previously said "a custom adapter must not either" (fixed in 3.6).
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md (doc-vs-code check)
+  summary: `crucible.it` is typed as one permissive signature `(name, optsOrBody: RunOptions | TestBody, maybeBody?)`, so `crucible.it(name, { runs: 5 })` with no body type-checks and only fails at registration (`usage`). Two overloads (`(name, body)`, `(name, options, body)`) would make it a compile error; the docs describe the call forms as overloads. TDD a type-level change if wanted (no runtime change).
+  evidence: `dist/index.d.ts`; `docs/api.md` notes the permissive signature.
+
+- source_spec: 3-6-learn-it-from-the-docs-alone.md
+  summary: README links to `docs/*.md` relatively, but `docs/` is not in the npm tarball and package.json has no `repository` field, so the links break on npmjs.com. Story 3.7 (npm README check) should add `repository` (npm then rewrites relative links to the GitHub repo) or switch README links to absolute GitHub URLs.
+  evidence: package.json `files: [dist, schemas]`, no `repository`.

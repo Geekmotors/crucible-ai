@@ -37,6 +37,14 @@ crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
 
 A threshold is a sampled estimate: a system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time. Before picking your numbers, read [docs/runs-and-threshold.md](docs/runs-and-threshold.md) — the `crucible.it()` reference, the three-zone verdict, and headroom guidance with worked examples.
 
+## Get started
+
+```sh
+npm install --save-dev crucible-ai
+```
+
+Crucible needs Node.js 22+, Jest 30, a committed `crucible.config.json` naming the judge model, and an `OPENROUTER_API_KEY` in the environment. [Getting started](docs/getting-started.md) walks you from install to a CI gate you can trust; the [documentation index](docs/README.md) lists every page — configuration and OpenRouter reference, API reference, gotchas, and how the instruction schema drives the judge.
+
 The same shape ports to each ecosystem's idiomatic form (roadmap — v1 is TypeScript/Jest):
 
 <details>

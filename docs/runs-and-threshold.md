@@ -301,8 +301,10 @@ What the trace never shows:
 
 - **Your API key.** The trace is taken at crucible's provider interface, above
   the HTTP layer, so request headers never reach it. Error messages are shown
-  as the adapter wrote them: the bundled OpenRouter adapter never puts the key
-  in one, and a custom adapter must not either.
+  as the provider adapter wrote them, and the OpenRouter adapter (the only
+  provider in v1) never puts the key in one. Errors and responses from your
+  own code are printed as they are — see
+  [gotchas](gotchas.md#reports-print-your-errors-and-responses-as-they-are).
 - **`meta` values.** Only `meta` key names are shown, because values can hold
   secrets.
 - **Unbounded payloads.** Prompts and replies longer than 2000 characters are

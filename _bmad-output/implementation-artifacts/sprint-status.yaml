@@ -73,6 +73,6 @@ development_status:
   3-3-prove-it-end-to-end-locally: done
   3-4-language-agnostic-judge-conformance-spike: done
   3-5-e2e-core-on-merge-to-main: done
-  3-6-learn-it-from-the-docs-alone: backlog
+  3-6-learn-it-from-the-docs-alone: done
   3-7-ship-it-with-provenance: backlog
   epic-3-retrospective: optional
