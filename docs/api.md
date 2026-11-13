@@ -113,8 +113,9 @@ expect(await crucible.coherent(reply, 'The reply declines to share the meeting p
 - **Without state** the claim is judged against the response alone.
 - **Errors.** A non-string `actual` or `expectation` throws a `usage` error;
   calling it outside a running `crucible.it()` body throws a `usage` error. A
-  missing provider key (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or the
-  variable `apiKeyEnv` names) throws a `config` error. Provider failures
+  missing provider key (`CRUCIBLE_JUDGE_KEY`, or the variable `apiKeyEnv`
+  names; optional for `openai-compatible` without `apiKeyEnv`) throws a
+  `config` error. Provider failures
   surface as `infra` errors after retries, which make the run *errored* rather
   than *failed* ([classification](runs-and-threshold.md#what-a-run-is-and-how-it-is-classified)).
 - **Cost.** Each call is one paid judge request (more if retried).

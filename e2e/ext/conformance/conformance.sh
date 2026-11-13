@@ -12,6 +12,7 @@ SYSTEM_CA_FILE=/etc/ssl/certs/ca-certificates.crt
 CALL_TIMEOUT_SECONDS=120
 EXIT_MISMATCH=1
 EXIT_USAGE=2
+DEFAULT_KEY_ENV=CRUCIBLE_JUDGE_KEY
 
 jq_lib() {
   jq -L "$HARNESS_DIR" "$@"
@@ -69,6 +70,18 @@ reject_setting() {
   fi
 }
 
+resolve_key_env() {
+  KEY_ENV=$DEFAULT_KEY_ENV
+  KEY_NEED=$1
+  if judge_has apiKeyEnv; then
+    KEY_ENV=$(judge_setting apiKeyEnv)
+    case "$KEY_ENV" in
+      '' | [0-9]* | *[!A-Za-z0-9_]*) usage_error "\"apiKeyEnv\" in the judge config must name an environment variable" ;;
+    esac
+    KEY_NEED=required
+  fi
+}
+
 resolve_compatible_endpoint() {
   BASE_URL=$(judge_setting baseUrl | sed 's:/*$::')
   case "$BASE_URL" in
@@ -76,13 +89,7 @@ resolve_compatible_endpoint() {
     http://?* | https://?*) ;;
     *) usage_error "openai-compatible needs an http or https \"baseUrl\" in the judge config" ;;
   esac
-  KEY_ENV=
-  if judge_has apiKeyEnv; then
-    KEY_ENV=$(judge_setting apiKeyEnv)
-    case "$KEY_ENV" in
-      '' | [0-9]* | *[!A-Za-z0-9_]*) usage_error "\"apiKeyEnv\" in the judge config must name an environment variable" ;;
-    esac
-  fi
+  resolve_key_env optional
 }
 
 resolve_endpoint() {
@@ -92,15 +99,13 @@ resolve_endpoint() {
   case "$PROVIDER" in
     openrouter)
       reject_setting baseUrl
-      reject_setting apiKeyEnv
       BASE_URL=https://openrouter.ai/api/v1
-      KEY_ENV=OPENROUTER_API_KEY
+      resolve_key_env required
       ;;
     openai)
       reject_setting baseUrl
-      reject_setting apiKeyEnv
       BASE_URL=https://api.openai.com/v1
-      KEY_ENV=OPENAI_API_KEY
+      resolve_key_env required
       ;;
     openai-compatible)
       resolve_compatible_endpoint
@@ -112,18 +117,47 @@ resolve_endpoint() {
   ENDPOINT=$BASE_URL/chat/completions
 }
 
-require_key() {
-  KEY_VALUE=
-  if [ -z "$KEY_ENV" ]; then
-    return
+plain_http_host() {
+  case "$BASE_URL" in
+    http://*) ;;
+    *) return 1 ;;
+  esac
+  host=${BASE_URL#http://}
+  host=$(printf '%s' "${host%%/*}" | tr '[:upper:]' '[:lower:]')
+  case "$host" in
+    '[::1]' | '[::1]:'*) return 1 ;;
+  esac
+  host=${host%%:*}
+  case "$host" in
+    localhost) return 1 ;;
+    127.*.*.*)
+      case "${host#127.}" in
+        *[!0-9.]* | *.*.*.*) ;;
+        *) return 1 ;;
+      esac
+      ;;
+  esac
+  return 0
+}
+
+warn_plain_http() {
+  if plain_http_host; then
+    echo "conformance: warning: the judge key from $KEY_ENV is sent unencrypted over plain http to $BASE_URL. Use https, or a loopback address for a local server." >&2
   fi
+}
+
+require_key() {
   KEY_VALUE=$(printenv "$KEY_ENV" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' || true)
   if [ -z "$KEY_VALUE" ]; then
-    usage_error "$KEY_ENV is not set. Pass it at runtime: docker run --env $KEY_ENV ..."
+    if [ "$KEY_NEED" = required ]; then
+      usage_error "$KEY_ENV is not set. Pass it at runtime: docker run --env $KEY_ENV ..."
+    fi
+    return
   fi
   case "$KEY_VALUE" in
     *[\"\\[:cntrl:]]*) usage_error "$KEY_ENV holds characters that cannot appear in an API key" ;;
   esac
+  warn_plain_http
 }
 
 auth_config() {
@@ -260,7 +294,7 @@ case "${1:-run}" in
     ;;
   key-env)
     resolve_endpoint
-    printf '%s\n' "$KEY_ENV"
+    printf '%s %s\n' "$KEY_ENV" "$KEY_NEED"
     ;;
   run)
     resolve_endpoint

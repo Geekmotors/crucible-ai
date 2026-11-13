@@ -57,12 +57,12 @@ npm install --save-dev crucible-ai
 }
 ```
 
-To judge with OpenAI instead, use `{ "provider": "openai", "model": "gpt-5-mini" }`. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"` and, if the endpoint needs a key, an `"apiKeyEnv"` naming the variable that holds it. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
+To judge with OpenAI instead, use `{ "provider": "openai", "model": "gpt-5-mini" }`. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"`. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
 
 **2. Set your API key** in the environment. Never put it in the config file.
 
 ```sh
-export OPENROUTER_API_KEY=...   # or OPENAI_API_KEY, or the variable apiKeyEnv names
+export CRUCIBLE_JUDGE_KEY=...   # every provider reads it; "apiKeyEnv" in the config names another variable
 ```
 
 **3. Write a test.** With no options it runs once, like a normal Jest test:

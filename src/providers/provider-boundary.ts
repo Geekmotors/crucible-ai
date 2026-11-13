@@ -13,5 +13,6 @@ type ProviderHttpRequestInit = {
 
 type FetchLike = (url: string, init: ProviderHttpRequestInit) => Promise<ProviderHttpResponse>;
 type EnvReader = (name: string) => string | undefined;
+type WarningSink = (message: string) => void;
 
-export type { EnvReader, FetchLike, ProviderHttpRequestInit, ProviderHttpResponse };
+export type { EnvReader, FetchLike, ProviderHttpRequestInit, ProviderHttpResponse, WarningSink };

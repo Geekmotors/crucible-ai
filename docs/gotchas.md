@@ -26,6 +26,7 @@ protect you from.
 **Secrets, data and spend**
 
 - [Never put an API key in `meta`](#never-put-an-api-key-in-meta)
+- [A key over plain `http` travels unencrypted](#a-key-over-plain-http-travels-unencrypted)
 - [Reports print your errors and responses as they are](#reports-print-your-errors-and-responses-as-they-are)
 - [Everything you judge leaves your machine](#everything-you-judge-leaves-your-machine)
 - [Runs spend in parallel](#runs-spend-in-parallel)
@@ -231,10 +232,20 @@ globally), or switch to fake timers only inside a plain Jest test.
 `token`, …) so the file stays safe to commit. `meta` is passed to the
 provider unmodified and is **never inspected** — a key placed inside it is
 committed with the file and sent in every request body. Keys belong only in
-the environment — `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or the variable
-`apiKeyEnv` names. `apiKeyEnv` itself takes a variable *name*: a value with
-punctuation, like `sk-…`, is rejected, but a key made only of letters, digits
-and underscores passes as a name, so check what you put there. See [`meta`](configuration.md#meta).
+the environment — `CRUCIBLE_JUDGE_KEY`, or the variable `apiKeyEnv` names.
+`apiKeyEnv` itself takes a variable *name*: a value with punctuation, like
+`sk-…`, is rejected, but a key made only of letters, digits and underscores
+passes as a name, so check what you put there. See
+[`meta`](configuration.md#meta).
+
+## A key over plain `http` travels unencrypted
+
+An `openai-compatible` `baseUrl` may be `http://`. If it points anywhere but
+this machine (`localhost`, `127.x.x.x`, `[::1]`) and a key is set, the key
+crosses the network in clear text. Crucible makes the call anyway and prints
+one warning per test file to stderr (it names the variable and URL, never
+the key). Use `https`, or — without `apiKeyEnv` — leave `CRUCIBLE_JUDGE_KEY`
+unset for a server that needs no key. See [`openai-compatible`](configuration.md#openai-compatible).
 
 ## Reports print your errors and responses as they are
 

@@ -2,7 +2,7 @@ import { CrucibleError } from '../core/errors.js';
 import { OpenAiCompatibleProvider } from './openai-compatible.js';
 import { OpenAiProvider } from './openai.js';
 import { OpenRouterProvider } from './openrouter.js';
-import type { EnvReader, FetchLike } from './provider-boundary.js';
+import type { EnvReader, FetchLike, WarningSink } from './provider-boundary.js';
 import type {
   ProviderAdapter,
   ProviderFactory,
@@ -17,14 +17,19 @@ class ProviderRegistry {
     return process.env[name];
   }
 
+  private static writeStderr(message: string): void {
+    process.stderr.write(`${message}\n`);
+  }
+
   static builtIn(
     fetchLike: FetchLike = globalThis.fetch,
     readEnv: EnvReader = ProviderRegistry.readProcessEnv,
+    warn: WarningSink = ProviderRegistry.writeStderr,
   ): ProviderRegistry {
     const registry = new ProviderRegistry();
     registry.register(new OpenRouterProvider(fetchLike, readEnv));
     registry.register(new OpenAiProvider(fetchLike, readEnv));
-    registry.register(new OpenAiCompatibleProvider(fetchLike, readEnv));
+    registry.register(new OpenAiCompatibleProvider(fetchLike, readEnv, warn));
     return registry;
   }
 
