@@ -3,12 +3,25 @@ import { CrucibleError } from './errors.js';
 import { JUDGE_CALL_TIMEOUT_MS } from './judge.js';
 import { Reporter } from './reporter.util.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
-import type { RunOptions } from './run-options.js';
+import type { ResolvedRunOptions, RunOptions } from './run-options.js';
 import type { RunResult } from './run-result.js';
 import { RunScope, runScope } from './state.js';
+import type { RunContext } from './state.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 
-type SettledRun = { readonly fatal: true; readonly cause: unknown } | RunResult;
+type Rethrow = { readonly rethrow: unknown };
+
+type SettledRun = Rethrow | RunResult;
+
+type InFlightRun = {
+  readonly context: RunContext;
+  readonly settled: Promise<SettledRun>;
+};
+
+type Batch =
+  | { readonly halt: 'none'; readonly results: RunResult[] }
+  | { readonly halt: 'rethrow'; readonly cause: unknown }
+  | { readonly halt: 'fatal'; readonly cause: unknown; readonly results: RunResult[] };
 
 class Runner {
   private static readonly RUN_BUDGET_MS = JUDGE_CALL_TIMEOUT_MS;
@@ -28,14 +41,21 @@ class Runner {
 
   async execute(body: () => unknown, opts: RunOptions = {}): Promise<void> {
     const options = this.resolver.resolve(opts);
-    const settled = await Promise.all(
-      Array.from({ length: options.runs }, () => this.runOnce(body)),
-    );
-    const fatal = settled.find((run) => 'fatal' in run);
-    if (fatal !== undefined) {
-      throw fatal.cause;
+    const batch = await this.runBatch(body, options.runs);
+    if (batch.halt === 'rethrow') {
+      throw batch.cause;
     }
-    const results = settled as RunResult[];
+    if (batch.halt === 'fatal') {
+      throw new CrucibleVerdictError(
+        'errored',
+        this.reporter.renderAborted({ results: batch.results, options }),
+        batch.cause,
+      );
+    }
+    this.judge(batch.results, options);
+  }
+
+  private judge(results: RunResult[], options: ResolvedRunOptions): void {
     const tally = this.aggregator.tally(
       results.map((result) => result.status),
       options,
@@ -51,35 +71,91 @@ class Runner {
     );
   }
 
-  private runOnce(body: () => unknown): Promise<SettledRun> {
-    return this.scope.enterRun(async (): Promise<SettledRun> => {
-      try {
-        await body();
-        return { status: 'passed', context: this.scope.context() };
-      } catch (cause) {
-        return this.classify(cause);
-      }
+  private runBatch(body: () => unknown, count: number): Promise<Batch> {
+    const controller = new AbortController();
+    const runs = Array.from({ length: count }, () => this.start(body, controller.signal));
+    const settled: (RunResult | undefined)[] = runs.map(() => undefined);
+    let pending = count;
+    return new Promise<Batch>((resolve) => {
+      runs.forEach((run, index) => {
+        void run.settled.then((outcome) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          if ('rethrow' in outcome) {
+            controller.abort();
+            resolve({ halt: 'rethrow', cause: outcome.rethrow });
+            return;
+          }
+          settled[index] = outcome;
+          if (this.isFatal(outcome)) {
+            controller.abort();
+            resolve({
+              halt: 'fatal',
+              cause: outcome.cause,
+              results: this.discardUnsettled(runs, settled),
+            });
+            return;
+          }
+          pending -= 1;
+          if (pending === 0) {
+            resolve({ halt: 'none', results: settled as RunResult[] });
+          }
+        });
+      });
     });
+  }
+
+  private discardUnsettled(
+    runs: readonly InFlightRun[],
+    settled: readonly (RunResult | undefined)[],
+  ): RunResult[] {
+    return runs.map(
+      (run, index) => settled[index] ?? { status: 'discarded', context: run.context },
+    );
+  }
+
+  private start(body: () => unknown, signal: AbortSignal): InFlightRun {
+    return this.scope.enterRun(
+      () => ({ context: this.scope.context(), settled: this.settle(body) }),
+      signal,
+    );
+  }
+
+  private async settle(body: () => unknown): Promise<SettledRun> {
+    try {
+      await body();
+      return { status: 'passed', context: this.scope.context() };
+    } catch (cause) {
+      return this.classify(cause);
+    }
   }
 
   private classify(cause: unknown): SettledRun {
     if (cause instanceof CrucibleVerdictError) {
-      return { fatal: true, cause };
+      return { rethrow: cause };
     }
     const crucible = this.firstCrucibleInChain(cause);
     if (crucible !== undefined && crucible.kind !== 'infra') {
-      return { fatal: true, cause };
+      return { rethrow: cause };
     }
     const status = crucible !== undefined ? 'errored' : 'failed';
     return { status, cause, context: this.scope.context() };
   }
 
+  private isFatal(result: RunResult): boolean {
+    const crucible = this.firstCrucibleInChain(result.cause);
+    return crucible?.kind === 'infra' && crucible.retryable !== true;
+  }
+
   private firstCrucibleInChain(cause: unknown): CrucibleError | undefined {
+    const visited = new Set<unknown>();
     let current = cause;
-    while (current !== null && current !== undefined) {
+    while (current !== null && current !== undefined && !visited.has(current)) {
       if (current instanceof CrucibleError) {
         return current;
       }
+      visited.add(current);
       current = current instanceof Error ? current.cause : undefined;
     }
     return undefined;

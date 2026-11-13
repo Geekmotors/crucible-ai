@@ -47,6 +47,18 @@ describe('Aggregator', () => {
       'errored',
     ],
     [
+      'a discarded run counts in no zone beside a failed run',
+      ['failed', 'discarded'],
+      Threshold.Half,
+      'fail',
+    ],
+    [
+      'a discarded run counts in no zone beside an errored run',
+      ['errored', 'discarded'],
+      Threshold.Half,
+      'errored',
+    ],
+    [
       'a single failed run at a minuscule threshold still fails',
       ['failed'],
       Threshold.Minuscule,

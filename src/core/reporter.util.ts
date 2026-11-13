@@ -1,4 +1,4 @@
-import type { RunResult, VerdictSummary } from './run-result.js';
+import type { AbortSummary, RunResult, VerdictSummary } from './run-result.js';
 import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
 
 const RESPONSE_EXCERPT_LIMIT = 500;
@@ -9,11 +9,11 @@ type FirstFailure =
 
 class Reporter {
   renderVerdict(summary: VerdictSummary): string {
-    const sections = summary.results
-      .map((result, index) => ({ result, number: index + 1 }))
-      .filter(({ result }) => result.status !== 'passed')
-      .map(({ result, number }) => this.renderRunSection(result, number));
-    return [this.headline(summary), ...sections].join('\n\n');
+    return [this.headline(summary), ...this.runSections(summary.results)].join('\n\n');
+  }
+
+  renderAborted(summary: AbortSummary): string {
+    return [this.abortHeadline(summary), ...this.runSections(summary.results)].join('\n\n');
   }
 
   renderFailed(context: RunContext, cause: unknown): string {
@@ -55,6 +55,25 @@ class Reporter {
       return `Verdict errored, not failed: ${rate}; ${tally.errored} errored run(s) left the result inconclusive.`;
     }
     return `Pass rate below threshold: ${rate}.`;
+  }
+
+  private abortHeadline({ results, options }: AbortSummary): string {
+    const discarded = results.filter((result) => result.status === 'discarded').length;
+    return `Test aborted on a fatal error after ${results.length - discarded}/${options.runs} runs settled; ${discarded} in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.`;
+  }
+
+  private runSections(results: readonly RunResult[]): string[] {
+    const numbered = results.map((result, index) => ({ result, number: index + 1 }));
+    const sections = numbered
+      .filter(({ result }) => result.status === 'failed' || result.status === 'errored')
+      .map(({ result, number }) => this.renderRunSection(result, number));
+    const discarded = numbered
+      .filter(({ result }) => result.status === 'discarded')
+      .map(({ number }) => `Run #${number}`);
+    if (discarded.length > 0) {
+      sections.push(`Discarded (aborted in flight, counted in no zone): ${discarded.join(', ')}`);
+    }
+    return sections;
   }
 
   private renderRunSection(result: RunResult, number: number): string {

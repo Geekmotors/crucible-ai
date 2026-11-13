@@ -35,3 +35,11 @@
 - source_spec: 2-1-repeat-and-gate-on-pass-rate.md (code review 2026-11-13)
   summary: The aggregate report renders one section per non-passed run with no bound or grouping, and the headline omits the failed count. Belongs to the Story 3.1 output contract.
   evidence: Reporter.renderVerdict / headline.
+
+- source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
+  summary: The per-test abort reaches only crucible's judge calls; the user's own SUT/provider calls in discarded runs keep running (and spending) after the test rejects. AC6 forbids a public signal handle in 2.3; decide whether a public `crucible.signal`-style accessor is wanted (would need an AD-5 amendment).
+  evidence: Blind Hunter + Edge Case Hunter; `RunScope.abortSignal()` is internal only by spec.
+
+- source_spec: 2-3-fail-fast-without-burning-spend.md (code review 2026-11-13)
+  summary: Story 3.1 output contract — (a) smoke-mode (1-run) fatal now renders the abort headline ("0 in-flight run(s) discarded") instead of the pass-rate headline; (b) runner-side snapshot (settled runs keep status, unsettled → discarded) is only locked by reporter tests over hand-built results, because asserting the thrown report text from runner tests is forbidden (no error-message assertions, no reporter-call capture). Revisit when 3.1 defines a structured report surface.
+  evidence: Acceptance Auditor; `Runner.discardUnsettled`, `Reporter.renderAborted`.

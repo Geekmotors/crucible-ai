@@ -24,18 +24,26 @@ type RunContext = {
 
 type RunStore = {
   readonly context: RunContext;
+  readonly signal: AbortSignal;
   seq: number;
 };
 
 class RunScope {
   private readonly storage = new AsyncLocalStorage<RunStore>();
 
-  enterRun<T>(body: () => T): T {
-    return this.storage.run({ context: { state: [], verdicts: [], errors: [] }, seq: 0 }, body);
+  enterRun<T>(body: () => T, signal: AbortSignal = new AbortController().signal): T {
+    return this.storage.run(
+      { context: { state: [], verdicts: [], errors: [] }, signal, seq: 0 },
+      body,
+    );
   }
 
   context(): RunContext {
     return this.store().context;
+  }
+
+  abortSignal(): AbortSignal {
+    return this.store().signal;
   }
 
   appendState(entries: unknown): void {

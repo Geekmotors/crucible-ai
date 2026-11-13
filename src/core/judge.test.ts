@@ -1,9 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { RunScope } from './state.js';
+import { BlockingAdapter } from './test/blocking-adapter.fake.js';
 import { Capture } from './test/capture.util.js';
+import { ExpiredDeadline } from './test/expired-deadline.fake.js';
 import { JudgeHarness } from './test/judge-harness.util.js';
+import { RunCount } from './test/run-count.enum.js';
 import { ScriptedAdapter } from './test/scripted-adapter.fake.js';
+import { StartGate } from './test/start-gate.util.js';
 
 describe('Judge', () => {
   it('resolves true when the judge reply says the response is coherent', async () => {
@@ -123,5 +127,32 @@ describe('Judge', () => {
         seq: 0,
       },
     ]);
+  });
+
+  it('an in-flight judge call rejects as soon as the run’s test aborts', async () => {
+    const scope = new RunScope();
+    const controller = new AbortController();
+    const judge = JudgeHarness.judge(new BlockingAdapter(new StartGate(RunCount.Single)), scope);
+    const pending = scope.enterRun(
+      () => Capture.rejection(judge.judgeCoherent('the response', 'the claim')),
+      controller.signal,
+    );
+    controller.abort();
+    await expect(pending).resolves.toBeDefined();
+  });
+
+  it('a judge call that outlives its deadline errors as retryable infra — never a plain failure', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(
+      new BlockingAdapter(new StartGate(RunCount.Single)),
+      scope,
+      new ExpiredDeadline().signal,
+    );
+    const error = await scope.enterRun(() =>
+      Capture.rejection(judge.judgeCoherent('the response', 'the claim')),
+    );
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('infra');
+    expect((error as CrucibleError).retryable).toBe(true);
   });
 });
