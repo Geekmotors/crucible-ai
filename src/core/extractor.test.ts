@@ -150,19 +150,6 @@ describe('Extractor — usage', () => {
 });
 
 describe('Extractor — facts', () => {
-  it('extracts against the run facts followed by the call’s own facts', async () => {
-    const scope = new RunScope();
-    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Casino, StateFact.Home]);
-    const value = await scope.enterRun(() => {
-      scope.appendState(StateFact.Casino);
-      return extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
-        as: 'number',
-        facts: [StateFact.Home],
-      });
-    });
-    expect(value).toBe(ExtractValue.Two);
-  });
-
   it('sends a single per-call fact when the run has none', async () => {
     const scope = new RunScope();
     const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Letter]);

@@ -1,64 +1,48 @@
 import { Aggregator } from '../aggregator.util.js';
 import { Reporter } from '../reporter.util.js';
 import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
-import type { RunGate } from '../run-options.js';
-import type { RunResult, RunStatus, VerdictSummary } from '../run-result.js';
+import type { RunResult, RunStatus } from '../run-result.js';
 import type { Verbosity } from '../verbosity.js';
 import type { ErrorRecord, ExtractionRecord, RunLedger, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
 import { ClaimText } from './claim-text.enum.js';
-import { ExtractModeName } from './extract-mode-name.enum.js';
 import { ExtractTarget } from './extract-target.enum.js';
+import { ProviderFault } from './provider-fault.enum.js';
 import { Threshold } from './threshold.enum.js';
-import { VerbosityLevel } from './verbosity-level.enum.js';
 
 class ReportHarness {
-  static context(
-    verdicts: VerdictRecord[] = [],
-    errors: ErrorRecord[] = [],
-    extractions: ExtractionRecord[] = [],
-  ): RunLedger {
-    return { state: [], verdicts, extractions, errors };
+  static trueVerdict(): VerdictRecord {
+    return ReportHarness.verdict(ClaimText.Default, true, 0);
   }
 
-  static falseVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
+  static verdict(claim: string, verdict: boolean, seq: number): VerdictRecord {
     return {
       assertion: AssertionName.Coherent,
-      claim: ClaimText.Default,
-      verdict: false,
+      claim,
+      verdict,
       reasoning: 'the reasoning',
       response: 'the response',
       facts: [],
-      seq: 0,
-      ...overrides,
+      seq,
     };
   }
 
-  static extraction(overrides: Partial<ExtractionRecord> = {}): ExtractionRecord {
+  static extraction(description: ExtractTarget, seq: number): ExtractionRecord {
     return {
       assertion: AssertionName.Extract,
-      description: ExtractTarget.Apples,
-      type: 'number',
-      mode: ExtractModeName.Lenient,
+      description,
+      type: 'string',
+      mode: 'lenient',
       value: null,
       reasoning: 'the reasoning',
       response: 'the response',
       facts: [],
-      seq: 0,
-      ...overrides,
+      seq,
     };
   }
 
-  static extractingRun(
-    status: RunStatus,
-    extractions: ExtractionRecord[],
-    verdicts: VerdictRecord[] = [],
-  ): RunResult {
-    return {
-      status,
-      cause: status === 'passed' ? undefined : new Error(status),
-      context: ReportHarness.context(verdicts, [], extractions),
-    };
+  static judgeError(attempts: number, seq: number): ErrorRecord {
+    return { cause: new Error(ProviderFault.InvalidKey), attempts, seq };
   }
 
   static reporter(
@@ -68,116 +52,41 @@ class ReportHarness {
     return new Reporter(() => ({ excerptChars, verbosity }));
   }
 
-  static fullReporter(): Reporter {
-    return ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, VerbosityLevel.Full);
+  static run(status: RunStatus, cause?: unknown): RunResult {
+    return { status, cause, context: { state: [], verdicts: [], extractions: [], errors: [] } };
   }
 
-  static trueVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
-    return ReportHarness.falseVerdict({ verdict: true, ...overrides });
+  static renderedFailure(cause: unknown): string {
+    return ReportHarness.rendered(ReportHarness.run('failed', cause));
   }
 
-  static claimedRuns(status: RunStatus, claims: readonly string[]): RunResult[] {
-    return claims.map((claim) =>
-      ReportHarness.run(status, status === 'passed' ? undefined : new Error(status), [
-        ReportHarness.falseVerdict({ claim, verdict: status === 'passed' }),
-      ]),
-    );
-  }
-
-  static renderedFullAbort(results: RunResult[]): string {
-    return ReportHarness.fullReporter().renderAborted({
-      results,
-      options: { runs: results.length, threshold: Threshold.Certain },
-      fatal: ReportHarness.firstErroredCause(results),
-    });
-  }
-
-  static renderedPass(
-    results: RunResult[],
-    threshold: number,
-    reporter: Reporter = ReportHarness.fullReporter(),
+  static renderedLedger(
+    status: RunStatus,
+    ledger: Partial<RunLedger>,
+    verbosity: Verbosity = DEFAULT_REPORT_SETTINGS.verbosity,
   ): string {
-    return reporter.renderPassed(ReportHarness.summary(results, threshold));
+    const result = {
+      ...ReportHarness.run(status, new Error(ClaimText.Default)),
+      context: { state: [], verdicts: [], extractions: [], errors: [], ...ledger },
+    };
+    return ReportHarness.rendered(result, verbosity);
   }
 
-  static summary(results: RunResult[], threshold: number): VerdictSummary {
-    const options: RunGate = { runs: results.length, threshold };
+  private static rendered(
+    result: RunResult,
+    verbosity: Verbosity = DEFAULT_REPORT_SETTINGS.verbosity,
+  ): string {
+    const results = [result];
+    const options = { runs: results.length, threshold: Threshold.Certain };
     const tally = new Aggregator().tally(
-      results.map((result) => result.status),
+      results.map(({ status }) => status),
       options,
     );
-    return { results, tally, options };
-  }
-
-  static renderedFailure(
-    verdicts: VerdictRecord[],
-    cause: unknown = new Error('boom'),
-    errors: ErrorRecord[] = [],
-    reporter: Reporter = ReportHarness.reporter(),
-  ): string {
-    return ReportHarness.renderedVerdict(
-      [ReportHarness.run('failed', cause, verdicts, errors)],
-      Threshold.Certain,
-      reporter,
-    );
-  }
-
-  static renderedErrored(cause: unknown, errors: ErrorRecord[] = []): string {
-    return ReportHarness.renderedVerdict(
-      [ReportHarness.run('errored', cause, [], errors)],
-      Threshold.Certain,
-    );
-  }
-
-  static run(
-    status: RunStatus,
-    cause?: unknown,
-    verdicts: VerdictRecord[] = [],
-    errors: ErrorRecord[] = [],
-  ): RunResult {
-    return { status, cause, context: ReportHarness.context(verdicts, errors) };
-  }
-
-  static runs(count: number, status: RunStatus, claim?: string): RunResult[] {
-    const verdicts = claim === undefined ? [] : [ReportHarness.falseVerdict({ claim })];
-    return Array.from({ length: count }, () =>
-      ReportHarness.run(status, new Error(status), verdicts),
-    );
-  }
-
-  static renderedAbort(
-    results: RunResult[],
-    fatal: unknown = ReportHarness.firstErroredCause(results),
-  ): string {
-    return ReportHarness.reporter().renderAborted({
+    return ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, verbosity).renderVerdict({
       results,
-      options: { runs: results.length, threshold: Threshold.Certain },
-      fatal,
+      tally,
+      options,
     });
-  }
-
-  static firstErroredCause(results: RunResult[]): unknown {
-    return results.find((result) => result.status === 'errored')?.cause;
-  }
-
-  static renderedExpiry(
-    results: RunResult[],
-    deadlineMs: number,
-    reporter: Reporter = ReportHarness.reporter(),
-  ): string {
-    return reporter.renderExpired({
-      results,
-      options: { runs: results.length, threshold: Threshold.Certain },
-      deadlineMs,
-    });
-  }
-
-  static renderedVerdict(
-    results: RunResult[],
-    threshold: number,
-    reporter: Reporter = ReportHarness.reporter(),
-  ): string {
-    return reporter.renderVerdict(ReportHarness.summary(results, threshold));
   }
 }
 

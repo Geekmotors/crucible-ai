@@ -4,7 +4,6 @@ import type { FixtureCase, FixtureFile } from './spec-fixtures.util.js';
 
 class MalformedFixture {
   private static base: FixtureFile = SpecFixtures.compute;
-  private static sample: FixtureCase = SpecFixtures.compute.cases[0] as FixtureCase;
 
   static all(): [MalformedFixtureName, unknown][] {
     return [
@@ -37,6 +36,46 @@ class MalformedFixture {
       [MalformedFixtureName.NonKebabArea, { ...MalformedFixture.base, area: 'Verdict' }],
       [MalformedFixtureName.CasesNotList, { ...MalformedFixture.base, cases: {} }],
       [MalformedFixtureName.NotObject, [MalformedFixture.base]],
+      [
+        MalformedFixtureName.UnknownInputKey,
+        MalformedFixture.withCase({ input: { threshold: 1, statuses: {}, thresold: 1 } }),
+      ],
+      [
+        MalformedFixtureName.MissingInputKey,
+        MalformedFixture.withCase({ input: { statuses: {} } }),
+      ],
+      [
+        MalformedFixtureName.MistypedInput,
+        MalformedFixture.withCase({ input: { threshold: 1, statuses: { passed: '1' } } }),
+      ],
+      [MalformedFixtureName.UnknownOperation, { ...MalformedFixture.base, operation: 'tally' }],
+      [MalformedFixtureName.OperationInWrongArea, { ...MalformedFixture.base, area: 'report' }],
+      [
+        MalformedFixtureName.ValueForTextOperation,
+        MalformedFixture.inFile(SpecFixtures.render, { expect: { value: 'text' } }),
+      ],
+      [
+        MalformedFixtureName.ZeroExcerptChars,
+        MalformedFixture.withRenderInput({
+          settings: { excerptChars: 0, verbosity: 'default' },
+        }),
+      ],
+      [
+        MalformedFixtureName.RetryWithoutDelay,
+        MalformedFixture.inFile(SpecFixtures.trace, {
+          input: {
+            ...(MalformedFixture.first(SpecFixtures.trace).input as Record<string, unknown>),
+            events: [
+              {
+                event: 'provider-failure',
+                attempt: 1,
+                cause: { name: 'Error', message: 'flake' },
+                next: 'retry',
+              },
+            ],
+          },
+        }),
+      ],
     ];
   }
 
@@ -45,12 +84,25 @@ class MalformedFixture {
   }
 
   private static withCase(changes: Record<string, unknown>): unknown {
+    return MalformedFixture.inFile(MalformedFixture.base, changes);
+  }
+
+  private static withRenderInput(changes: Record<string, unknown>): unknown {
+    const input = MalformedFixture.first(SpecFixtures.render).input as Record<string, unknown>;
+    return MalformedFixture.inFile(SpecFixtures.render, { input: { ...input, ...changes } });
+  }
+
+  private static first(file: FixtureFile): FixtureCase {
+    return file.cases[0] as FixtureCase;
+  }
+
+  private static inFile(file: FixtureFile, changes: Record<string, unknown>): unknown {
     const changed = Object.fromEntries(
-      Object.entries({ ...MalformedFixture.sample, ...changes }).filter(
+      Object.entries({ ...MalformedFixture.first(file), ...changes }).filter(
         ([, value]) => value !== undefined,
       ),
     );
-    return { ...MalformedFixture.base, cases: [changed] };
+    return { ...file, cases: [changed] };
   }
 }
 

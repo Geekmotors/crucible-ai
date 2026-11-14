@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
+import { ConformanceGoldens } from './test/conformance-goldens.util.js';
 import { MalformedFixture } from './test/malformed-fixture.util.js';
 import { SchemaCheck } from './test/schema-check.util.js';
 import { SpecFixtures } from './test/spec-fixtures.util.js';
@@ -22,6 +23,10 @@ describe('spec fixture files', () => {
       expect(file.cases.filter((fixture) => !fixture.id.startsWith(prefix))).toEqual([]);
     },
   );
+
+  it('holds a golden payload for exactly the current conformance cases, built from their inputs', () => {
+    expect(ConformanceGoldens.drift()).toEqual([]);
+  });
 
   it.each(MalformedFixture.all())('the schema refuses a fixture with %s', (_label, file) => {
     expect(schema.violations(file)).not.toEqual([]);

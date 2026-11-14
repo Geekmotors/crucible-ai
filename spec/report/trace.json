@@ -1,0 +1,835 @@
+{
+  "area": "report",
+  "operation": "trace",
+  "description": "Renders the debug trace written for a sequence of trace events.",
+  "cases": [
+    {
+      "id": "report-trace-default-is-silent",
+      "description": "Below debug verbosity the trace writes nothing, for any event.",
+      "input": {
+        "settings": {
+          "verbosity": "default",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          { "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 },
+          {
+            "run": 1,
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "m",
+            "prompt": "p",
+            "attempt": 1
+          },
+          { "run": 1, "event": "provider-response", "attempt": 1, "reply": "r" },
+          {
+            "run": 1,
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "Error", "message": "401" },
+            "next": "fatal"
+          },
+          {
+            "run": 1,
+            "event": "judge-reply-rejected",
+            "ask": 1,
+            "cause": { "name": "Error", "message": "bad" }
+          },
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "verdict": {
+                "claim": "c",
+                "verdict": true,
+                "reasoning": "The response contradicts the claim.",
+                "response": "The response text."
+              }
+            }
+          },
+          { "event": "run-settled", "number": 1, "status": "passed" },
+          {
+            "event": "verdict-reached",
+            "outcome": "passed",
+            "need": 1,
+            "passed": 1,
+            "failed": 0,
+            "errored": 0,
+            "runs": 1
+          },
+          {
+            "event": "test-aborted",
+            "cause": { "name": "Error", "message": "fatal" },
+            "discarded": 1
+          },
+          { "event": "test-expired", "deadlineMs": 1000, "discarded": 1 }
+        ]
+      },
+      "expect": { "text": "" }
+    },
+    {
+      "id": "report-trace-full-is-silent",
+      "description": "Full verbosity writes no live trace, for any event.",
+      "input": {
+        "settings": {
+          "verbosity": "full",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          { "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 },
+          {
+            "run": 1,
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "m",
+            "prompt": "p",
+            "attempt": 1
+          },
+          { "run": 1, "event": "provider-response", "attempt": 1, "reply": "r" },
+          {
+            "run": 1,
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "Error", "message": "401" },
+            "next": "fatal"
+          },
+          {
+            "run": 1,
+            "event": "judge-reply-rejected",
+            "ask": 1,
+            "cause": { "name": "Error", "message": "bad" }
+          },
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "verdict": {
+                "claim": "c",
+                "verdict": true,
+                "reasoning": "The response contradicts the claim.",
+                "response": "The response text."
+              }
+            }
+          },
+          { "event": "run-settled", "number": 1, "status": "passed" },
+          {
+            "event": "verdict-reached",
+            "outcome": "passed",
+            "need": 1,
+            "passed": 1,
+            "failed": 0,
+            "errored": 0,
+            "runs": 1
+          },
+          {
+            "event": "test-aborted",
+            "cause": { "name": "Error", "message": "fatal" },
+            "discarded": 1
+          },
+          { "event": "test-expired", "deadlineMs": 1000, "discarded": 1 }
+        ]
+      },
+      "expect": { "text": "" }
+    },
+    {
+      "id": "report-trace-header-once",
+      "description": "The first line written opens with the engine and resolved-config header, once.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          { "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 },
+          { "event": "test-expired", "deadlineMs": 39000, "discarded": 0 }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test started: 10 run(s) at threshold 0.9, deadline 39000 ms\n[crucible:debug] test deadline of 39000 ms expired; 0 in-flight run(s) discarded\n"
+      }
+    },
+    {
+      "id": "report-trace-meta-keys-only",
+      "description": "Meta keys are listed in order; their values are never written.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "HTTP-Referer": "https://secret.example", "X-Title": "secret" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [{ "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 }]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [HTTP-Referer, X-Title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test started: 10 run(s) at threshold 0.9, deadline 39000 ms\n"
+      }
+    },
+    {
+      "id": "report-trace-no-meta",
+      "description": "Without meta the key list is empty.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [{ "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 }]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test started: 10 run(s) at threshold 0.9, deadline 39000 ms\n"
+      }
+    },
+    {
+      "id": "report-trace-test-defaults-json",
+      "description": "testDefaults is written as compact JSON in the order given, with excerptChars.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": { "runs": 3, "threshold": 0.8 },
+          "excerptChars": 200
+        },
+        "events": [{ "event": "test-started", "runs": 10, "threshold": 0.9, "deadlineMs": 39000 }]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {\"runs\":3,\"threshold\":0.8}, excerptChars 200\n[crucible:debug] test started: 10 run(s) at threshold 0.9, deadline 39000 ms\n"
+      }
+    },
+    {
+      "id": "report-trace-run-tag",
+      "description": "An event inside a run is tagged with its run number.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [{ "run": 3, "event": "provider-response", "attempt": 1, "reply": "{}" }]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #3 provider response attempt 1\n    reply (2 chars): {}\n"
+      }
+    },
+    {
+      "id": "report-trace-provider-request",
+      "description": "A provider request names provider, model, system prompt length and meta keys, then the prompt with its length on an indented line; multi-line prompts stay indented.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "run": 2,
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "test/model",
+            "system": "You are a judge.",
+            "meta": { "user": "u1", "x": 1 },
+            "prompt": "RESPONSE\n<<<\nhi\n>>>",
+            "attempt": 1
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #2 provider request attempt 1 to \"openrouter\": model \"test/model\", system prompt 16 chars, meta keys [user, x]\n    prompt (19 chars): RESPONSE\n    <<<\n    hi\n    >>>\n"
+      }
+    },
+    {
+      "id": "report-trace-provider-request-no-system",
+      "description": "Without a system prompt the request says none; without meta the key list is empty.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-request",
+            "provider": "openai",
+            "model": "gpt",
+            "prompt": "p",
+            "attempt": 2
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider request attempt 2 to \"openai\": model \"gpt\", system prompt none, meta keys []\n    prompt (1 chars): p\n"
+      }
+    },
+    {
+      "id": "report-trace-prompt-truncated",
+      "description": "A prompt longer than 2000 characters is cut at 2000 and marked, with both lengths.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "m",
+            "prompt": "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
+            "attempt": 1
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider request attempt 1 to \"openrouter\": model \"m\", system prompt none, meta keys []\n    prompt (first 2000 of 2500 chars): 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789…\n"
+      }
+    },
+    {
+      "id": "report-trace-prompt-at-limit",
+      "description": "A prompt of exactly 2000 characters is written whole.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "m",
+            "prompt": "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
+            "attempt": 1
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider request attempt 1 to \"openrouter\": model \"m\", system prompt none, meta keys []\n    prompt (2000 chars): 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789\n"
+      }
+    },
+    {
+      "id": "report-trace-reply-truncation-holds-back-split-pair",
+      "description": "A cut at 2000 that would split a surrogate pair holds the high surrogate back.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-response",
+            "attempt": 1,
+            "reply": "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678😀tail"
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider response attempt 1\n    reply (first 1999 of 2005 chars): 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678…\n"
+      }
+    },
+    {
+      "id": "report-trace-provider-response",
+      "description": "A provider reply is written with its length.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-response",
+            "attempt": 2,
+            "reply": "{\"verdict\": true, \"reasoning\": \"ok\"}"
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider response attempt 2\n    reply (36 chars): {\"verdict\": true, \"reasoning\": \"ok\"}\n"
+      }
+    },
+    {
+      "id": "report-trace-provider-failure-retry",
+      "description": "A retryable failure states the backoff in whole milliseconds, rounding half up.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "ProviderError", "message": "429 Too Many Requests" },
+            "next": "retry",
+            "delayMs": 1500
+          },
+          {
+            "event": "provider-failure",
+            "attempt": 2,
+            "cause": { "name": "Error", "message": "503" },
+            "next": "retry",
+            "delayMs": 1234.5
+          },
+          {
+            "event": "provider-failure",
+            "attempt": 3,
+            "cause": { "name": "Error", "message": "503" },
+            "next": "retry",
+            "delayMs": 999.4
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider attempt 1 failed (retryable, retrying in 1500 ms): ProviderError: 429 Too Many Requests\n[crucible:debug] provider attempt 2 failed (retryable, retrying in 1235 ms): Error: 503\n[crucible:debug] provider attempt 3 failed (retryable, retrying in 999 ms): Error: 503\n"
+      }
+    },
+    {
+      "id": "report-trace-provider-failure-final",
+      "description": "Fatal, exhausted and aborted failures each say why there is no retry.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" },
+            "next": "fatal"
+          },
+          {
+            "event": "provider-failure",
+            "attempt": 4,
+            "cause": { "name": "Error", "message": "503" },
+            "next": "exhausted"
+          },
+          {
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "AbortError", "message": "This operation was aborted" },
+            "next": "aborted"
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] provider attempt 1 failed (fatal, not retried): ProviderError: 401 Unauthorized\n[crucible:debug] provider attempt 4 failed (retryable, but no attempts left): Error: 503\n[crucible:debug] provider attempt 1 failed (the call was aborted): AbortError: This operation was aborted\n"
+      }
+    },
+    {
+      "id": "report-trace-judge-reply-rejected",
+      "description": "An unusable judge reply is written with its cause; a multi-line cause stays indented.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "run": 1,
+            "event": "judge-reply-rejected",
+            "ask": 1,
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge reply was not the expected JSON.\nUnexpected token"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #1 judge reply 1 unusable: CrucibleError: The judge reply was not the expected JSON.\n    Unexpected token\n"
+      }
+    },
+    {
+      "id": "report-trace-judge-recorded-verdict",
+      "description": "A recorded verdict names verdict, assertion and claim, then the reasoning with its length.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "verdict": {
+                "claim": "The reply is polite.",
+                "verdict": true,
+                "reasoning": "It says please.",
+                "response": "The response text."
+              }
+            }
+          },
+          {
+            "run": 2,
+            "event": "judge-recorded",
+            "call": {
+              "verdict": {
+                "claim": "Paris is in Spain.",
+                "verdict": false,
+                "reasoning": "Line one.\nLine two.",
+                "response": "The response text."
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #1 judge verdict true for coherent \"The reply is polite.\"\n    reasoning (15 chars): It says please.\n[crucible:debug] run #2 judge verdict false for coherent \"Paris is in Spain.\"\n    reasoning (19 chars): Line one.\n    Line two.\n"
+      }
+    },
+    {
+      "id": "report-trace-judge-recorded-extraction",
+      "description": "A recorded extraction names the JSON value, description, type and mode.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "extraction": {
+                "description": "the price",
+                "type": "number",
+                "mode": "strict",
+                "value": 12.5,
+                "reasoning": "It says 12.50.",
+                "response": "The response text."
+              }
+            }
+          },
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "extraction": {
+                "description": "the name",
+                "type": "string",
+                "mode": "lenient",
+                "value": "Zoë \"Z\"",
+                "reasoning": "Named.",
+                "response": "The response text."
+              }
+            }
+          },
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "extraction": {
+                "description": "in stock",
+                "type": "boolean",
+                "mode": "strict",
+                "value": null,
+                "reasoning": "Hedged.",
+                "response": "The response text."
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #1 judge value 12.5 for extract \"the price\" as number (strict)\n    reasoning (14 chars): It says 12.50.\n[crucible:debug] run #1 judge value \"Zoë \\\"Z\\\"\" for extract \"the name\" as string (lenient)\n    reasoning (6 chars): Named.\n[crucible:debug] run #1 judge value null for extract \"in stock\" as boolean (strict)\n    reasoning (7 chars): Hedged.\n"
+      }
+    },
+    {
+      "id": "report-trace-judge-recorded-error",
+      "description": "A recorded judge error names the attempt count and cause.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "run": 4,
+            "event": "judge-recorded",
+            "call": {
+              "error": {
+                "cause": {
+                  "name": "CrucibleError",
+                  "message": "The judge call did not finish within 30000 ms."
+                },
+                "attempts": 3
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #4 judge call errored after 3 attempt(s): CrucibleError: The judge call did not finish within 30000 ms.\n"
+      }
+    },
+    {
+      "id": "report-trace-run-settled",
+      "description": "Each settled run states its status, and its cause when it has one.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          { "event": "run-settled", "number": 1, "status": "passed" },
+          {
+            "event": "run-settled",
+            "number": 2,
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" }
+          },
+          {
+            "event": "run-settled",
+            "number": 3,
+            "status": "errored",
+            "cause": { "name": "FetchError", "message": "socket hang up" }
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] run #1 settled passed\n[crucible:debug] run #2 settled failed: AssertionError: expected false to be true\n[crucible:debug] run #3 settled errored: FetchError: socket hang up\n"
+      }
+    },
+    {
+      "id": "report-trace-verdict-reached",
+      "description": "The verdict line names the zone, counts, run count and need.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "verdict-reached",
+            "outcome": "passed",
+            "need": 9,
+            "passed": 10,
+            "failed": 0,
+            "errored": 0,
+            "runs": 10
+          },
+          {
+            "event": "verdict-reached",
+            "outcome": "failed",
+            "need": 9,
+            "passed": 5,
+            "failed": 5,
+            "errored": 0,
+            "runs": 10
+          },
+          {
+            "event": "verdict-reached",
+            "outcome": "errored",
+            "need": 9,
+            "passed": 8,
+            "failed": 0,
+            "errored": 2,
+            "runs": 10
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] verdict pass: 10 passed, 0 failed, 0 errored of 10 (need 9)\n[crucible:debug] verdict fail: 5 passed, 5 failed, 0 errored of 10 (need 9)\n[crucible:debug] verdict errored: 8 passed, 0 failed, 2 errored of 10 (need 9)\n"
+      }
+    },
+    {
+      "id": "report-trace-test-aborted",
+      "description": "An abort states the fatal cause and how many in-flight runs were discarded.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          {
+            "event": "test-aborted",
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" },
+            "discarded": 4
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test aborted on a fatal error: ProviderError: 401 Unauthorized; 4 in-flight run(s) discarded\n"
+      }
+    },
+    {
+      "id": "report-trace-test-expired",
+      "description": "An expiry states the deadline and how many in-flight runs were discarded.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [{ "event": "test-expired", "deadlineMs": 39000, "discarded": 2 }]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test deadline of 39000 ms expired; 2 in-flight run(s) discarded\n"
+      }
+    },
+    {
+      "id": "report-trace-whole-test",
+      "description": "A two-run test traced end to end.",
+      "input": {
+        "settings": {
+          "verbosity": "debug",
+          "provider": "openrouter",
+          "model": "test/model",
+          "meta": { "x-title": "secret title" },
+          "testDefaults": {},
+          "excerptChars": 500
+        },
+        "events": [
+          { "event": "test-started", "runs": 2, "threshold": 1, "deadlineMs": 31000 },
+          {
+            "run": 1,
+            "event": "provider-request",
+            "provider": "openrouter",
+            "model": "test/model",
+            "system": "schema",
+            "prompt": "RESPONSE\n<<<\nhi\n>>>\n\nCLAIM\n<<<\ngreets\n>>>",
+            "attempt": 1
+          },
+          {
+            "run": 1,
+            "event": "provider-response",
+            "attempt": 1,
+            "reply": "{\"verdict\":true,\"reasoning\":\"It greets.\"}"
+          },
+          {
+            "run": 1,
+            "event": "judge-recorded",
+            "call": {
+              "verdict": {
+                "claim": "greets",
+                "verdict": true,
+                "reasoning": "It greets.",
+                "response": "hi"
+              }
+            }
+          },
+          { "event": "run-settled", "number": 1, "status": "passed" },
+          {
+            "run": 2,
+            "event": "provider-failure",
+            "attempt": 1,
+            "cause": { "name": "ProviderError", "message": "503 Service Unavailable" },
+            "next": "retry",
+            "delayMs": 250
+          },
+          { "run": 2, "event": "provider-response", "attempt": 2, "reply": "not json" },
+          {
+            "run": 2,
+            "event": "judge-reply-rejected",
+            "ask": 1,
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge reply was not the expected JSON."
+            }
+          },
+          {
+            "event": "run-settled",
+            "number": 2,
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge reply was not the expected JSON."
+            }
+          },
+          {
+            "event": "verdict-reached",
+            "outcome": "errored",
+            "need": 2,
+            "passed": 1,
+            "failed": 0,
+            "errored": 1,
+            "runs": 2
+          }
+        ]
+      },
+      "expect": {
+        "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n[crucible:debug] config resolved: provider \"openrouter\", model \"test/model\", meta keys [x-title] (values not shown), testDefaults {}, excerptChars 500\n[crucible:debug] test started: 2 run(s) at threshold 1, deadline 31000 ms\n[crucible:debug] run #1 provider request attempt 1 to \"openrouter\": model \"test/model\", system prompt 6 chars, meta keys []\n    prompt (41 chars): RESPONSE\n    <<<\n    hi\n    >>>\n\n    CLAIM\n    <<<\n    greets\n    >>>\n[crucible:debug] run #1 provider response attempt 1\n    reply (41 chars): {\"verdict\":true,\"reasoning\":\"It greets.\"}\n[crucible:debug] run #1 judge verdict true for coherent \"greets\"\n    reasoning (10 chars): It greets.\n[crucible:debug] run #1 settled passed\n[crucible:debug] run #2 provider attempt 1 failed (retryable, retrying in 250 ms): ProviderError: 503 Service Unavailable\n[crucible:debug] run #2 provider response attempt 2\n    reply (8 chars): not json\n[crucible:debug] run #2 judge reply 1 unusable: CrucibleError: The judge reply was not the expected JSON.\n[crucible:debug] run #2 settled errored: CrucibleError: The judge reply was not the expected JSON.\n[crucible:debug] verdict errored: 1 passed, 0 failed, 1 errored of 2 (need 2)\n"
+      }
+    }
+  ]
+}

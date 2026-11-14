@@ -7,6 +7,7 @@ type SchemaNode = {
   items?: SchemaNode;
   minItems?: number;
   minLength?: number;
+  minimum?: number;
   pattern?: string;
   enum?: unknown[];
   oneOf?: SchemaNode[];
@@ -24,6 +25,7 @@ class SchemaCheck {
     'items',
     'minItems',
     'minLength',
+    'minimum',
     'pattern',
     'enum',
     'oneOf',
@@ -50,6 +52,7 @@ class SchemaCheck {
       ...SchemaCheck.typed(node, value, path),
       ...SchemaCheck.enumerated(node, value, path),
       ...SchemaCheck.text(node, value, path),
+      ...SchemaCheck.bounded(node, value, path),
       ...this.list(node, value, path),
       ...this.record(node, value, path),
     ];
@@ -139,6 +142,13 @@ class SchemaCheck {
         ? [`${path}: does not match ${node.pattern}`]
         : [];
     return [...short, ...unmatched];
+  }
+
+  private static bounded(node: SchemaNode, value: unknown, path: string): string[] {
+    if (node.minimum === undefined || typeof value !== 'number' || value >= node.minimum) {
+      return [];
+    }
+    return [`${path}: less than ${node.minimum}`];
   }
 
   private static hasType(type: string, value: unknown): boolean {

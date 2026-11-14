@@ -745,3 +745,21 @@ So that `make e2e` and CI are cheap, deterministic and not flaky, while model be
 **Then** CI runs `make conformance` automatically when `schemas/`, the conformance cases or the payload-building code change, and on a weekly schedule (catches provider/model drift); the release checklist requires a passing conformance run before tagging
 
 **And** `make e2e` drops from 72 to ≤ 3 live judge calls and CI per main push from 22 to ≤ 2; docs (RELEASING.md, judge-models/conformance docs) say where model semantics are covered (`make conformance`, run before releases)
+
+### Story 8.6: Harden prompt fencing against forged sections
+
+As a developer testing a system that an adversary can steer,
+I want a reply that tries to close a fenced section and forge a new one to be neutralised whatever its line endings,
+So that the system under test cannot rewrite the judge's prompt.
+
+**Acceptance Criteria:**
+
+**Given** content placed in a fenced section (`RESPONSE`, `STATE`, `CLAIM`, `TARGET`)
+**When** any line, split on every line break (`\n`, `\r\n`, `\r`, U+2028, U+2029) for the check only, equals `<<<` or `>>>` after trimming surrounding white space
+**Then** that line is neutralised; the original separators and all other content are kept byte-for-byte
+
+**And** the TypeScript payload builder, the jq conformance builder and the payload fixtures implement the same rule (new fixture cases for CRLF, CR, U+2028/2029 and padded fences; goldens regenerated)
+**And** `make conformance` passes on the default judge before merge; CHANGELOG notes the change
+**And** this story lands before Story 8.5 removes the TypeScript conformance e2e
+
+Also for 8.3/8.5: prove TS and jq send the same system prompt (`schemas/*.md` verbatim) and the same request envelope (model, meta, OpenRouter usage field) — not covered by the 8.2 payload goldens.
