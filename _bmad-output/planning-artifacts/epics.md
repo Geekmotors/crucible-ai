@@ -580,3 +580,24 @@ So that "I think so" counts as yes while I can still demand a firm commitment wh
 **And** the extract schema defines both modes; the conformance harness covers both with cases on each side of the line
 **And** the failure report shows which mode each extraction used
 **And** docs and CHANGELOG state the default change (breaking, pre-1.0)
+
+### Story 6.5: Facts — one name for state, per call or per run
+
+As a developer giving the judge the ground truth my system worked from,
+I want one clearly named function for it, and the option to pass facts with a single assertion,
+So that the common case reads naturally and multi-step tests stay possible.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.facts(fact: string | readonly string[])` inside a running `crucible.it()` body
+**Then** it adds the facts to the run's state, exactly as `load`/`append` do today (append-only, per run, read when an assertion is called)
+**And** `crucible.load()` and `crucible.append()` remain as aliases with identical behaviour, marked `@deprecated` in JSDoc (removal planned for 1.0), and are no longer shown in README or guides
+
+**Given** `crucible.coherent(actual, expectation, { facts })` or `crucible.extract(text, description, { as, facts })`
+**Then** those facts are sent with that call only, after the run's facts; they are not added to the run's state and later calls do not see them
+**And** `facts` follows the same validation as `crucible.facts()` (string or array of strings, else `usage`)
+**And** per-call facts work inside a running `crucible.it()` body (the same scope rules as today); the failure report shows the facts each judged call used
+
+**And** the judge payload section stays `STATE` (instruction schema unchanged; conformance unaffected); docs call the concept "facts" and explain the wire name once
+**And** README and guides use `crucible.facts()`, with an example showing facts taken from the system under test (e.g. `crucible.facts(assistant.getLogs())`), and the Quick start shows a first test without facts
+**And** CHANGELOG `## Unreleased` lists the new function, the per-call option and the deprecations

@@ -92,13 +92,14 @@ import { createAssistant } from '../src/assistant';
 
 crucible.it('declines to export on the free plan', async () => {
   const assistant = createAssistant({ plan: 'free' });
-  crucible.load('Free-plan users cannot export reports.');
 
   const reply = await assistant.ask('Export my report as PDF.');
 
   expect(await crucible.coherent(reply, 'The reply declines the export')).toBe(true);
 });
 ```
+
+The judge sees only the reply and the claim. When whether a reply is right depends on what your system knew, [give the judge state](#give-the-judge-state).
 
 Each run calls your system and the judge, so an unconfigured test costs 10 runs of your system and 10 judge calls per assertion. For a single run that must pass, like a normal Jest test, declare `{ runs: 1, threshold: 1 }` on the test or in [`testDefaults`](#project-wide-defaults).
 
@@ -125,7 +126,7 @@ A threshold is a sampled estimate. A system that is truly 95% reliable fails a `
 
 ### Give the judge state
 
-Each run starts with empty state. Use `load` while arranging and `append` for facts that arise later. A `coherent()` call judges against the state as it stood when you called it:
+Use state when the right answer depends on what your system knew: a secret it must keep, a fact that changed, something a character can't know yet. The judge treats state as ground truth, separate from the reply it judges, so a test can check that a reply does *not* reveal something. Each run starts with empty state. Use `load` while arranging and `append` for facts that arise later. A `coherent()` call judges against the state as it stood when you called it:
 
 ```ts
 crucible.it('remembers a change of venue', async () => {
@@ -183,6 +184,26 @@ Put defaults for every `crucible.it()` in the config; they replace the built-in 
 ```
 
 `"testDefaults": { "runs": 1, "threshold": 1 }` makes every test a single run that must pass, the built-in behaviour up to 0.3.0.
+
+### Group settings
+
+Declare shared settings once on a group with `crucible.describe`; each test inside states only what differs:
+
+```ts
+crucible.describe('refund policy', { runs: 20, threshold: 0.85 }, () => {
+  crucible.it('explains the 30-day window', async () => {
+    const reply = await createAssistant().ask('Can I return this after three weeks?');
+    expect(await crucible.coherent(reply, 'The reply allows a return within 30 days')).toBe(true);
+  });
+
+  crucible.it('never promises cash', { threshold: 1 }, async () => {
+    const reply = await createAssistant().ask('Can I get cash back?');
+    expect(await crucible.coherent(reply, 'The reply offers store credit, not cash')).toBe(true);
+  });
+});
+```
+
+Each field resolves on its own, last wins: built-in → `testDefaults` → outer `crucible.describe` → inner `crucible.describe` → the test's own options. Plain Jest `describe` blocks can sit inside or around a group. See [Runs and threshold](docs/runs-and-threshold.md#group-settings-crucibledescribe).
 
 ### Read a failure
 

@@ -15,8 +15,8 @@ import type {
 } from 'crucible-ai';
 ```
 
-`crucible` is a frozen object with five functions: [`it`](#crucibleit),
-[`coherent`](#cruciblecoherent), [`extract`](#crucibleextract),
+`crucible` is a frozen object with six functions: [`it`](#crucibleit),
+[`describe`](#crucibledescribe), [`coherent`](#cruciblecoherent), [`extract`](#crucibleextract),
 [`load`](#crucibleload-and-crucibleappend) and
 [`append`](#crucibleload-and-crucibleappend). There are no `crucible.it.only`,
 `.skip` or `.each` variants; to skip inference tests, wrap them in Jest's
@@ -69,6 +69,68 @@ The full reference — run statuses, the three-zone verdict, the failure
 report, verbosity, the [timeouts](runs-and-threshold.md#timeout) and the
 re-entrancy contract — is in
 [Runs and threshold](runs-and-threshold.md#crucibleit-reference).
+
+## `crucible.describe()`
+
+```ts
+crucible.describe(name, fn);
+crucible.describe(name, { runs, threshold, inferenceTimeout, testTimeout }, fn);
+```
+
+Registers a Jest `describe` block named `name` and runs `fn` to collect its
+tests, so the group shows up in Jest's output like any `describe`. The
+options take the same fields as `crucible.it()` options, and every
+`crucible.it()` declared inside `fn` inherits them, at any depth — plain Jest
+`describe` blocks inside or around the group do not break inheritance:
+
+```ts
+crucible.describe('refund policy', { runs: 20, threshold: 0.85 }, () => {
+  crucible.it('explains the 30-day window', async () => {
+    /* 20 runs, 17 must pass */
+  });
+
+  describe('edge cases', () => {
+    crucible.it('handles a missing receipt', { threshold: 0.95 }, async () => {
+      /* 20 runs, 19 must pass */
+    });
+  });
+});
+```
+
+Each field resolves on its own, last wins: the built-in default, then the
+config's `testDefaults`, then the outer `crucible.describe`, then the inner
+`crucible.describe`, then the test's own options (a trailing timeout number
+counts as the test's `testTimeout`). A field a level leaves out comes from
+further up, so a group `{ runs: 20 }` keeps the threshold from
+`testDefaults`. A `crucible.it()` outside any `crucible.describe` behaves as
+if there were none.
+
+The built-in test timeout `30000 + 1000 × (runs − 1)` uses the resolved
+`runs`, so a group `{ runs: 20 }` gives its tests 49 s — unless a
+`testTimeout` is declared at any level (config, group or test), in which case
+the nearest declared one wins and does not grow with `runs`. A group
+`testTimeout` with a trailing timeout on a test inside is allowed (the test
+wins); a trailing timeout together with `testTimeout` in the same test's
+options is still a `usage` error.
+
+`fn` must be synchronous, like Jest's own `describe`. Invalid options (the
+same rules as `crucible.it()`), a missing or non-function `fn`, an argument
+after `fn`, or an `fn` that returns a value (a promise included) throw a
+`CrucibleError` of kind `usage` when the file is collected, which fails the
+file. Options are checked before the group is registered; a returned promise
+can only be seen after `fn` has run, so tests an async `fn` declared before
+its first `await` are already registered by then, and anything after the
+`await` runs outside the group. A later rejection of that promise is
+absorbed rather than reported as an unhandled rejection. Group settings
+never leak into sibling groups or later tests, even when `fn` throws. The two
+forms are TypeScript overloads; `crucible.describe(name, options)` without
+`fn` is a compile error.
+
+There are no `.only`, `.skip` or `.each` variants of `crucible.describe`.
+Jest's own `describe.only`, `describe.skip` and `describe.each` work around
+or inside a group: wrap a group in `describe.skip` to skip it, in
+`describe.only` to focus it, or in `describe.each` to repeat it per case;
+inheritance holds in every case.
 
 ## `crucible.coherent()`
 

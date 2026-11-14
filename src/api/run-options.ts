@@ -7,7 +7,7 @@ type RunOptions = {
    * so 10 runs cost 10 runs of your system and 10 judge calls per assertion.
    * Integer ≥ 1.
    *
-   * @default testDefaults.runs, else 10
+   * @default the enclosing crucible.describe, else testDefaults.runs, else 10
    */
   readonly runs?: ResolvableRunOptions['runs'];
   /**
@@ -15,7 +15,7 @@ type RunOptions = {
    * of runs needed is rounded up, so 0.9 of fewer than 10 runs needs every
    * run. Number in (0, 1].
    *
-   * @default testDefaults.threshold, else 0.9 (9 of 10 runs)
+   * @default the enclosing crucible.describe, else testDefaults.threshold, else 0.9 (9 of 10 runs)
    */
   readonly threshold?: ResolvableRunOptions['threshold'];
   /**
@@ -23,7 +23,7 @@ type RunOptions = {
    * reply attempt may take, provider retries included. Integer from 1 to
    * 2147483647.
    *
-   * @default testDefaults.inferenceTimeout, else 30000
+   * @default the enclosing crucible.describe, else testDefaults.inferenceTimeout, else 30000
    */
   readonly inferenceTimeout?: ResolvableRunOptions['inferenceTimeout'];
   /**
@@ -31,7 +31,7 @@ type RunOptions = {
    * `timeout` argument to `crucible.it()` sets the same budget. Integer from
    * 1 to 2147483647.
    *
-   * @default testDefaults.testTimeout, else 30000 + 1000 × (runs − 1) (39000 for 10 runs)
+   * @default the enclosing crucible.describe, else testDefaults.testTimeout, else 30000 + 1000 × (runs − 1) (39000 for 10 runs)
    */
   readonly testTimeout?: ResolvableRunOptions['testTimeout'];
 };

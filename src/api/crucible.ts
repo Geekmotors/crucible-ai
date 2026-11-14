@@ -117,6 +117,14 @@ const crucible: Readonly<CrucibleSurface> = Object.freeze({
   ): void {
     compositionRoot.jestBinding().register(name, optsOrBody, bodyOrTimeout, timeout);
   },
+  describe(
+    name: string,
+    optsOrFn: RunOptions | (() => void),
+    fn?: () => void,
+    ...surplus: unknown[]
+  ): void {
+    compositionRoot.jestBinding().group(name, optsOrFn, fn, ...surplus);
+  },
   coherent(actual: string, expectation: string): Promise<boolean> {
     return compositionRoot.coherentJudge().judgeCoherent(actual, expectation);
   },

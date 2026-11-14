@@ -13,6 +13,8 @@ import { CustomTimeout } from '../core/test/custom-timeout.enum.js';
 import { InvalidTimeout } from '../core/test/invalid-timeout.enum.js';
 import { ManualTimer } from '../core/test/manual-timer.fake.js';
 import { JestBinding } from './jest.js';
+import { DescribeRegistrarFake } from './test/describe-registrar.fake.js';
+import { GroupName } from './test/group-name.enum.js';
 import { InvalidOption } from './test/invalid-option.enum.js';
 import { JestBindingHarness } from './test/jest-harness.util.js';
 import { RegistrarFake } from './test/registrar.fake.js';
@@ -321,6 +323,247 @@ describe('JestBinding — test timeout', () => {
         CustomTimeout.Short as unknown as () => void,
       ),
     );
+    expect(error.kind).toBe('usage');
+  });
+});
+
+describe('JestBinding — group settings', () => {
+  it('registers one describe block under the given name', () => {
+    const describes = new DescribeRegistrarFake();
+    JestBindingHarness.binding(
+      new RegistrarFake(),
+      new RunScope(),
+      {},
+      new ManualTimer(),
+      describes,
+    ).group(GroupName.Checkout, () => {});
+    expect(describes.names).toEqual([GroupName.Checkout]);
+  });
+
+  it('collects the tests declared in the callback', () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    binding.group(GroupName.Checkout, () => {
+      binding.register('first', async () => {});
+      binding.register('second', async () => {});
+    });
+    expect(registrar.registrations).toHaveLength(2);
+  });
+
+  it('a test inside a group executes the group run count', async () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    let executed = 0;
+    binding.group(GroupName.Checkout, { runs: RunCount.Smaller }, () => {
+      binding.register('inherits', async () => {
+        executed += 1;
+      });
+    });
+    await registrar.registrations[0]?.fn();
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('group settings take precedence over the configured defaults', async () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(
+      registrar,
+      new RunScope(),
+      ProjectDefaults.strictGate,
+    );
+    let executed = 0;
+    binding.group(GroupName.Checkout, { runs: RunCount.Smaller }, () => {
+      binding.register('inherits', async () => {
+        executed += 1;
+      });
+    });
+    await registrar.registrations[0]?.fn();
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it("a test's own runs win over its group", async () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    let executed = 0;
+    binding.group(GroupName.Checkout, { runs: RunCount.Gated }, () => {
+      binding.register('own', { runs: RunCount.Single }, async () => {
+        executed += 1;
+      });
+    });
+    await registrar.registrations[0]?.fn();
+    expect(executed).toBe(RunCount.Single);
+  });
+
+  it('plain describe blocks inside and around a group keep inheritance', async () => {
+    const registrar = new RegistrarFake();
+    const describes = new DescribeRegistrarFake();
+    const binding = JestBindingHarness.binding(
+      registrar,
+      new RunScope(),
+      {},
+      new ManualTimer(),
+      describes,
+    );
+    let executed = 0;
+    describes.register('plain outer', () => {
+      binding.group('group', { runs: RunCount.Smaller }, () => {
+        describes.register('plain inner', () => {
+          binding.register('deep', async () => {
+            executed += 1;
+          });
+        });
+      });
+    });
+    await registrar.registrations[0]?.fn();
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('settings do not leak into a sibling group or later tests', async () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    let executed = 0;
+    const body = async (): Promise<void> => {
+      executed += 1;
+    };
+    binding.group('first', { runs: RunCount.Smaller }, () => {});
+    binding.group('second', () => {
+      binding.register('sibling', body);
+    });
+    binding.register('after', body);
+    await registrar.registrations[0]?.fn();
+    await registrar.registrations[1]?.fn();
+    expect(executed).toBe(RunCount.BuiltIn * 2);
+  });
+
+  it('a usage error inside a group propagates and the group settings end with it', async () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    const error = JestBindingHarness.errorFrom(() =>
+      binding.group('broken', { runs: RunCount.Smaller }, () => {
+        binding.register('invalid', { runs: InvalidOption.Zero }, async () => {});
+      }),
+    );
+    let executed = 0;
+    binding.register('after', async () => {
+      executed += 1;
+    });
+    await registrar.registrations[0]?.fn();
+    expect(error.kind).toBe('usage');
+    expect(executed).toBe(RunCount.BuiltIn);
+  });
+
+  it('a group testTimeout sets the Jest timeout of the tests inside it', () => {
+    const timeout = JestBindingHarness.registeredTimeout((binding) =>
+      binding.group(GroupName.Slow, { testTimeout: CustomTimeout.Long }, () => {
+        binding.register('t', async () => {});
+      }),
+    );
+    expect(timeout).toBe(CustomTimeout.Long + TimeoutBudget.CeilingMarginMs);
+  });
+
+  it('a group testTimeout is the runner deadline of the tests inside it', async () => {
+    const registrar = new RegistrarFake();
+    const timer = new ManualTimer();
+    const binding = JestBindingHarness.binding(registrar, new RunScope(), {}, timer);
+    binding.group(GroupName.Slow, { testTimeout: CustomTimeout.Short }, () => {
+      binding.register('hangs', () => new Promise<void>(() => {}));
+    });
+    const pending = Capture.rejection(registrar.registrations[0]!.fn());
+    timer.advance(CustomTimeout.Short);
+    expect(((await pending) as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('a trailing timeout inside a group with a testTimeout is allowed and wins', async () => {
+    const registrar = new RegistrarFake();
+    const timer = new ManualTimer();
+    const binding = JestBindingHarness.binding(registrar, new RunScope(), {}, timer);
+    binding.group(GroupName.Slow, { testTimeout: CustomTimeout.Longer }, () => {
+      binding.register('hangs', () => new Promise<void>(() => {}), CustomTimeout.Short);
+    });
+    const pending = Capture.rejection(registrar.registrations[0]!.fn());
+    timer.advance(CustomTimeout.Short);
+    expect(((await pending) as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('a trailing timeout with a testTimeout in the same test options stays usage inside a group', () => {
+    const registrar = new RegistrarFake();
+    const binding = JestBindingHarness.binding(registrar);
+    const error = JestBindingHarness.errorFrom(() =>
+      binding.group(GroupName.Slow, { testTimeout: CustomTimeout.Longer }, () => {
+        binding.register(
+          'both',
+          { testTimeout: CustomTimeout.Long },
+          async () => {},
+          CustomTimeout.Short,
+        );
+      }),
+    );
+    expect(error.kind).toBe('usage');
+  });
+
+  it.each<[unknown]>([
+    [{ runs: InvalidOption.Zero }],
+    [{ threshold: InvalidOption.ThresholdAboveOne }],
+    [{ run: RunCount.Smaller }],
+    [null],
+  ])('rejects group options %j as usage', (options) => {
+    const binding = JestBindingHarness.binding(new RegistrarFake());
+    const error = JestBindingHarness.errorFrom(() =>
+      binding.group(GroupName.Invalid, options as RunOptions, () => {}),
+    );
+    expect(error.kind).toBe('usage');
+  });
+
+  it.each<[unknown]>([[{ runs: InvalidOption.Zero }], [null]])(
+    'registers no describe block for invalid group options %j',
+    (options) => {
+      const describes = new DescribeRegistrarFake();
+      const binding = JestBindingHarness.binding(
+        new RegistrarFake(),
+        new RunScope(),
+        {},
+        new ManualTimer(),
+        describes,
+      );
+      Capture.thrown(() => binding.group(GroupName.Invalid, options as RunOptions, () => {}));
+      expect(describes.names).toHaveLength(0);
+    },
+  );
+
+  it.each<[string, (binding: JestBinding) => void]>([
+    ['a missing callback', (b) => b.group(GroupName.Invalid, undefined as unknown as () => void)],
+    [
+      'options without a callback',
+      (b) => b.group(GroupName.Invalid, {}, undefined as unknown as () => void),
+    ],
+    [
+      'a non-function callback',
+      (b) => b.group(GroupName.Invalid, {}, 'body' as unknown as () => void),
+    ],
+    [
+      'an argument after the callback',
+      (b) => b.group(GroupName.Invalid, () => {}, (() => {}) as unknown as () => void),
+    ],
+    [
+      'an argument after options and callback',
+      (b) => b.group(GroupName.Invalid, {}, () => {}, GroupName.Slow),
+    ],
+  ])('rejects %s as usage', (_label, declare) => {
+    const describes = new DescribeRegistrarFake();
+    const binding = JestBindingHarness.binding(
+      new RegistrarFake(),
+      new RunScope(),
+      {},
+      new ManualTimer(),
+      describes,
+    );
+    const error = JestBindingHarness.errorFrom(() => declare(binding));
+    expect(error.kind).toBe('usage');
+    expect(describes.names).toHaveLength(0);
+  });
+
+  it('rejects an async callback as usage', () => {
+    const binding = JestBindingHarness.binding(new RegistrarFake());
+    const error = JestBindingHarness.errorFrom(() => binding.group('async', async () => {}));
     expect(error.kind).toBe('usage');
   });
 });
