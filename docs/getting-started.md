@@ -5,7 +5,7 @@ can trust in CI. It assumes a Node project that already runs Jest tests.
 
 1. [Install](#1-install)
 2. [Choose the right assertion first](#2-choose-the-right-assertion-first)
-3. [Create `crucible.config.json`](#3-create-crucibleconfigjson)
+3. [Create the config file](#3-create-the-config-file)
 4. [Set your API key](#4-set-your-api-key)
 5. [Write a first test](#5-write-a-first-test)
 6. [Tune the gate](#6-tune-the-gate)
@@ -70,27 +70,51 @@ check:
 skip spends judge latency and money and adds judge error where none was
 needed.
 
-## 3. Create `crucible.config.json`
+## 3. Create the config file
 
-Create `crucible.config.json` in the directory you run Jest from (normally
-your project root):
+In the directory you run Jest from (normally your project root), run:
 
-```json
+```sh
+npx crucible-ai init
+```
+
+It writes `crucible.config.jsonc`. The top sets the judge:
+
+```jsonc
 {
+  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
-  "meta": { "reasoning": { "effort": "low" } }
+  // OpenRouter reasoning setting that speeds up the model above; extra request fields
+  // go to the provider as-is, so remove or change this when you switch provider.
+  "meta": { "reasoning": { "effort": "low" } },
+
+  // Every line below shows a default. Uncomment a line to change it.
+  // "apiKeyEnv": "CRUCIBLE_JUDGE_KEY", // the variable holding the key, never the key
+  // ...
 }
 ```
 
+- `$schema` — points your editor at the JSON Schema shipped in the package,
+  so hovering a field shows what it does and its default, and field names
+  autocomplete. Crucible ignores it.
 - `provider` — the judge provider: `openrouter`, `openai` or
   `openai-compatible` (see below).
 - `model` — a model id your provider serves. The value above is the
   [recommended default judge](judge-models.md#recommendation-feeds-oq-6) on
   OpenRouter.
-- `meta` — optional; passed unmodified to the provider as extra request
-  parameters. Low reasoning effort keeps that model accurate and well inside
-  Crucible's per-test deadline ([why](judge-models.md#reasoning-effort-and-the-per-test-deadline-story-33-e2e)).
+- `meta` — passed unmodified to the provider as extra request parameters.
+  `{ "reasoning": { "effort": "low" } }` is an OpenRouter setting that keeps
+  the recommended model accurate and well inside Crucible's per-test
+  deadline
+  ([why](judge-models.md#reasoning-effort-and-the-per-test-deadline-story-33-e2e)).
+  Remove or change it when you switch provider.
+- The commented lines list every other setting at its default, so you can
+  see and change any of them without looking them up.
+
+The file accepts `//` and `/* */` comments and trailing commas. You can name
+it `crucible.config.json` instead, with the same content; keep only one of
+the two. `init` never overwrites an existing config file.
 
 Choose the provider you already have access to:
 

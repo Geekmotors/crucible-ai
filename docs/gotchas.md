@@ -230,7 +230,7 @@ globally), or switch to fake timers only inside a plain Jest test.
 
 ## Never put an API key in `meta`
 
-`crucible.config.json` rejects top-level fields named like secrets (`apiKey`,
+The config file rejects top-level fields named like secrets (`apiKey`,
 `token`, …) so the file stays safe to commit. `meta` is passed to the
 provider unmodified and is **never inspected** — a key placed inside it is
 committed with the file and sent in every request body. Keys belong only in
@@ -294,8 +294,9 @@ use Crucible. Importing `expect` from `@jest/globals` is fine.
 
 ## The config is read from the working directory
 
-Crucible looks for `crucible.config.json` in the directory the Jest process
-runs in — not next to the test file, not in a parent directory. If tests fail
+Crucible looks for `crucible.config.json` or `crucible.config.jsonc` (exactly
+one of them) in the directory the Jest process runs in — not next to the test
+file, not in a parent directory. If tests fail
 with a `config` error saying the file cannot be found, check where Jest was
 started (monorepo workspace scripts often start it in a package directory).
 See [Where and when the file is read](configuration.md#where-and-when-the-file-is-read).

@@ -88,7 +88,11 @@ make conformance CONFORMANCE_CONFIG=path/to/your/crucible.config.json
   `apiKeyEnv` from the config you point it at (default:
   `e2e/crucible.config.json`, OpenRouter) and passes the key into the
   container by the variable's name: `CRUCIBLE_JUDGE_KEY`, or the variable
-  `apiKeyEnv` names. Export it first. `openai-compatible` without `apiKeyEnv`
+  `apiKeyEnv` names. Export it first. The harness reads plain JSON only: a
+  config with comments or trailing commas (fine for Crucible itself, as in
+  the `crucible.config.jsonc` that `init` writes) stops it with a usage error
+  (exit 2), so point `CONFORMANCE_CONFIG` at a plain JSON copy.
+  `openai-compatible` without `apiKeyEnv`
   runs keyless when `CRUCIBLE_JUDGE_KEY` is unset, and the harness warns when
   a key would go over plain `http://` to a non-loopback host.
 - `CONFORMANCE_REPS` (default 3) repeats each case; `CONFORMANCE_SUITES`

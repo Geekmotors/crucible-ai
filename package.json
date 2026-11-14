@@ -29,6 +29,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "crucible-ai": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": {
@@ -44,6 +47,7 @@
   "files": [
     "dist",
     "schemas/*.md",
+    "schemas/*.schema.json",
     "CHANGELOG.md"
   ],
   "publishConfig": {

@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Geekmotors/crucible-ai/main/schemas/crucible.config.schema.json",
+  "title": "Crucible config",
+  "description": "Configuration for crucible-ai, read from crucible.config.json or crucible.config.jsonc in the directory Jest runs from. Never put an API key in this file.",
+  "type": "object",
+  "allowComments": true,
+  "allowTrailingCommas": true,
+  "required": ["provider", "model"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "description": "Path or URL of this JSON Schema, for editor hints. Ignored by Crucible."
+    },
+    "provider": {
+      "description": "The judge provider to call. \"openai-compatible\" also needs \"baseUrl\".",
+      "type": "string",
+      "enum": ["openrouter", "openai", "openai-compatible"]
+    },
+    "model": {
+      "description": "The provider's model id for the judge, passed through as given. Recommended on OpenRouter: \"deepseek/deepseek-v4-flash-0731\".",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "baseUrl": {
+      "description": "API root of an OpenAI-compatible endpoint (openai-compatible only); judge calls go to <baseUrl>/chat/completions. http or https, without credentials, query or fragment.",
+      "type": "string",
+      "format": "uri",
+      "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/@?#\\s]+(/[^?#]*)?$"
+    },
+    "apiKeyEnv": {
+      "description": "Name of the environment variable that holds the judge's API key. Never the key itself.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "default": "CRUCIBLE_JUDGE_KEY"
+    },
+    "meta": {
+      "description": "Extra request-body fields sent with every judge request, unmodified (for example { \"reasoning\": { \"effort\": \"low\" } }). Default: none. Never put a secret here.",
+      "type": "object"
+    },
+    "verbosity": {
+      "description": "Output detail: \"default\", \"full\" (every run in failure reports) or \"debug\" (also a trace of each judge call). CRUCIBLE_VERBOSE overrides it.",
+      "type": "string",
+      "enum": ["default", "full", "debug"],
+      "default": "default"
+    },
+    "excerptChars": {
+      "description": "Length of the response excerpt in failure reports, in characters.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 500
+    },
+    "testDefaults": {
+      "description": "Project-wide defaults for every crucible.it(). Options declared on a test win.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runs": {
+          "description": "How many times each test body runs, concurrently. Each run calls your system and the judge.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "threshold": {
+          "description": "Fraction of runs that must pass, greater than 0 and at most 1. The test needs ceil(threshold × runs) passing runs.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "default": 0.9
+        },
+        "inferenceTimeout": {
+          "description": "Time limit for each judge request, in milliseconds.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "default": 30000
+        },
+        "testTimeout": {
+          "description": "Time limit for the whole test, in milliseconds. Default: 30000 + 1000 × (runs − 1), so 39000 for 10 runs; a value set here no longer grows with runs.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      }
+    }
+  },
+  "if": {
+    "properties": { "provider": { "const": "openai-compatible" } },
+    "required": ["provider"]
+  },
+  "then": {
+    "required": ["baseUrl"]
+  },
+  "else": {
+    "not": { "required": ["baseUrl"] }
+  }
+}

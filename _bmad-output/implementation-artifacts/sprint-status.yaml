@@ -92,7 +92,7 @@ development_status:
   # Epic 6: Ergonomics
   epic-6: in-progress
   6-1-sensible-defaults: done
-  6-2-commented-config-and-init: backlog
+  6-2-commented-config-and-init: done
   6-3-describe-group-settings: backlog
   6-4-lenient-strict-extract: backlog
   epic-6-retrospective: optional

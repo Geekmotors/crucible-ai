@@ -1,9 +1,12 @@
 # Configuration and provider reference
 
-Crucible is configured by one committable file, `crucible.config.json`, plus
-environment variables for anything secret or per-invocation.
+Crucible is configured by one committable file, `crucible.config.json` or
+`crucible.config.jsonc`, plus environment variables for anything secret or
+per-invocation.
 
+- [Create it with `init`](#create-it-with-init)
 - [Where and when the file is read](#where-and-when-the-file-is-read)
+- [Comments and editor hints](#comments-and-editor-hints)
 - [Fields](#fields)
 - [Validation and errors](#validation-and-errors)
 - [Environment variables](#environment-variables)
@@ -12,12 +15,62 @@ environment variables for anything secret or per-invocation.
 - [Choosing a judge model](#choosing-a-judge-model)
 - [CI secrets](#ci-secrets)
 
+## Create it with `init`
+
+```sh
+npx crucible-ai init
+```
+
+writes `crucible.config.jsonc` in the current directory:
+
+```jsonc
+{
+  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
+
+  // Judge provider: "openrouter", "openai" or "openai-compatible" (the last also needs
+  // a "baseUrl", e.g. "http://localhost:11434/v1"). The API key comes from the environment.
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  // OpenRouter reasoning setting that speeds up the model above; extra request fields
+  // go to the provider as-is, so remove or change this when you switch provider.
+  "meta": { "reasoning": { "effort": "low" } },
+
+  // Every line below shows a default. Uncomment a line to change it.
+  // "apiKeyEnv": "CRUCIBLE_JUDGE_KEY", // the variable holding the key, never the key
+  // "verbosity": "default", // "default", "full" or "debug"
+  // "excerptChars": 500, // response excerpt length in failure reports
+  // "testDefaults": {
+  //   "runs": 10,
+  //   "threshold": 0.9, // at least 9 of 10 runs must pass
+  //   "inferenceTimeout": 30000, // ms per judge request
+  //   testTimeout defaults to 30000 + 1000 per run after the first; set "testTimeout": <ms> to fix it
+  // },
+}
+```
+
+- `meta` is the one active setting beyond the judge: an OpenRouter
+  reasoning setting for the recommended model
+  ([why](judge-models.md#reasoning-effort-and-the-per-test-deadline-story-33-e2e)).
+  Remove or change it when you switch provider ([`meta`](#meta)).
+- Uncomment a line to change that setting; a commented line changes nothing.
+  Uncomment `"testDefaults": {`, the fields you want and the closing `},`
+  together.
+- `testTimeout` has no setting line because its default is a formula, not
+  a value: it grows with `runs`. Adding `"testTimeout": <ms>` fixes it at
+  that value, and it no longer grows with `runs`.
+- `init` never overwrites. If `crucible.config.json` or
+  `crucible.config.jsonc` already exists, it writes nothing, says which file
+  is in the way and exits with code 1. An unknown command prints usage and
+  exits with code 2; `npx crucible-ai --help` prints usage and exits with 0.
+- Run it from the directory you start Jest from.
+
 ## Where and when the file is read
 
-- **Location:** `crucible.config.json` in the current working directory of
-  the Jest process — the directory you run Jest from, normally your project
-  root. It is not searched for in parent directories; in a monorepo, put it
-  where you start Jest.
+- **Location:** `crucible.config.json` or `crucible.config.jsonc` in the
+  current working directory of the Jest process — the directory you run Jest
+  from, normally your project root. It is not searched for in parent
+  directories; in a monorepo, put it where you start Jest. Keep exactly one:
+  with both present, every `crucible.it()` test fails with a `config` error.
 - **When:** the first time a `crucible.it()` test **executes** in a test file,
   never while Jest collects the file. It is then reused for the rest of that
   test file. Jest loads Crucible afresh for each test file, so each file reads
@@ -26,6 +79,29 @@ environment variables for anything secret or per-invocation.
   option or makes no `coherent()` or `extract()` call. A missing or invalid
   file fails each `crucible.it()` test that runs; plain Jest `it()` tests are
   unaffected.
+
+## Comments and editor hints
+
+Both file names are read the same way, as JSON with comments: `//` line
+comments, `/* */` block comments and trailing commas are allowed. Comment
+markers inside strings are ordinary text, so `"baseUrl": "http://…"` is safe.
+A UTF-8 byte-order mark is tolerated.
+
+The package ships a JSON Schema,
+`node_modules/crucible-ai/schemas/crucible.config.schema.json`. Point the
+config at it with `"$schema"` (as `init` does) and VS Code, and other editors
+that read JSON Schema, show each field's description and default on hover,
+autocomplete field names and values, and flag invalid values as you type.
+Crucible itself ignores `"$schema"`; validation is the runtime checks below.
+The schema tells VS Code that comments and trailing commas are allowed, so
+it does not underline them in either file name.
+
+The `"$schema"` path that `init` writes is relative to the config file and
+assumes `crucible-ai` is installed in the `node_modules` next to it. In a
+workspace (monorepo) where the package is hoisted to the root
+`node_modules`, change the path to point there (for example
+`"../../node_modules/crucible-ai/schemas/crucible.config.schema.json"`);
+a wrong path only loses the editor hints.
 
 ## Fields
 
@@ -42,6 +118,7 @@ environment variables for anything secret or per-invocation.
 
 | Field | Required | Type and valid values | Default | Meaning |
 | --- | --- | --- | --- | --- |
+| `$schema` | no | string | — | Path or URL of the JSON Schema, for editor hints; ignored by Crucible |
 | `provider` | yes | `"openrouter"`, `"openai"` or `"openai-compatible"` | — | Which judge provider to call ([Providers](#providers)) |
 | `model` | yes | non-empty string (not only whitespace) | — | The provider's model id, passed through as given |
 | `baseUrl` | with `openai-compatible` only | http or https URL, no credentials, query or fragment | — | The endpoint's API root; judge calls go to `<baseUrl>/chat/completions` (a trailing `/` is dropped) |
@@ -89,7 +166,7 @@ the first problem:
 
 | Problem | Kind |
 | --- | --- |
-| `crucible.config.json` missing, unreadable, not valid JSON, or not a JSON object | `config` |
+| No config file, both `crucible.config.json` and `crucible.config.jsonc` present, a file unreadable, not valid JSON (comments and trailing commas are allowed), or not a JSON object. A syntax error names the line where it can, and never quotes the file's content | `config` |
 | A top-level field named like a secret — `apiKey`, `api_key`, `key`, `token`, `secret`, `authorization` (any letter case) | `config` |
 | Any other unknown top-level field | `config` |
 | `provider` missing, empty, or not a string | `config` |
@@ -123,7 +200,7 @@ is tolerated.
 Key values have surrounding whitespace trimmed, and are needed only by tests
 that call `coherent()` or `extract()`. Variables prefixed `CRUCIBLE_` are
 reserved for Crucible. API keys always come from the environment, never from
-`crucible.config.json`.
+the config file.
 
 ### Judge key
 
@@ -328,7 +405,7 @@ The judge can be wrong, as any model can. Crucible's stance on that is in
   (GitHub: Settings → Secrets and variables → Actions → New repository
   secret) — and expose it as the `CRUCIBLE_JUDGE_KEY` variable, or as the
   variable `apiKeyEnv` names. Never commit it, never put it in
-  `crucible.config.json`.
+  the config file.
 - Expose it **only to the step that runs your inference tests**, through
   that step's `env`, not at workflow or job level.
 - Keep pull-request lanes **provider-free**: run lint, type-check and

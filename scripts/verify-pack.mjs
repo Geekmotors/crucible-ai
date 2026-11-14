@@ -9,6 +9,7 @@ class PackVerifier {
     /^LICENSE$/,
     /^dist\/[\w.-]+\.(js|cjs|d\.ts|d\.cts)$/,
     /^schemas\/[\w-]+\.md$/,
+    /^schemas\/[\w.-]+\.schema\.json$/,
   ];
 
   static required = [
@@ -20,8 +21,10 @@ class PackVerifier {
     'dist/index.cjs',
     'dist/index.d.ts',
     'dist/index.d.cts',
+    'dist/cli.js',
     'schemas/coherent.md',
     'schemas/extract.md',
+    'schemas/crucible.config.schema.json',
   ];
 
   packedFiles() {

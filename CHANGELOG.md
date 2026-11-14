@@ -17,13 +17,16 @@ contain breaking changes, and they are marked **Breaking** below.
   have 10 judge calls in flight at once; mind your provider's rate limits.
   To keep the old behaviour, declare
   `{ runs: 1, threshold: 1 }` on the test, or set
-  `"testDefaults": { "runs": 1, "threshold": 1 }` in `crucible.config.json`.
+  `"testDefaults": { "runs": 1, "threshold": 1 }` in the config file.
 - **Breaking:** the built-ins also fill a field you leave out, on the test or
   in `testDefaults`. `{ runs: 20 }` without a `threshold` used to need 20 of
   20 runs to pass and now needs 18; `{ threshold: 1 }` without `runs` used to
   be 1 run and is now 10 runs that must all pass. Declare both fields to keep
   a gate as it was. With fewer than 10 runs, 0.9 still needs every run to
   pass (`{ runs: 5 }` needs 5 of 5).
+- **Breaking:** a `crucible.config.jsonc` next to `crucible.config.json`,
+  previously ignored, is now read too, so having both fails every
+  `crucible.it()` with a `config` error. Keep one of them.
 - **Breaking (types only):** `crucible.it()` is typed as its four supported
   forms — `(name, body)`, `(name, body, timeout)`, `(name, options, body)`,
   `(name, options, body, timeout)` — so a call without a body, such as
@@ -39,6 +42,20 @@ contain breaking changes, and they are marked **Breaking** below.
   `crucible.extract()`, `crucible.load()` and `crucible.append()` carry
   documentation, including each option's default.
 - `CHANGELOG.md` is included in the published package.
+- `npx crucible-ai init` writes `crucible.config.jsonc` with the provider,
+  the recommended judge model, an OpenRouter low-reasoning `meta` setting
+  that speeds it up, and every other setting as a commented line showing its
+  default. It never overwrites: with `crucible.config.json` or
+  `crucible.config.jsonc` already present it changes nothing and exits
+  non-zero.
+- The config can be named `crucible.config.json` or `crucible.config.jsonc`;
+  both accept `//` and `/* */` comments and trailing commas. Having both is a
+  `config` error. A syntax error names the line where it can and no longer
+  quotes the file's content.
+- A JSON Schema for the config ships at
+  `schemas/crucible.config.schema.json`, describing every field with its
+  default; set `"$schema"` to it for editor autocomplete and hover docs.
+  Crucible ignores `"$schema"`.
 
 ## 0.3.0
 
