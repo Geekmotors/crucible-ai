@@ -106,11 +106,11 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: A shared, language-neutral spec
-  epic-8: in-progress
+  epic-8: done
   8-1-spec-run-options-and-verdicts: done
   8-2-spec-payloads-and-reports: done
   8-3-spec-parsing-and-providers: done
   8-4-porting-guide-and-coverage: done
   8-6-harden-prompt-fencing: done
-  8-5-live-tests-only-where-needed: backlog
+  8-5-live-tests-only-where-needed: done
   epic-8-retrospective: optional

@@ -5,5 +5,6 @@ export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   test: {
     include: ['**/*.test.ts'],
+    globalSetup: ['./stub-judge.setup.ts'],
   },
 });

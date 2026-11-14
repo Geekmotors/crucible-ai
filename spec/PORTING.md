@@ -354,7 +354,9 @@ fake HTTP, fake runner):
 - **Language-only inputs** a JSON fixture cannot hold, and every case it
   skips by id.
 - **One live smoke**: one `coherent` and one `extract` call against a real
-  judge (TypeScript: OpenRouter, at most two calls), run in CI.
+  judge (TypeScript: OpenRouter, at most two calls), run in CI. Every other
+  end-to-end test can run offline against a scripted stub judge
+  (TypeScript: `make e2e-offline`, a loopback OpenAI-compatible server).
 - **Model behaviour is not a port's test.** `make conformance` (a jq/curl
   harness in [`e2e/ext/conformance/`](../e2e/ext/conformance/)) checks the
   judge models against the conformance cases. A port that passes the

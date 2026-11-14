@@ -52,11 +52,13 @@ Check these before tagging, or the publish fails with an auth or provenance erro
 ## Every release
 
 1. Merge everything for the release into `main`. The README links to `blob/main/docs/...`, so the docs have to be on `main` before anyone reads the npm page.
-2. Run the full e2e suite locally against real OpenRouter. CI runs only `e2e-core`. `.env.dev.local` must set `CRUCIBLE_JUDGE_KEY` to your OpenRouter key.
+2. Check the judge and the e2e suite on the `main` commit you are releasing from (the version bump in step 3 changes no judged input). `.env.dev.local` must set `CRUCIBLE_JUDGE_KEY` to your OpenRouter key.
    ```sh
    set -a; . ./.env.dev.local; set +a
-   make e2e
+   make conformance   # needs Docker; judges every conformance case against real OpenRouter
+   make e2e           # stub-judge suites plus the one live OpenRouter smoke (2 judge calls)
    ```
+   A passing `make conformance` is required before tagging: model behaviour is tested only there, not in `make e2e` or the unit tests. A green **Actions → conformance** run on that commit counts instead (start it with **Run workflow** on `main` if no push triggered it).
 3. Bump the version in a PR and merge it to `main`. In the same PR, rename `## Unreleased` in `CHANGELOG.md` to the new version (the changelog ships in the tarball):
    ```sh
    npm version 0.2.0 --no-git-tag-version   # edits package.json and package-lock.json

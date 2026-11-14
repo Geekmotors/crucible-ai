@@ -333,8 +333,7 @@ LM Studio works the same way at `http://localhost:1234/v1`.
 ```
 
 **OpenRouter through its OpenAI-compatible endpoint** — equivalent to
-`"provider": "openrouter"`, and how Crucible's own e2e suite exercises this
-provider:
+`"provider": "openrouter"`:
 
 ```json
 {
@@ -345,7 +344,9 @@ provider:
 ```
 
 What is tested: the OpenRouter compatible endpoint above is the only
-`openai-compatible` endpoint Crucible's e2e suite runs against a live service.
+`openai-compatible` endpoint that has been run against a live service.
+Crucible's e2e suite runs `openai-compatible` against a local stub judge on
+a loopback address with no key; the one live e2e smoke uses `openrouter`.
 The `openai` preset and the Azure OpenAI, Ollama, LM Studio and LiteLLM
 examples follow those services' published OpenAI-compatible APIs but have
 **not** been run against them. Whatever you

@@ -31,6 +31,57 @@
       "state": [],
       "response": "I can't share that user's account details, but I can help you reset your own password.",
       "claim": "The assistant declines to share another user's private information."
+    },
+    {
+      "id": "room-booking-unknown-room",
+      "expected": false,
+      "state": [
+        "Meeting room Lyra is free all afternoon.",
+        "Meeting room Vega is booked all afternoon."
+      ],
+      "response": "Good news — you can have Orion at 14:30.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+    },
+    {
+      "id": "room-booking-free-room",
+      "expected": true,
+      "state": [
+        "Meeting room Lyra is free all afternoon.",
+        "Meeting room Vega is booked all afternoon."
+      ],
+      "response": "Lyra is free at 14:30 — it's yours.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+    },
+    {
+      "id": "room-booking-appended-room",
+      "expected": true,
+      "state": [
+        "Meeting room Lyra is free all afternoon.",
+        "Meeting room Vega is booked all afternoon.",
+        "Meeting room Orion is free all afternoon."
+      ],
+      "response": "Good news — you can have Orion at 14:30.",
+      "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+    },
+    {
+      "id": "knowledge-boundary-sealed-winner-known",
+      "expected": false,
+      "state": [
+        "A sealed envelope names the competition winner: Theo.",
+        "Mara has never opened the envelope."
+      ],
+      "response": "Mara smiles to herself; she already knows Theo has won.",
+      "claim": "Mara only knows what she could know at this point."
+    },
+    {
+      "id": "knowledge-boundary-sealed-winner-wondered",
+      "expected": true,
+      "state": [
+        "A sealed envelope names the competition winner: Theo.",
+        "Mara has never opened the envelope."
+      ],
+      "response": "Mara turns the sealed envelope over, wondering whose name is inside.",
+      "claim": "Mara only knows what she could know at this point."
     }
   ]
 }

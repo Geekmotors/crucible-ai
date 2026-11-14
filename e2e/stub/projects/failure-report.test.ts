@@ -1,17 +1,18 @@
 import { beforeAll, describe, expect, it } from '@jest/globals';
-import scenario from './fixtures/projects/failure-report/scenario.json' with { type: 'json' };
-import extraction from './fixtures/projects/failure-report/extraction.json' with { type: 'json' };
-import { ChildProject } from '../test/child-project.enum.js';
-import type { JestOutcome } from '../test/jest-outcome.js';
-import { JestProcess } from '../test/jest-process.util.js';
-import { ReportLine } from '../test/report-line.enum.js';
-import { ReportPattern } from '../test/report-pattern.util.js';
+import scenario from './fixtures/failure-report/scenario.json' with { type: 'json' };
+import extraction from './fixtures/failure-report/extraction.json' with { type: 'json' };
+import { ChildProject } from '../../test/child-project.enum.js';
+import type { JestOutcome } from '../../test/jest-outcome.js';
+import { JestProcess } from '../../test/jest-process.util.js';
+import { JudgeKey } from '../../test/judge-key.enum.js';
+import { ReportLine } from '../../test/report-line.enum.js';
+import { ReportPattern } from '../../test/report-pattern.util.js';
 
 describe('a deliberately failing inference test', () => {
   let outcome: JestOutcome;
 
   beforeAll(async () => {
-    outcome = await JestProcess.run(ChildProject.FailureReport);
+    outcome = await JestProcess.run(ChildProject.FailureReport, { [JudgeKey.Variable]: undefined });
   });
 
   it('fails the Jest run', () => {

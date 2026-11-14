@@ -1,6 +1,12 @@
 {
-  "description": "Stateless smoke case judged through the CommonJS build, proving the CJS entry locates and loads the shipped coherent schema.",
+  "description": "The one live smoke against real OpenRouter: one coherent and one extract call judged through the CommonJS build, proving the CJS entry loads both shipped schemas and the real provider accepts the request and key. Model behaviour is covered by make conformance, not here.",
   "response": "The package was delivered to the front desk at 09:15 and signed for by the receptionist.",
-  "claim": "The reply says the package was delivered.",
-  "expected": true
+  "coherent": {
+    "claim": "The reply says the package was delivered.",
+    "expected": true
+  },
+  "extract": {
+    "target": "whether the receptionist signed for the package",
+    "expected": true
+  }
 }

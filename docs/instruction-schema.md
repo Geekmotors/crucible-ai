@@ -293,4 +293,8 @@ provider, and its dry `request <suite> <case index>` mode, which prints the
 HTTP request (URL, headers, JSON body) it would send for one case, are the
 reference for anyone writing another shell. `make spec-goldens-check` proves
 the TypeScript port builds the same payloads and request envelopes (see
-[`spec/README.md`](../spec/README.md)).
+[`spec/README.md`](../spec/README.md)). The conformance cases are the only
+place model behaviour is tested: CI runs `make conformance` when the
+schemas, the cases, the harness, the judge config or the payload builder
+change, and weekly; a release needs a passing run
+([judge models](judge-models.md#where-model-behaviour-is-tested)).

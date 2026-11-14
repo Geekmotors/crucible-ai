@@ -1,5 +1,8 @@
 {
-  "description": "Self-contained stateful scenario: a booking assistant's replies are judged against the room schedule loaded for the run, then against the schedule accumulated after more of it is appended. The first and last steps judge the same response and claim against different state and expect opposite verdicts.",
+  "description": "Room-booking run whose facts grow between judge calls: every call starts before any is awaited, and each must carry the facts as they stood when it was made. The stub judge answers on STATE, so a call that saw a later fact gets the wrong verdict. Whether a model judges these correctly is the room-booking-* conformance cases.",
+  "runs": 1,
+  "threshold": 1,
+  "name": "judges each call against the run facts as they stood when it was made",
   "state": [
     "Meeting room Lyra is free all afternoon.",
     "Meeting room Vega is booked all afternoon."

@@ -1,0 +1,60 @@
+name: conformance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'schemas/**'
+      - 'e2e/ext/fixtures/*-conformance.json'
+      - 'e2e/ext/conformance/**'
+      - 'src/core/payload-assembler.util.ts'
+      - 'e2e/crucible.config.json'
+      - 'Makefile'
+      - '.github/workflows/conformance.yml'
+  pull_request:
+    paths:
+      - 'schemas/**'
+      - 'e2e/ext/fixtures/*-conformance.json'
+      - 'e2e/ext/conformance/**'
+      - 'src/core/payload-assembler.util.ts'
+      - 'e2e/crucible.config.json'
+      - 'Makefile'
+      - '.github/workflows/conformance.yml'
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  conformance:
+    name: make conformance (real OpenRouter)
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Require CRUCIBLE_JUDGE_KEY secret
+        env:
+          CRUCIBLE_JUDGE_KEY: ${{ secrets.CRUCIBLE_JUDGE_KEY }}
+        run: |
+          if [ -z "$CRUCIBLE_JUDGE_KEY" ]; then
+            echo "::error title=CRUCIBLE_JUDGE_KEY secret missing::make conformance judges the conformance cases against real OpenRouter. Add a CRUCIBLE_JUDGE_KEY repository secret holding your OpenRouter key (Settings > Secrets and variables > Actions > New repository secret), then re-run this workflow."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: make conformance
+        env:
+          CRUCIBLE_JUDGE_KEY: ${{ secrets.CRUCIBLE_JUDGE_KEY }}
+        run: make conformance

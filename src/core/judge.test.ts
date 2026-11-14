@@ -165,6 +165,19 @@ describe('Judge — facts', () => {
     ]);
   });
 
+  it('a pending call judges the run facts as they stood when it was made', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const verdicts = await scope.enterRun(() => {
+      scope.appendState(StateFact.Casino);
+      const madeBeforeAppend = judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      scope.appendState(StateFact.Letter);
+      const madeAfterAppend = judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      return Promise.all([madeBeforeAppend, madeAfterAppend]);
+    });
+    expect(verdicts).toEqual([true, false]);
+  });
+
   it('judges against the facts as given when the caller mutates its array mid-call', async () => {
     const scope = new RunScope();
     const judge = JudgeHarness.factJudge(scope, [StateFact.Home]);

@@ -1,6 +1,6 @@
 const config = {
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/core/**/*.test.{ts,cts}', '<rootDir>/ext/**/*.test.{ts,cts}'],
+  testMatch: ['<rootDir>/core/**/*.test.{ts,cts}'],
   testTimeout: 120000,
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {

@@ -31,7 +31,7 @@ assembled per the schema's documented order). Fixtures:
 - **Caveat:** this matrix is small and unambiguous by design. Before GA
   model guidance, extend fixtures with genuinely ambiguous and adversarial
   cases (partial reveals, implication-only leaks, multi-fact state conflicts)
-  — deliberate follow-up for the e2e/ext suite.
+  — deliberate follow-up for the conformance cases.
 
 ## Wire findings (confirms Story 1.2 adapter assumptions)
 
@@ -61,13 +61,34 @@ Measured 2026-11-13 against real OpenRouter while building the e2e suite:
   limit with `inferenceTimeout`) — see
   [Timeout](runs-and-threshold.md#timeout).
 - With reasoning disabled the judge is fast but unreliable on stateful claims:
-  a 3-run gate failed 2 of 3 runs on the e2e room-booking scenario.
-- The e2e configs (`e2e/crucible.config.json` and the child projects) use
-  `"reasoning": { "effort": "low" }`: correct verdicts, inside the deadline.
-  A full `make e2e` is ~23 judge calls.
-- Multi-step e2e bodies start every step's `coherent` call before awaiting
-  any of them (each call judges the state as it stands when it is made), so a
-  run costs about one judge round trip instead of one per step.
+  a 3-run gate failed 2 of 3 runs on the e2e room-booking scenario (now the
+  `room-booking-*` conformance cases).
+- The judge config `e2e/crucible.config.json` (the live smoke and the default
+  for `make conformance`) uses `"reasoning": { "effort": "low" }`: correct
+  verdicts, inside the deadline.
+- Multi-step bodies that start every step's `coherent` call before awaiting
+  any of them (each call judges the state as it stands when it is made) cost
+  about one judge round trip per run instead of one per step.
+
+## Where model behaviour is tested
+
+Whether a judge model gets the verdicts and values right is checked only by
+the conformance harness (`make conformance`, below), against the cases in
+`e2e/ext/fixtures/coherent-conformance.json` and
+`e2e/ext/fixtures/extract-conformance.json`. CI runs it when the schemas,
+the cases, the harness, the judge config (`e2e/crucible.config.json`) or the
+payload builder change, and weekly to catch provider or model drift; a
+release needs a passing run (see [RELEASING.md](../RELEASING.md)). The payload and request goldens in `spec/`
+prove that Crucible sends exactly what the harness sends, so the harness
+result holds for the library.
+
+The e2e suite does not test the model. `make e2e-offline` (no key; it runs
+on every pull request) drives real Jest and Vitest processes against a local
+stub judge on `127.0.0.1:28731` that answers from a script (a call it has no
+reply for fails the test); if that port is taken, the run stops with an
+error naming it; `make e2e` adds one live OpenRouter
+smoke (`e2e/core/cjs-build.test.cts`: one `coherent` and one `extract` call)
+that proves the real provider accepts the request and key.
 
 ## Using another provider or model
 
@@ -110,6 +131,7 @@ another model, or to measure your gates with that in mind
 ([measure first](runs-and-threshold.md#1-measure-first-with-many-runs)).
 
 Tested so far: `openai-compatible` against OpenRouter's compatible endpoint
-(`https://openrouter.ai/api/v1`), which the e2e suite runs live. The `openai`
+(`https://openrouter.ai/api/v1`), run live while that provider was built
+(the e2e suite now runs `openai-compatible` against a local stub). The `openai`
 preset, Azure OpenAI, Ollama and LiteLLM have not been tested against the
 live services.

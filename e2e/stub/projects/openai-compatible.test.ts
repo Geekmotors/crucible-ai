@@ -1,21 +1,23 @@
 import { beforeAll, describe, expect, it } from '@jest/globals';
-import scenario from './fixtures/projects/openai-compatible/scenario.json' with { type: 'json' };
-import { ChildProject } from '../test/child-project.enum.js';
-import type { JestOutcome } from '../test/jest-outcome.js';
-import { JestProcess } from '../test/jest-process.util.js';
-import { TraceLine } from '../test/trace-line.enum.js';
-import { VerbosityOverride } from '../test/verbosity-override.enum.js';
+import scenario from './fixtures/openai-compatible/scenario.json' with { type: 'json' };
+import { ChildProject } from '../../test/child-project.enum.js';
+import type { JestOutcome } from '../../test/jest-outcome.js';
+import { JestProcess } from '../../test/jest-process.util.js';
+import { JudgeKey } from '../../test/judge-key.enum.js';
+import { TraceLine } from '../../test/trace-line.enum.js';
+import { VerbosityOverride } from '../../test/verbosity-override.enum.js';
 
-describe('the openai-compatible provider against OpenRouter as a generic endpoint', () => {
+describe('the openai-compatible provider against a keyless loopback endpoint', () => {
   let outcome: JestOutcome;
 
   beforeAll(async () => {
     outcome = await JestProcess.run(ChildProject.OpenAiCompatible, {
       CRUCIBLE_VERBOSE: VerbosityOverride.Debug,
+      [JudgeKey.Variable]: undefined,
     });
   });
 
-  it('passes the judged test', () => {
+  it('passes the judged test with no judge key set', () => {
     expect(outcome.exitCode).toBe(0);
   });
 
@@ -32,9 +34,5 @@ describe('the openai-compatible provider against OpenRouter as a generic endpoin
     expect(outcome.output).toContain(
       `${TraceLine.ExtractionFor} "${scenario.extract.target}" as string`,
     );
-  });
-
-  it('never reveals the API key', () => {
-    expect(JestProcess.revealsApiKey(outcome.output)).toBe(false);
   });
 });
