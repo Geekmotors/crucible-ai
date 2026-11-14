@@ -10,6 +10,7 @@ REPS=${CONFORMANCE_REPS:-3}
 EXTRA_CA_FILE=${CONFORMANCE_EXTRA_CA:-/etc/conformance/extra-ca.pem}
 SYSTEM_CA_FILE=/etc/ssl/certs/ca-certificates.crt
 CALL_TIMEOUT_SECONDS=120
+TRANSIENT_RETRIES=2
 EXIT_MISMATCH=1
 EXIT_USAGE=2
 DEFAULT_KEY_ENV=CRUCIBLE_JUDGE_KEY
@@ -216,6 +217,7 @@ call_judge() {
     curl --config - \
       --silent --show-error \
       --max-time "$CALL_TIMEOUT_SECONDS" \
+      --retry "$TRANSIENT_RETRIES" \
       --cacert "$CA_BUNDLE" \
       --header "Content-Type: $CONTENT_TYPE" \
       --data-binary "@$1" \

@@ -1,5 +1,5 @@
 {
-  "description": "Plain Jest it / it.each with crucible.gate: the gate owns runs, threshold and the run context t; Jest owns the test and its timeout. One run at threshold 1 keeps the live cost to one judge call per test.",
+  "description": "Plain Jest it / it.each with crucible.gate: the gate owns runs, threshold and the run context t; Jest owns the test and its timeout. One run at threshold 1 per test, answered by the stub judge (judge-replies.json).",
   "runs": 1,
   "threshold": 1,
   "timeout": 60000,

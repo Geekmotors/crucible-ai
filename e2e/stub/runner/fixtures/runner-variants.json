@@ -1,5 +1,5 @@
 {
-  "description": "crucible.it.each and crucible.describe.each on Jest: the runner formats names and passes row values, the gate owns runs and threshold. One run at threshold 1 per row keeps the live cost to four judge calls; the skipped and todo tests make none.",
+  "description": "crucible.it.each and crucible.describe.each on Jest: the runner formats names and passes row values, the gate owns runs and threshold. One run at threshold 1 per row, answered by the stub judge (judge-replies.json); the skipped and todo tests make no call.",
   "runs": 1,
   "threshold": 1,
   "timeout": 60000,

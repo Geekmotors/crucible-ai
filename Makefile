@@ -1,6 +1,9 @@
-.PHONY: e2e-core e2e-ext e2e-vitest e2e e2e-key e2e-build conformance conformance-image spec-goldens spec-goldens-check spec-payloads spec-payloads-check
+.NOTPARALLEL:
+
+.PHONY: e2e-core e2e-offline e2e-stub-jest e2e-stub-vitest e2e e2e-key e2e-compile e2e-build conformance conformance-image spec-goldens spec-goldens-check spec-payloads spec-payloads-check
 
 E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
+E2E_OFFLINE_NODE_OPTIONS ?= --experimental-vm-modules
 CONFORMANCE_IMAGE ?= crucible-ai-conformance
 CONFORMANCE_REPS ?= 3
 CONFORMANCE_SUITES ?= coherent extract
@@ -9,29 +12,35 @@ CONFORMANCE_CONFIG ?= e2e/crucible.config.json
 MACOS_CA_KEYCHAINS = /Library/Keychains/System.keychain /System/Library/Keychains/SystemRootCertificates.keychain
 
 E2E_JEST = cd e2e && NODE_OPTIONS="$(E2E_NODE_OPTIONS)" ../node_modules/.bin/jest --config jest.config.mjs --ci
-E2E_VITEST = cd e2e && NODE_OPTIONS="--use-system-ca" ../node_modules/.bin/vitest run --config vitest/vitest.config.ts
+E2E_STUB_ENV = env -u CRUCIBLE_JUDGE_KEY -u CRUCIBLE_VERBOSE
+E2E_STUB_JEST = cd e2e/stub && $(E2E_STUB_ENV) NODE_OPTIONS="$(E2E_OFFLINE_NODE_OPTIONS)" ../../node_modules/.bin/jest --config jest.config.mjs --ci --runInBand
+E2E_STUB_VITEST = cd e2e/stub && $(E2E_STUB_ENV) ../../node_modules/.bin/vitest run --config vitest/vitest.config.ts
 
 e2e-key:
 	@if [ -z "$$(printf '%s' "$$CRUCIBLE_JUDGE_KEY" | tr -d '[:space:]')" ]; then \
-		echo "e2e: CRUCIBLE_JUDGE_KEY is not set. e2e runs judge calls against real OpenRouter; set it to your OpenRouter key." >&2; \
+		echo "e2e: CRUCIBLE_JUDGE_KEY is not set. The live smoke (e2e-core) judges against real OpenRouter; set it to your OpenRouter key, or run make e2e-offline, which needs none." >&2; \
 		echo "     Export your key first, e.g.: set -a; . ./.env.dev.local; set +a" >&2; \
 		exit 2; \
 	fi
 
-e2e-build: e2e-key
+e2e-compile:
 	npm run build
 	npx tsc --noEmit -p e2e
 
+e2e-build: e2e-key e2e-compile
+
 e2e-core: e2e-build
-	$(E2E_JEST) --testPathPatterns 'e2e/core/'
+	$(E2E_JEST)
 
-e2e-ext: e2e-build
-	$(E2E_JEST) --testPathPatterns 'e2e/ext/'
+e2e-stub-jest: e2e-compile
+	$(E2E_STUB_JEST)
 
-e2e-vitest: e2e-build
-	$(E2E_VITEST)
+e2e-stub-vitest: e2e-compile
+	$(E2E_STUB_VITEST)
 
-e2e: e2e-core e2e-ext e2e-vitest
+e2e-offline: e2e-stub-jest e2e-stub-vitest
+
+e2e: e2e-key e2e-offline e2e-core
 
 spec-goldens:
 	sh e2e/ext/conformance/spec-goldens.sh write

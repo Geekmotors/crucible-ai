@@ -1,5 +1,5 @@
 {
-  "description": "Passing scenario judged through the generic openai-compatible provider pointed at OpenRouter's OpenAI-compatible endpoint, with the key read from CRUCIBLE_JUDGE_KEY (no apiKeyEnv). Run with CRUCIBLE_VERBOSE=debug so the trace shows which provider carried the calls.",
+  "description": "Passing scenario judged through the generic openai-compatible provider pointed at the loopback stub judge, run with CRUCIBLE_JUDGE_KEY unset (no apiKeyEnv, so no key is needed). Run with CRUCIBLE_VERBOSE=debug so the trace shows which provider carried the calls.",
   "runs": 1,
   "threshold": 1,
   "name": "judges through an openai-compatible endpoint",

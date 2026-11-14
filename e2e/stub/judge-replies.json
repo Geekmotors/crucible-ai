@@ -1,0 +1,117 @@
+{
+  "description": "Scripted judge replies for the stub suites. The StubJudgeServer reads the STATE, RESPONSE, CLAIM and TARGET sections of the last user message; a reply answers a call when every section its match names is equal, and exactly one reply must answer, in an OpenAI chat-completions envelope. A call no reply (or more than one) answers gets HTTP 404, which fails the test. The judge's answer is incidental in these suites: they test the runner, the reports, the traces and that each call carries the right facts, not the model.",
+  "replies": [
+    {
+      "match": {
+        "state": "The library closes at 18:00 on weekdays.",
+        "claim": "The reply is consistent with the library's weekday opening hours."
+      },
+      "reply": {
+        "verdict": true,
+        "reasoning": "It is 19:30 on a weekday, after the 18:00 closing time."
+      }
+    },
+    {
+      "match": {
+        "state": "The library is closed all day on Sundays.",
+        "claim": "The reply is consistent with the library's Sunday hours."
+      },
+      "reply": {
+        "verdict": true,
+        "reasoning": "The library is closed all day on Sundays."
+      }
+    },
+    {
+      "match": {
+        "state": "The museum is free on the first Sunday of every month.",
+        "claim": "The reply is consistent with the museum's free-entry rule."
+      },
+      "reply": {
+        "verdict": true,
+        "reasoning": "Entry is free on the first Sunday of the month, as the reply says."
+      }
+    },
+    {
+      "match": {
+        "state": "King Street has one traffic light.",
+        "claim": "The reply says the traffic light turned green."
+      },
+      "reply": {
+        "verdict": false,
+        "reasoning": "The reply says the light turned red."
+      }
+    },
+    {
+      "match": {
+        "target": "how many apples were bought",
+        "response": "I bought three apples and nothing else."
+      },
+      "reply": {
+        "value": 3,
+        "reasoning": "The reply says three apples were bought."
+      }
+    },
+    {
+      "match": {
+        "target": "how many apples were bought",
+        "response": "Just the two apples, thanks."
+      },
+      "reply": {
+        "value": 2,
+        "reasoning": "The reply mentions two apples."
+      }
+    },
+    {
+      "match": {
+        "state": "The library closes at 18:00 on weekdays.",
+        "target": "the day of the week it is"
+      },
+      "reply": {
+        "value": "Tuesday",
+        "reasoning": "The reply says it is a Tuesday."
+      }
+    },
+    {
+      "match": {
+        "target": "the number of apples"
+      },
+      "reply": {
+        "value": null,
+        "reasoning": "The reply hedges between two and three, so strict mode gives no value."
+      }
+    },
+    {
+      "match": {
+        "state": "Meeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.",
+        "response": "Good news — you can have Orion at 14:30.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "reply": {
+        "verdict": false,
+        "reasoning": "Orion is not in the known schedule."
+      }
+    },
+    {
+      "match": {
+        "state": "Meeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.",
+        "response": "Lyra is free at 14:30 — it's yours.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "reply": {
+        "verdict": true,
+        "reasoning": "Lyra is free all afternoon."
+      }
+    },
+    {
+      "match": {
+        "state": "Meeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.\nMeeting room Orion is free all afternoon.",
+        "response": "Good news — you can have Orion at 14:30.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "reply": {
+        "verdict": true,
+        "reasoning": "Orion is now known to be free all afternoon."
+      }
+    }
+  ]
+}

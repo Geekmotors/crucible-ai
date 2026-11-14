@@ -1,5 +1,5 @@
 {
-  "description": "Passing smoke scenario run with CRUCIBLE_VERBOSE=debug over a config that says default, so the trace shows env-over-config verbosity, the resolved config, and real provider traffic carrying the loaded run state, plus one traced extraction.",
+  "description": "Passing smoke scenario run with CRUCIBLE_VERBOSE=debug over a config that says default, so the trace shows env-over-config verbosity, the resolved config, and the provider traffic to the stub judge carrying the loaded run state, plus one traced extraction. The child runs with a sentinel CRUCIBLE_JUDGE_KEY that must never be printed.",
   "runs": 1,
   "threshold": 1,
   "name": "traces a stateful judge call",

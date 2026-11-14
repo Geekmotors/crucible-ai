@@ -455,3 +455,19 @@
 - The default/values comparison is one-sided (a manifest default with no schema default is unchecked) and uses the editor config schema, not runtime defaults.
 - `assertionCallInput` in `spec/fixture.schema.json` does not cap `args` at 3 entries: the in-house schema checker has no `maxItems`.
 - `docs` anchors in `spec/surface.json` are not link-checked.
+
+## Deferred from: dev of 8-5-live-tests-only-where-needed (2026-11-14)
+
+- `make conformance` now runs in CI (conformance workflow). `conformance.sh` retries a call twice on curl's transient set (timeouts, 408, 429, 500/502/503/504, honouring `Retry-After`), but `alpine:3.22` is still not digest-pinned (Story 3.4 item).
+- Stub judge port `28731` is fixed and written in four checked-in configs (`e2e/stub/crucible.config.json`, the three child projects) plus `e2e/test/stub-judge.enum.ts`. A port clash on a dev machine fails `make e2e-offline` with `EADDRINUSE`; the stub then fails with an error naming the port and the files to change. An ephemeral port needs Crucible to read config from somewhere other than `process.cwd()` (it has no env override for `baseUrl`), or generated temp configs (file writes); revisit if a clash ever happens.
+- The weekly scheduled conformance run makes ~120 paid judge calls (~1¢); fork PRs skip it (no secrets).
+
+## Deferred from: code review of 8-5-live-tests-only-where-needed (2026-11-14)
+
+- No live e2e proves `openai-compatible` against a real authenticated endpoint any more (stub only; the request goldens cover the Bearer header). The docs say so.
+- The live smoke (`cjs-build`) has no key-leak assertion with the real key; the leak check runs with a sentinel key against the stub (same trace path for every chat-completions provider).
+- Fork PRs that touch conformance inputs skip the conformance job (no secrets), and a skipped job reads as passing; it runs on the merge push to `main`. A maintainer can dispatch it before merging.
+- Pushes, the weekly schedule and dispatches on `main` share one concurrency group; GitHub keeps one pending run per group, so a queued push run can be replaced by a later one (which tests a newer `main`).
+- The CI `unit` job builds twice (`npm run build` / `tsc -p e2e`, then `make e2e-offline` → `e2e-compile`): seconds, kept so CI runs the documented target.
+- The stub matches the extract MODE section only through the reply script's TARGET/RESPONSE; strict vs lenient request shape rests on the payload goldens.
+- Running the stub Jest config from anywhere but `e2e/stub` (cwd) reads the wrong `crucible.config.json`; `make e2e-offline` is the supported entry point. Node 24 `NODE_USE_ENV_PROXY` with an `HTTP_PROXY` that does not exempt `127.0.0.1` would route stub calls through the proxy.

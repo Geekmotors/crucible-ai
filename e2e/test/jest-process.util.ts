@@ -13,9 +13,12 @@ class JestProcess {
   private static outputBytes = 16 * 1024 * 1024;
   private static plainOutput = { FORCE_COLOR: '0', NO_COLOR: '1' };
 
-  static run(project: string, environment: Record<string, string> = {}): Promise<JestOutcome> {
+  static run(
+    project: string,
+    environment: Record<string, string | undefined> = {},
+  ): Promise<JestOutcome> {
     const projectDir = fileURLToPath(
-      new URL(`ext/fixtures/projects/${project}/`, JestProcess.e2eRoot),
+      new URL(`stub/projects/fixtures/${project}/`, JestProcess.e2eRoot),
     );
     const args = [
       JestProcess.jestBin,
@@ -23,7 +26,7 @@ class JestProcess {
       JestProcess.jestConfig,
       '--ci',
       '--testMatch',
-      `**/projects/${project}/*.scenario.ts`,
+      `**/projects/fixtures/${project}/*.scenario.ts`,
     ];
     return new Promise((resolve) => {
       execFile(
@@ -31,7 +34,7 @@ class JestProcess {
         args,
         {
           cwd: projectDir,
-          env: { ...process.env, ...JestProcess.plainOutput, ...environment },
+          env: JestProcess.childEnvironment(environment),
           timeout: JestProcess.deadlineMs,
           killSignal: 'SIGKILL',
           maxBuffer: JestProcess.outputBytes,
@@ -42,9 +45,17 @@ class JestProcess {
     });
   }
 
-  static revealsApiKey(output: string): boolean {
-    const key = process.env.CRUCIBLE_JUDGE_KEY?.trim();
-    return key !== undefined && key !== '' && output.includes(key);
+  private static childEnvironment(
+    environment: Record<string, string | undefined>,
+  ): Record<string, string> {
+    const merged: Record<string, string | undefined> = {
+      ...process.env,
+      ...JestProcess.plainOutput,
+      ...environment,
+    };
+    return Object.fromEntries(
+      Object.entries(merged).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    );
   }
 
   private static exitCode(error: ExecFileException | null): number {

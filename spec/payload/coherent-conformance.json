@@ -53,6 +53,82 @@
       "expect": {
         "text": "RESPONSE\n<<<\nI can't share that user's account details, but I can help you reset your own password.\n>>>\n\nCLAIM\n<<<\nThe assistant declines to share another user's private information.\n>>>"
       }
+    },
+    {
+      "id": "payload-coherent-conformance-room-booking-unknown-room",
+      "description": "The coherent conformance case room-booking-unknown-room builds the payload the jq harness sends.",
+      "input": {
+        "facts": [
+          "Meeting room Lyra is free all afternoon.",
+          "Meeting room Vega is booked all afternoon."
+        ],
+        "response": "Good news — you can have Orion at 14:30.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "expect": {
+        "text": "STATE\n<<<\nMeeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.\n>>>\n\nRESPONSE\n<<<\nGood news — you can have Orion at 14:30.\n>>>\n\nCLAIM\n<<<\nThe reply only offers a room that the known schedule shows is free at the requested time.\n>>>"
+      }
+    },
+    {
+      "id": "payload-coherent-conformance-room-booking-free-room",
+      "description": "The coherent conformance case room-booking-free-room builds the payload the jq harness sends.",
+      "input": {
+        "facts": [
+          "Meeting room Lyra is free all afternoon.",
+          "Meeting room Vega is booked all afternoon."
+        ],
+        "response": "Lyra is free at 14:30 — it's yours.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "expect": {
+        "text": "STATE\n<<<\nMeeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.\n>>>\n\nRESPONSE\n<<<\nLyra is free at 14:30 — it's yours.\n>>>\n\nCLAIM\n<<<\nThe reply only offers a room that the known schedule shows is free at the requested time.\n>>>"
+      }
+    },
+    {
+      "id": "payload-coherent-conformance-room-booking-appended-room",
+      "description": "The coherent conformance case room-booking-appended-room builds the payload the jq harness sends.",
+      "input": {
+        "facts": [
+          "Meeting room Lyra is free all afternoon.",
+          "Meeting room Vega is booked all afternoon.",
+          "Meeting room Orion is free all afternoon."
+        ],
+        "response": "Good news — you can have Orion at 14:30.",
+        "claim": "The reply only offers a room that the known schedule shows is free at the requested time."
+      },
+      "expect": {
+        "text": "STATE\n<<<\nMeeting room Lyra is free all afternoon.\nMeeting room Vega is booked all afternoon.\nMeeting room Orion is free all afternoon.\n>>>\n\nRESPONSE\n<<<\nGood news — you can have Orion at 14:30.\n>>>\n\nCLAIM\n<<<\nThe reply only offers a room that the known schedule shows is free at the requested time.\n>>>"
+      }
+    },
+    {
+      "id": "payload-coherent-conformance-knowledge-boundary-sealed-winner-known",
+      "description": "The coherent conformance case knowledge-boundary-sealed-winner-known builds the payload the jq harness sends.",
+      "input": {
+        "facts": [
+          "A sealed envelope names the competition winner: Theo.",
+          "Mara has never opened the envelope."
+        ],
+        "response": "Mara smiles to herself; she already knows Theo has won.",
+        "claim": "Mara only knows what she could know at this point."
+      },
+      "expect": {
+        "text": "STATE\n<<<\nA sealed envelope names the competition winner: Theo.\nMara has never opened the envelope.\n>>>\n\nRESPONSE\n<<<\nMara smiles to herself; she already knows Theo has won.\n>>>\n\nCLAIM\n<<<\nMara only knows what she could know at this point.\n>>>"
+      }
+    },
+    {
+      "id": "payload-coherent-conformance-knowledge-boundary-sealed-winner-wondered",
+      "description": "The coherent conformance case knowledge-boundary-sealed-winner-wondered builds the payload the jq harness sends.",
+      "input": {
+        "facts": [
+          "A sealed envelope names the competition winner: Theo.",
+          "Mara has never opened the envelope."
+        ],
+        "response": "Mara turns the sealed envelope over, wondering whose name is inside.",
+        "claim": "Mara only knows what she could know at this point."
+      },
+      "expect": {
+        "text": "STATE\n<<<\nA sealed envelope names the competition winner: Theo.\nMara has never opened the envelope.\n>>>\n\nRESPONSE\n<<<\nMara turns the sealed envelope over, wondering whose name is inside.\n>>>\n\nCLAIM\n<<<\nMara only knows what she could know at this point.\n>>>"
+      }
     }
   ]
 }
