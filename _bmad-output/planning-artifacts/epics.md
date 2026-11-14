@@ -755,7 +755,7 @@ So that the system under test cannot rewrite the judge's prompt.
 **Acceptance Criteria:**
 
 **Given** content placed in a fenced section (`RESPONSE`, `STATE`, `CLAIM`, `TARGET`)
-**When** any line, split on every line break (`\n`, `\r\n`, `\r`, U+2028, U+2029) for the check only, equals `<<<` or `>>>` after trimming surrounding white space
+**When** any line, split for the check only on every line break (U+000A–U+000D, U+001C–U+001E, U+0085, U+2028, U+2029), equals `<<<` or `>>>` after removing default-ignorable (invisible) code points and trimming surrounding padding (exact sets in `spec/README.md`)
 **Then** that line is neutralised; the original separators and all other content are kept byte-for-byte
 
 **And** the TypeScript payload builder, the jq conformance builder and the payload fixtures implement the same rule (new fixture cases for CRLF, CR, U+2028/2029 and padded fences; goldens regenerated)

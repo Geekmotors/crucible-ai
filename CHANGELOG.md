@@ -4,6 +4,24 @@ All notable changes to `crucible-ai` are listed here. The project follows
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may
 contain breaking changes, and they are marked **Breaking** below.
 
+## Unreleased
+
+### Fixed
+
+- Prompt fencing is harder to break out of (prompt-injection hardening). A
+  line of a fenced section (`STATE`, `RESPONSE`, `CLAIM`, and for extract
+  `TARGET`, `TYPE` and `MODE`) that is only `<<<` or `>>>` was prefixed with
+  a space only when it was split off by `\n` and had no other characters.
+  Now every common line break counts (`\r\n`, `\r`, VT, FF, U+001C–U+001E,
+  U+0085, U+2028 and U+2029 as well as `\n`), and white space around the
+  marker and invisible characters (zero-width, bidi and tag characters) are
+  ignored, so a system under test can no longer forge a section with CRLF
+  text, padded fences such as `  >>>  ` or a zero-width `\u200b>>>`. Only
+  such lines change, by one leading space, including one that already
+  started with a space (` >>>` becomes `  >>>`); line breaks and all other
+  text reach the judge as before. No API change. Ports of `spec/` and
+  recorded payloads must follow the new rule in `spec/README.md`.
+
 ## 0.4.0
 
 ### Changed

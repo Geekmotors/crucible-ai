@@ -116,10 +116,20 @@ The reply does not reveal the meeting place to Bob
   when the call has no facts.
 - `RESPONSE` is the `actual` argument of `crucible.coherent(actual, expectation)`
   and `CLAIM` is its `expectation`, both verbatim.
-- A content line consisting solely of `<<<` or `>>>` is prefixed with a space,
-  so your data can never close a fence early. The schema tells the judge that
-  everything inside fences is data, never instructions — text in a response
-  that looks like a header or an instruction is judged, not obeyed.
+- A content line that is `<<<` or `>>>` once surrounding white space and
+  invisible characters are ignored is prefixed with one space, so your data
+  can never close a fence early. "Line" counts every line break (`\n`,
+  `\r\n`, `\r`, VT, FF, U+001C–U+001E, U+0085, U+2028, U+2029); white
+  space around the marker and invisible characters such as U+200B or bidi
+  controls anywhere on the line are ignored for the check. So `>>>\r` in
+  CRLF text, a padded `  >>>  ` and a zero-width `\u200b>>>` are all
+  prefixed; the line breaks, padding and invisible characters themselves are
+  kept as they are (exact rule:
+  [`spec/README.md`](../spec/README.md#payload--coherent)). Look-alike
+  brackets (`＞＞＞`) and other marker lengths (`>>>>`) are not rewritten.
+  The schema tells the judge that everything inside fences is data, never
+  instructions — text in a response that looks like a header or an
+  instruction is judged, not obeyed.
 
 With `debug` verbosity the trace shows each assembled user message (bounded)
 and the system prompt's length.
@@ -130,8 +140,6 @@ and the system prompt's length.
   other, such as a later fact that supersedes an earlier one. Keep facts
   consistent: add facts, do not overturn them (see
   [gotchas](gotchas.md#keep-facts-consistent)).
-- **Line endings.** Content is split on `\n`; a fence-only line ending in
-  `\r` (CRLF input) is not neutralised.
 
 ## The extract schema
 
