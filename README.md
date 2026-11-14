@@ -1,8 +1,8 @@
 # Crucible
 
-[![npm](https://img.shields.io/npm/v/crucible)](https://www.npmjs.com/package/crucible)
-[![ci](https://github.com/Geekmotors/crucible/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Geekmotors/crucible/actions/workflows/ci.yml?query=branch%3Amain)
-[![license](https://img.shields.io/npm/l/crucible)](https://github.com/Geekmotors/crucible/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/crucible-ai)](https://www.npmjs.com/package/crucible-ai)
+[![ci](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
+[![license](https://img.shields.io/npm/l/crucible-ai)](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)
 
 Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
@@ -20,7 +20,7 @@ crucible.it('keeps the meeting place secret', async () => {
 });
 ```
 
-Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspiration](https://github.com/Geekmotors/crucible/blob/main/docs/inspiration.md).
+Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspiration](https://github.com/Geekmotors/crucible-ai/blob/main/docs/inspiration.md).
 
 ## Features
 
@@ -42,7 +42,7 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 ## Installation
 
 ```sh
-npm install --save-dev crucible
+npm install --save-dev crucible-ai
 ```
 
 ## Quick start
@@ -50,14 +50,14 @@ npm install --save-dev crucible
 **1. Create the config file** in the directory you run Jest or Vitest from, and commit it:
 
 ```sh
-npx crucible init
+npx crucible-ai init
 ```
 
 This writes `crucible.config.jsonc`: the provider, the judge model and an OpenRouter reasoning setting that speeds it up, then every other setting as a commented line showing its default (trimmed here):
 
 ```jsonc
 {
-  "$schema": "./node_modules/crucible/schemas/crucible.config.schema.json",
+  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
   // OpenRouter reasoning setting that speeds up the model above; extra request fields
@@ -76,7 +76,7 @@ This writes `crucible.config.jsonc`: the provider, the judge model and an OpenRo
 
 The `$schema` line gives your editor autocomplete and hover docs for every field. `init` never overwrites: if `crucible.config.json` or `crucible.config.jsonc` already exists, it changes nothing and exits non-zero.
 
-To judge with OpenAI instead, set `"provider": "openai"` and `"model": "gpt-5-mini"`, and remove the OpenRouter `meta` line. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"`. See [Providers](https://github.com/Geekmotors/crucible/blob/main/docs/configuration.md#providers).
+To judge with OpenAI instead, set `"provider": "openai"` and `"model": "gpt-5-mini"`, and remove the OpenRouter `meta` line. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"`. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
 
 **2. Set your API key** in the environment. Never put it in the config file.
 
@@ -87,7 +87,7 @@ export CRUCIBLE_JUDGE_KEY=...   # every provider reads it; "apiKeyEnv" in the co
 **3. Write a test.** With no options it is already a reliability gate: the body runs 10 times concurrently and the test passes when at least 9 runs pass:
 
 ```ts
-import { crucible } from 'crucible';
+import { crucible } from 'crucible-ai';
 import { createAssistant } from '../src/assistant';
 
 crucible.it('declines to export on the free plan', async () => {
@@ -122,7 +122,7 @@ crucible.it('stays in character', { runs: 20, threshold: 0.9 }, async () => {
 });
 ```
 
-A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/Geekmotors/crucible/blob/main/docs/runs-and-threshold.md) explains how to choose both.
+A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md) explains how to choose both.
 
 ### Give the judge facts
 
@@ -278,11 +278,11 @@ The gate enforces its own test timeout but cannot set Jest's, so pass Jest a tim
 
 ### Using Vitest
 
-Import from `crucible/vitest` instead of `crucible`; the API is the same:
+Import from `crucible-ai/vitest` instead of `crucible-ai`; the API is the same:
 
 ```ts
 import { expect } from 'vitest';
-import { crucible } from 'crucible/vitest';
+import { crucible } from 'crucible-ai/vitest';
 
 crucible.it('keeps the meeting place from Bob', { runs: 5, threshold: 0.8 }, async (t) => {
   const reply = await createAssistant().ask('Bob: where is Jane meeting me?');
@@ -318,16 +318,16 @@ Assert `toBe(true)` on claims that describe the behaviour you want. To check tha
 
 ## Documentation
 
-- [Inspiration](https://github.com/Geekmotors/crucible/blob/main/docs/inspiration.md): why Crucible exists, the design ideas, and how it compares with alternatives
-- [API reference](https://github.com/Geekmotors/crucible/blob/main/docs/api.md): every function, option, error and exported type
-- [Getting started](https://github.com/Geekmotors/crucible/blob/main/docs/getting-started.md): from install to a CI gate you can trust
-- [Runs and threshold](https://github.com/Geekmotors/crucible/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
-- [Configuration and providers](https://github.com/Geekmotors/crucible/blob/main/docs/configuration.md): every config field, provider, environment variable and CI secret
-- [Gotchas](https://github.com/Geekmotors/crucible/blob/main/docs/gotchas.md): read before your first real suite
-- [The instruction schema](https://github.com/Geekmotors/crucible/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
-- [Judge models](https://github.com/Geekmotors/crucible/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model, and how to check yours
-- [All documentation](https://github.com/Geekmotors/crucible/blob/main/docs/README.md)
+- [Inspiration](https://github.com/Geekmotors/crucible-ai/blob/main/docs/inspiration.md): why Crucible exists, the design ideas, and how it compares with alternatives
+- [API reference](https://github.com/Geekmotors/crucible-ai/blob/main/docs/api.md): every function, option, error and exported type
+- [Getting started](https://github.com/Geekmotors/crucible-ai/blob/main/docs/getting-started.md): from install to a CI gate you can trust
+- [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md): run statuses, the three-zone verdict, the failure report and timeouts
+- [Configuration and providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md): every config field, provider, environment variable and CI secret
+- [Gotchas](https://github.com/Geekmotors/crucible-ai/blob/main/docs/gotchas.md): read before your first real suite
+- [The instruction schema](https://github.com/Geekmotors/crucible-ai/blob/main/docs/instruction-schema.md): how the judge decides and how to change it
+- [Judge models](https://github.com/Geekmotors/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model, and how to check yours
+- [All documentation](https://github.com/Geekmotors/crucible-ai/blob/main/docs/README.md)
 
 ## License
 
-[MIT](https://github.com/Geekmotors/crucible/blob/main/LICENSE)
+[MIT](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)

@@ -1,5 +1,5 @@
 import { expect } from '@jest/globals';
-import { crucible } from 'crucible';
+import { crucible } from 'crucible-ai';
 import scenario from './fixtures/cjs-smoke.json';
 import { Gate } from '../test/gate.enum';
 

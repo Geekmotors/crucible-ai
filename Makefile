@@ -1,7 +1,7 @@
 .PHONY: e2e-core e2e-ext e2e-vitest e2e e2e-key e2e-build conformance conformance-image
 
 E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
-CONFORMANCE_IMAGE ?= crucible-conformance
+CONFORMANCE_IMAGE ?= crucible-ai-conformance
 CONFORMANCE_REPS ?= 3
 CONFORMANCE_SUITES ?= coherent extract
 CONFORMANCE_CA_BUNDLE ?=

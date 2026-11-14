@@ -1,14 +1,10 @@
 # Changelog
 
-All notable changes to `crucible` (published as `crucible-ai` up to 0.3.0) are listed here. The project follows
+All notable changes to `crucible-ai` are listed here. The project follows
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may
 contain breaking changes, and they are marked **Breaking** below.
 
-## 0.5.0
-
-The package is renamed from `crucible-ai` to `crucible`, and the repository moved to `Geekmotors/crucible` (GitHub redirects the old URLs). Install `crucible`, import from `'crucible'` (or `'crucible/vitest'`), and run `npx crucible init`. The CLI command is now `crucible`, and the `$schema` path in `crucible.config.jsonc` is `./node_modules/crucible/schemas/crucible.config.schema.json`. `crucible-ai` stays on npm at 0.3.0, deprecated. Versions 0.4.x are skipped because the `crucible` name was used for an unrelated package years ago and npm never reuses version numbers.
-
-**Migration:** `npm uninstall crucible-ai && npm install --save-dev crucible`, then replace `'crucible-ai'` with `'crucible'` in imports and the `$schema` path.
+## 0.4.0
 
 ### Changed
 
@@ -81,7 +77,7 @@ The package is renamed from `crucible-ai` to `crucible`, and the repository move
   `crucible.extract()`, `crucible.load()` and `crucible.append()` carry
   documentation, including each option's default.
 - `CHANGELOG.md` is included in the published package.
-- `npx crucible init` writes `crucible.config.jsonc` with the provider,
+- `npx crucible-ai init` writes `crucible.config.jsonc` with the provider,
   the recommended judge model, an OpenRouter low-reasoning `meta` setting
   that speeds it up, and every other setting as a commented line showing its
   default. It never overwrites: with `crucible.config.json` or
@@ -156,7 +152,7 @@ The package is renamed from `crucible-ai` to `crucible`, and the repository move
   Jest variant Crucible does not wrap or a variant in the wrong place
   (`crucible.it.each.only`); any other property, such as `then`, is
   `undefined`. New exported types: `CrucibleIt`, `CrucibleDescribe`.
-- Vitest support: `import { crucible } from 'crucible/vitest'` gives the
+- Vitest support: `import { crucible } from 'crucible-ai/vitest'` gives the
   same API on Vitest 5, without Vitest's `globals` option. `crucible.it`
   adds Vitest's `for`, `skipIf` and `runIf` (and `only.for`, `skip.for`);
   `crucible.describe` adds `todo`, `for`, `skipIf` and `runIf`. Bodies
@@ -225,7 +221,7 @@ The package is renamed from `crucible-ai` to `crucible`, and the repository move
 - `crucible.extract(text, description, { as })`: pull one typed value out of
   prose, or `null` when the text commits to none.
 - `crucible.coherent()` parameters are `(actual, expectation)`.
-- Repository moved to `Geekmotors/crucible`.
+- Repository moved to `Geekmotors/crucible-ai`.
 
 ## 0.1.0
 

@@ -88,7 +88,7 @@ class ConfigStore {
     if (found.length === 0) {
       throw this.failure(
         `Could not find ${this.boundary.describeLocation(json)} or ${jsonc}. ` +
-          `Run "npx crucible init" to create ${jsonc}, or create either file ` +
+          `Run "npx crucible-ai init" to create ${jsonc}, or create either file ` +
           `with at least { "provider": "...", "model": "..." }.`,
       );
     }

@@ -1,5 +1,5 @@
 {
-  "description": "The core scenarios on Vitest through crucible/vitest: crucible.it with t.facts, crucible.it.each with extract, a crucible.describe group whose test inherits runs and threshold, and Vitest's own test with crucible.gate. One run at threshold 1 everywhere keeps the live cost to five judge calls.",
+  "description": "The core scenarios on Vitest through crucible-ai/vitest: crucible.it with t.facts, crucible.it.each with extract, a crucible.describe group whose test inherits runs and threshold, and Vitest's own test with crucible.gate. One run at threshold 1 everywhere keeps the live cost to five judge calls.",
   "runs": 1,
   "threshold": 1,
   "timeout": 60000,

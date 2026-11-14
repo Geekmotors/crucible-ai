@@ -3,7 +3,7 @@
 Everything is exported from the package root:
 
 ```ts
-import { crucible, CrucibleError, CrucibleVerdictError } from 'crucible';
+import { crucible, CrucibleError, CrucibleVerdictError } from 'crucible-ai';
 import type {
   CoherentOptions,
   CrucibleDescribe,
@@ -18,7 +18,7 @@ import type {
   RunOptions,
   TestBody,
   VerdictOutcome,
-} from 'crucible';
+} from 'crucible-ai';
 ```
 
 `crucible` is a frozen object with six functions: [`it`](#crucibleit),
@@ -31,7 +31,7 @@ of a test body also gets a [run context `t`](#the-run-context-t) with
 `crucible.it` and `crucible.describe` also have the runner's
 [variants](#variants-only-skip-todo-each): `only`, `skip`, `todo` and `each`.
 
-On Vitest, import the same names from `crucible/vitest` instead; see
+On Vitest, import the same names from `crucible-ai/vitest` instead; see
 [Vitest](#vitest) for what differs.
 
 ## `crucible.it()`
@@ -224,15 +224,15 @@ awaiting `crucible.it` is harmless.
 
 ## Vitest
 
-`crucible/vitest` exports the same `crucible` object, errors and types as
+`crucible-ai/vitest` exports the same `crucible` object, errors and types as
 the root, built on Vitest's `test` and `describe` (imported from `vitest`, so
-Vitest's `globals` option is not needed). The root `crucible` entry stays
+Vitest's `globals` option is not needed). The root `crucible-ai` entry stays
 the Jest one; never mix the two entries in one test file.
 
 ```ts
 import { expect } from 'vitest';
-import { crucible } from 'crucible/vitest';
-import type { RunContext } from 'crucible/vitest';
+import { crucible } from 'crucible-ai/vitest';
+import type { RunContext } from 'crucible-ai/vitest';
 ```
 
 Everything on this page applies, with these differences:
@@ -301,7 +301,7 @@ with the same failure report. Each run calls `body` with its own
 (the row values of `it.each`, for example):
 
 ```ts
-import { crucible } from 'crucible';
+import { crucible } from 'crucible-ai';
 
 it(
   'declines the PDF export on the free plan',
@@ -631,8 +631,8 @@ Thrown by a `crucible.it()` or `crucible.gate()` test that did not pass. Its `me
 | `RunContext` | `{ facts, coherent, extract }` — the [run context `t`](#the-run-context-t) each run receives |
 | `GateBody<A>` | `(t: RunContext, ...args: A) => unknown` — the body passed to `crucible.gate()` |
 | `GatedTest<A>` | `(...args: A) => Promise<void>` — what `crucible.gate()` returns, for the runner's `it` |
-| `CrucibleIt` | the type of `crucible.it`: its four forms and its `only`, `skip`, `todo`, `each` variants (from `crucible/vitest`: also `for`, `skipIf`, `runIf`) |
-| `CrucibleDescribe` | the type of `crucible.describe`: its two forms and its `only`, `skip`, `each` variants (from `crucible/vitest`: also `todo`, `for`, `skipIf`, `runIf`) |
+| `CrucibleIt` | the type of `crucible.it`: its four forms and its `only`, `skip`, `todo`, `each` variants (from `crucible-ai/vitest`: also `for`, `skipIf`, `runIf`) |
+| `CrucibleDescribe` | the type of `crucible.describe`: its two forms and its `only`, `skip`, `each` variants (from `crucible-ai/vitest`: also `todo`, `for`, `skipIf`, `runIf`) |
 | `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
 | `CoherentOptions` | `{ facts?: string \| readonly string[] }` — the third argument of `crucible.coherent()` |
 | `ExtractOptions` | `{ as?: ExtractType; strict?: boolean; facts?: string \| readonly string[] }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |

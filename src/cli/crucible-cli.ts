@@ -5,7 +5,7 @@ import type { InitCommand } from './init-command.js';
 class CrucibleCli {
   private static readonly HELP_ARGUMENTS = new Set(['--help', '-h', 'help']);
   private static readonly USAGE = [
-    'Usage: crucible <command>',
+    'Usage: crucible-ai <command>',
     '',
     'Commands:',
     '  init    Write crucible.config.jsonc in the current directory, listing every',

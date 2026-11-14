@@ -1,5 +1,5 @@
-import { crucible } from 'crucible';
-import type { RunContext, RunOptions } from 'crucible';
+import { crucible } from 'crucible-ai';
+import type { RunContext, RunOptions } from 'crucible-ai';
 import { Gate } from './gate.enum.js';
 
 class CrucibleVariantsTyping {
