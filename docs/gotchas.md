@@ -11,12 +11,13 @@ protect you from.
 - [`extract()` returns `null` when there is no value to take](#extract-returns-null-when-there-is-no-value-to-take)
 - [`extract()` is async: always `await` it](#extract-is-async-always-await-it)
 
-**Runs and state**
+**Runs and facts**
 
 - [Bodies must be re-entrant](#bodies-must-be-re-entrant)
 - [`beforeEach` arranges once per test, not once per run](#beforeeach-arranges-once-per-test-not-once-per-run)
-- [`load` never replaces](#load-never-replaces)
-- [Keep state consistent](#keep-state-consistent)
+- [Facts are per run, never global](#facts-are-per-run-never-global)
+- [`facts` never replaces](#facts-never-replaces)
+- [Keep facts consistent](#keep-facts-consistent)
 
 **Time**
 
@@ -174,25 +175,35 @@ per run. So:
 
 - a system under test created in `beforeEach` is **shared by all runs** (see
   above);
-- `crucible.load()` or `crucible.append()` in `beforeEach` (or `beforeAll`,
-  or at module scope) **throws a `usage` error**, because state belongs to a
-  run and no run exists yet.
+- `crucible.facts()` in `beforeEach` (or `beforeAll`, or at module scope)
+  **throws a `usage` error**, because facts belong to a run and no run exists
+  yet.
 
 Put the whole arrange step in the body. To share setup code, call a helper
 function from inside the body.
 
-## `load` never replaces
+## Facts are per run, never global
 
-`crucible.load()` and `crucible.append()` both add to the run's state; neither
-removes anything. Calling `load` twice keeps both sets of entries. Use `load`
-for the arrange step and `append` after an act — the names state your intent,
-the behaviour is the same. See [`load` and `append`](api.md#crucibleload-and-crucibleappend).
+`crucible` is a module import, but `crucible.facts()` does not set anything
+module-wide: the facts belong to the run that is executing when you call it,
+found through Node's async context. Concurrent runs and other tests never
+share them. Code that loses that async context — for example a timer or
+event listener set up in `beforeAll` that fires later, outside any run — gets
+a `usage` error, not shared facts. Call `crucible.facts()` from
+code the running body awaits.
 
-## Keep state consistent
+## `facts` never replaces
 
-The schema treats state as ground truth but has no rule for entries that
-contradict each other — for example an appended "the booking was cancelled"
-after a loaded "the booking is confirmed". Judges handle such conflicts
+`crucible.facts()` only adds to the run's facts; calling it twice keeps both
+sets of entries. Add facts while arranging and again after an act. Facts
+passed to a single call (`{ facts }` on `coherent()` or `extract()`) are
+never added to the run. See [`crucible.facts()`](api.md#cruciblefacts).
+
+## Keep facts consistent
+
+The schema treats facts (the `STATE` section) as ground truth but has no rule for entries that
+contradict each other — for example a later "the booking was cancelled"
+after an earlier "the booking is confirmed". Judges handle such conflicts
 inconsistently (sometimes keeping the older fact). Until the schema defines
 an ordering rule, add facts that build on each other rather than overturning
 earlier ones, or phrase the change so it does not contradict ("the booking
@@ -264,8 +275,8 @@ unset for a server that needs no key. See [`openai-compatible`](configuration.md
 Failure reports and the `full`/`debug` output include, verbatim (bounded in
 length): the error your test body threw (`Thrown:`), the infrastructure
 cause of errored runs (`Cause:`), the response excerpt, your claims and
-extraction descriptions and, at
-`debug`, the assembled state. In CI that output lands in build logs.
+extraction descriptions, the facts each judged call used (`Facts:`) and, at
+`debug`, the assembled payload. In CI that output lands in build logs.
 
 Crucible never prints your API key or `meta` values, and its bundled
 provider adapter never puts the key in an error message. But if your own
@@ -275,11 +286,10 @@ error messages.
 
 ## Everything you judge leaves your machine
 
-Each `coherent()` call sends the run's state, the response and the claim to
-your judge provider (each `extract()` call the state, the text and the
+Each `coherent()` call sends the facts, the response and the claim to
+your judge provider (each `extract()` call the facts, the text and the
 description). OpenRouter and gateways such as LiteLLM forward them to the
-model provider serving your chosen model. Treat everything you `load`,
-`append` and judge as data shared with those services: use synthetic
+model provider serving your chosen model. Treat every fact you pass and everything you judge as data shared with those services: use synthetic
 fixtures, not production data, and check the provider's data policy
 (OpenRouter's provider routing settings can restrict where requests go,
 through `meta`). Only a local server such as Ollama keeps it on your machine.

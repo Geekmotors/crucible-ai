@@ -5,6 +5,7 @@ import { BlockingAdapter } from './test/blocking-adapter.fake.js';
 import { Capture } from './test/capture.util.js';
 import { ExpiredDeadline } from './test/expired-deadline.fake.js';
 import { JudgeHarness } from './test/judge-harness.util.js';
+import { JudgedResponse } from './test/judged-response.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { ScriptedAdapter } from './test/scripted-adapter.fake.js';
 import { StartGate } from './test/start-gate.util.js';
@@ -13,6 +14,10 @@ import { CustomTimeout } from './test/custom-timeout.enum.js';
 import { TraceHarness } from './test/trace-harness.util.js';
 import { TraceText } from './test/trace-text.enum.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
+import { FactsHarness } from './test/facts-harness.util.js';
+import { OptionsHarness } from './test/options-harness.util.js';
+import { StateFact } from './test/state-fact.enum.js';
+import type { CoherentOptions } from './assertion-options.js';
 
 describe('Judge', () => {
   it('resolves true when the judge reply says the response is coherent', async () => {
@@ -129,6 +134,7 @@ describe('Judge', () => {
         verdict: false,
         reasoning: 'names the mismatch',
         response: 'the response',
+        facts: [],
         seq: 0,
       },
     ]);
@@ -159,6 +165,158 @@ describe('Judge', () => {
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('infra');
     expect((error as CrucibleError).retryable).toBe(true);
+  });
+});
+
+describe('Judge — facts', () => {
+  it('judges against the run facts followed by the call’s own facts', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [
+      StateFact.Casino,
+      StateFact.Home,
+      StateFact.Letter,
+    ]);
+    const verdict = await scope.enterRun(() => {
+      scope.appendState(StateFact.Casino);
+      return judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+        facts: [StateFact.Home, StateFact.Letter],
+      });
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it('sends a single per-call fact when the run has none', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Letter]);
+    const verdict = await scope.enterRun(() =>
+      judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, { facts: StateFact.Letter }),
+    );
+    expect(verdict).toBe(true);
+  });
+
+  it('a later call does not see an earlier call’s facts', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const verdict = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+        facts: StateFact.Home,
+      });
+      return judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it('per-call facts never enter the run’s facts', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const state = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+        facts: StateFact.Home,
+      });
+      return scope.context().state;
+    });
+    expect(state).toEqual([StateFact.Casino]);
+  });
+
+  it('records the facts each call used, unaffected by facts added afterwards', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const verdicts = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+        facts: StateFact.Home,
+      });
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      scope.appendState(StateFact.Letter);
+      return scope.context().verdicts;
+    });
+    expect(verdicts.map((record) => record.facts)).toEqual([
+      [StateFact.Casino, StateFact.Home],
+      [StateFact.Casino],
+    ]);
+  });
+
+  it('judges against the facts as given when the caller mutates its array mid-call', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Home]);
+    const verdict = await scope.enterRun(() => {
+      const facts = [StateFact.Home];
+      const pending = judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, { facts });
+      facts.push(StateFact.Letter);
+      return pending;
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it('a concurrent call in the same run does not see another call’s facts', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const verdict = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      const withOwnFacts = judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+        facts: StateFact.Home,
+      });
+      const withRunFacts = judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      await withOwnFacts;
+      return withRunFacts;
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it('options without facts judge against the run facts alone', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, [StateFact.Casino]);
+    const verdict = await scope.enterRun(() => {
+      scope.appendState(StateFact.Casino);
+      return judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {});
+    });
+    expect(verdict).toBe(true);
+  });
+
+  it.each(FactsHarness.invalid())(
+    'rejects %s as per-call facts as a usage error',
+    async (_label, facts) => {
+      const scope = new RunScope();
+      const judge = JudgeHarness.factJudge(scope, []);
+      const error = await scope.enterRun(() =>
+        Capture.rejection(
+          judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
+            facts,
+          } as CoherentOptions),
+        ),
+      );
+      expect(error).toBeInstanceOf(CrucibleError);
+      expect((error as CrucibleError).kind).toBe('usage');
+    },
+  );
+
+  it.each([
+    ['a string', StateFact.Casino],
+    ['an array', [StateFact.Casino]],
+    ['null', null],
+    ['an unknown key', { fact: StateFact.Casino }],
+    ...OptionsHarness.nonPlain(),
+  ])('rejects %s as coherent options as a usage error', async (_label, options) => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.factJudge(scope, []);
+    const error = await scope.enterRun(() =>
+      Capture.rejection(
+        judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, options as CoherentOptions),
+      ),
+    );
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
+  });
+
+  it('per-call facts outside a run scope are a usage error', async () => {
+    const judge = JudgeHarness.factJudge(new RunScope(), [StateFact.Home]);
+    const error = await Capture.rejection(
+      judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, { facts: StateFact.Home }),
+    );
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
   });
 });
 

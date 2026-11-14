@@ -28,7 +28,7 @@ describe('CRUCIBLE_VERBOSE=debug against the real provider', () => {
     expect(outcome.output).toContain(TraceLine.ProviderRequest);
   });
 
-  it('sends the loaded run state to the judge', () => {
+  it('sends the run facts to the judge as STATE', () => {
     expect(outcome.output).toMatch(TracePattern.promptCarryingState(scenario.state[0]));
   });
 

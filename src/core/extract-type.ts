@@ -1,3 +1,5 @@
+import type { Facts } from './assertion-options.js';
+
 type ExtractTypeMap = {
   string: string;
   number: number;
@@ -13,6 +15,7 @@ type ExtractMode = 'lenient' | 'strict';
 type ExtractOptions<T extends ExtractType = ExtractType> = {
   readonly as?: T;
   readonly strict?: boolean;
+  readonly facts?: Facts;
 };
 
 type RequestedType<O extends ExtractOptions | undefined> = O extends ExtractOptions

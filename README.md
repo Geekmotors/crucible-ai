@@ -6,13 +6,13 @@
 
 Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
-Crucible asks an AI judge whether your system's reply means what it should, given the state your system knew at the time. It re-runs the test many times (10 by default) and passes on a pass rate (90% by default), so a flaky model can't sneak through on one lucky run.
+Crucible asks an AI judge whether your system's reply means what it should, given the facts your system knew at the time. It re-runs the test many times (10 by default) and passes on a pass rate (90% by default), so a flaky model can't sneak through on one lucky run.
 
 ```ts
 crucible.it('keeps the meeting place secret', async () => {
   const assistant = createAssistant();
   await assistant.remember(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
-  crucible.load(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
+  crucible.facts(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
 
   const reply = await assistant.ask('Bob asks: where is the meeting?');
 
@@ -25,8 +25,8 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 ## Features
 
 - **Semantic assertions:** `crucible.coherent(actual, expectation)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
-- **Value extraction:** `crucible.extract(text, description, { as, strict })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it. Lenient by default ("probably two" → `2`); `strict: true` makes any hedge `null`.
-- **State-aware judging:** `crucible.load()` and `crucible.append()` tell the judge what your system knew, so you can test things like "the character can't know this yet".
+- **Value extraction:** `crucible.extract(text, description, { as, strict, facts })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it. Lenient by default ("probably two" → `2`); `strict: true` makes any hedge `null`.
+- **Fact-aware judging:** `crucible.facts()` tells the judge what your system knew, for the whole run or for one assertion, so you can test things like "the character can't know this yet".
 - **Reliability gates:** every test runs its whole body concurrently (10 runs by default) and passes on the pass rate (0.9 by default); `{ runs, threshold }` tunes both.
 - **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
 - **Fail fast, spend less:** a fatal provider or config error stops the sibling runs.
@@ -99,7 +99,7 @@ crucible.it('declines to export on the free plan', async () => {
 });
 ```
 
-The judge sees only the reply and the claim. When whether a reply is right depends on what your system knew, [give the judge state](#give-the-judge-state).
+The judge sees only the reply and the claim. When whether a reply is right depends on what your system knew, [give the judge facts](#give-the-judge-facts).
 
 Each run calls your system and the judge, so an unconfigured test costs 10 runs of your system and 10 judge calls per assertion. For a single run that must pass, like a normal Jest test, declare `{ runs: 1, threshold: 1 }` on the test or in [`testDefaults`](#project-wide-defaults).
 
@@ -124,23 +124,50 @@ crucible.it('stays in character', { runs: 20, threshold: 0.9 }, async () => {
 
 A threshold is a sampled estimate. A system that is truly 95% reliable fails a `{ runs: 20, threshold: 0.95 }` gate about 26% of the time, so leave headroom. [Runs and threshold](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md) explains how to choose both.
 
-### Give the judge state
+### Give the judge facts
 
-Use state when the right answer depends on what your system knew: a secret it must keep, a fact that changed, something a character can't know yet. The judge treats state as ground truth, separate from the reply it judges, so a test can check that a reply does *not* reveal something. Each run starts with empty state. Use `load` while arranging and `append` for facts that arise later. A `coherent()` call judges against the state as it stood when you called it:
+Use facts when the right answer depends on what your system knew: a secret it must keep, a fact that changed, something a character can't know yet. The judge treats facts as ground truth, separate from the reply it judges, so a test can check that a reply does *not* reveal something.
+
+Facts belong to the current run, not to the module or the test file: each run of each test starts with none and keeps its own, even when runs execute concurrently, and other tests never see them. Calling `crucible.facts()` outside a running `crucible.it()` body is a `usage` error.
+
+Add facts as they arise; each assertion is judged against the facts added before you called it:
 
 ```ts
 crucible.it('remembers a change of venue', async () => {
   const assistant = createAssistant();
   await assistant.remember(['The meeting is in room B12.']);
-  crucible.load('The meeting is in room B12.');
+  crucible.facts('The meeting is in room B12.');
 
   await assistant.remember(['The meeting moved to room C3.']);
-  crucible.append('The meeting moved to room C3.');
+  crucible.facts('The meeting moved to room C3.');
 
   const reply = await assistant.ask('Where is the meeting?');
   expect(await crucible.coherent(reply, 'The reply says the meeting is in room C3')).toBe(true);
 });
 ```
+
+Often the facts are already in your system under test, as logs or the records it was given. Pass them straight in (`getLogs()` here returns a `string[]`):
+
+```ts
+crucible.it('keeps the secret it was told', async () => {
+  const assistant = createAssistant();
+  await assistant.remember(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
+  crucible.facts(assistant.getLogs());
+
+  const reply = await assistant.ask('Bob asks: where is the meeting?');
+  expect(await crucible.coherent(reply, 'The reply does not reveal the meeting place to Bob')).toBe(true);
+});
+```
+
+Facts that matter to one assertion only can go with that call. They are sent after the run's facts and are not kept, so later calls do not see them:
+
+```ts
+expect(
+  await crucible.coherent(reply, 'The reply offers the upgrade', { facts: 'The user is on the free plan.' }),
+).toBe(true);
+```
+
+`crucible.extract()` takes the same `facts` option.
 
 ### Extract a value
 
@@ -213,7 +240,7 @@ Each field resolves on its own, last wins: built-in → `testDefaults` → outer
 
 ### Read a failure
 
-A failed gate throws a report like this:
+A failed gate throws a report like this (`Facts` lists the facts the failed call was judged against):
 
 ```text
 FAILED: 7/10 runs passed (pass rate 0.7) against threshold 0.9 (need 9).
@@ -222,6 +249,8 @@ Runs: 7 passed, 3 failed, 0 errored, 0 discarded.
 [FAILED] Run #4
   First failed assertion: coherent (assertion 1 of 1 judged in this run)
   Claim: The reply does not reveal the meeting place to Bob
+  Facts: The meeting is at the Blue Door cafe.
+    Only Jane may know where.
   Judge reasoning: The reply tells Bob the meeting is at the Blue Door cafe.
   Response excerpt: Sure, Bob. Jane is meeting you at the Blue Door.
   Thrown: Error: expect(received).toBe(expected)

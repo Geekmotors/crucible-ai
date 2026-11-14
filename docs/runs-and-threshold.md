@@ -307,6 +307,8 @@ Runs: 14 passed, 5 failed, 1 errored, 0 discarded.
 [FAILED] Run #2
   First failed assertion: coherent (assertion 2 of 3 judged in this run)
   Claim: the reply never reveals the meeting location
+  Facts: The meeting is at the Blue Door cafe on 5th street.
+    Only Jane may know the meeting location.
   Judge reasoning: The reply names the Blue Door cafe on 5th street,
     which is the secret meeting location.
   Response excerpt (first 60 of 116 chars): Sure — Bob said he would meet Jane at the Blue Door cafe on …
@@ -337,14 +339,17 @@ Failing claims (first failure of each of the 5 failed runs):
   `the smoke run (runs: 1)` instead and has no `Runs:` line.
 - **Per failed run** (`[FAILED]`): the run's *first* failure — its
   lowest-sequence false verdict — with the assertion name and which of the
-  run's judged assertions it was, the claim, the judge's reasoning, a bounded
+  run's judged assertions it was, the claim, the facts the call was judged
+  against (`Facts:`, one per line: the run's facts, then the call's own
+  `{ facts }`; omitted when there were none), the judge's reasoning, a bounded
   excerpt of the judged response, and the error your test threw. If a judge
   call errored before any false verdict, that error is shown instead.
 - **Extractions in a failed run.** After those fields, every
   [`crucible.extract()`](api.md#crucibleextract) the run made is listed in
   call order — its mode (`lenient` or `strict`), description, requested
   type, the value the judge returned
-  (`null` included), its reasoning and a bounded response excerpt — so a
+  (`null` included), the facts it used (`Facts:`, when there were any), its
+  reasoning and a bounded response excerpt — so a
   failing `expect(...).toBe(2)` shows what the judge extracted and why:
 
   ```text
@@ -368,7 +373,9 @@ Failing claims (first failure of each of the 5 failed runs):
   failed runs are hidden a `Failing claims` tally groups every failed run by
   its first failing assertion and claim, so you can see whether the failures
   share one cause.
-- **Response excerpt length.** 500 characters by default. Set
+- **Response excerpt length.** 500 characters by default; the `Facts:` field
+  is bounded the same way, with its full length stated when cut; when the
+  cut falls between two facts, the `…` sits on its own line. Set
   `"excerptChars"` (an integer ≥ 1) in the config file to change it; an
   invalid value fails at config load as a `CrucibleError` of kind `config`.
   Lengths are counted in UTF-16 code units, and the cut never splits an emoji
@@ -385,7 +392,7 @@ levels; each includes everything the level before it shows.
 | Level | What you get |
 | --- | --- |
 | `default` | The failure report above, only when a test fails. Nothing is printed while runs execute or when a test passes. |
-| `full` | Every run in the report, with all of its judge output: each `coherent` and `extract` call in the order it was recorded (passing verdicts included), its claim or extracted value, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
+| `full` | Every run in the report, with all of its judge output: each `coherent` and `extract` call in the order it was recorded (passing verdicts included), its claim or extracted value, the facts it used, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
 | `debug` | `full`, plus a live trace while the test runs: engine start-up and the resolved config, test start (runs, threshold, deadline), each provider request and response, retry attempts and backoff, judge re-asks, each recorded verdict, extracted value or judge error, how each run settled, and the verdict. |
 
 Set the level in the config file with `"verbosity"`, or for a single
@@ -407,13 +414,14 @@ A run at `full` lists its judge calls like this:
 [PASSED] Run #1
   Judge call 1 of 1: coherent verdict true
     Claim: the reply never reveals the meeting location
+    Facts: The meeting is at the Blue Door cafe.
     Judge reasoning: The reply declines to say where they meet.
     Response excerpt: I can't share that, but I can pass on a message.
 ```
 
 An extraction is listed among the judge calls as
 `Judge call 2 of 2: extract (lenient) "the number of apples" as number → 2`, followed by
-its judge reasoning and response excerpt; at `full` the `Extraction` lines of
+its facts (when any), judge reasoning and response excerpt; at `full` the `Extraction` lines of
 a failed run are not repeated. In a `debug` trace it appears as
 `judge value 2 for extract "the number of apples" as number (lenient)`, followed by
 the reasoning.
@@ -541,16 +549,16 @@ is re-entrant:
 - **Build a fresh system under test inside the body.** Every run must arrange
   its own instance. An object created once at module scope and mutated by the
   body is mutated by 20 runs at the same time.
-- **`crucible.load()` and `crucible.append()` are per-run.** Both add a
-  string, or an array of strings, to the context of the run they are called
-  from, and that run's judge calls see only what that run added.
-  Calling either outside a `crucible.it()` body throws a `usage` error.
+- **`crucible.facts()` is per-run.** It adds a string, or an array of
+  strings, to the facts of the run it is called from, and that run's judge
+  calls see only what that run added. Calling it outside a `crucible.it()`
+  body throws a `usage` error.
 
 ```ts
 crucible.it('Jane looks for Bob', { runs: 20, threshold: 0.85 }, async () => {
   const story = await createStory('The Long Weekend'); // fresh per run
   await story.memory('Bob is at the casino');
-  crucible.load(story.getLogs()); // visible to this run's judge calls only
+  crucible.facts(story.getLogs()); // visible to this run's judge calls only
 
   const response = await story.input('Jane looks for Bob');
 

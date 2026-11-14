@@ -18,6 +18,14 @@ type ExtractOptions<T extends ExtractType = ExtractType> = {
    * @default the test's resolved strict: crucible.it options, else the enclosing crucible.describe, else testDefaults.strict, else false (lenient)
    */
   readonly strict?: CoreExtractOptions<T>['strict'];
+  /**
+   * Facts for this call only, sent after the run's facts (from
+   * `crucible.facts()`). They are not added to the run, so later calls do
+   * not see them. One string or an array of strings.
+   *
+   * @default none: the call uses the run's facts alone
+   */
+  readonly facts?: CoreExtractOptions<T>['facts'];
 };
 
 export type { ExtractOptions };

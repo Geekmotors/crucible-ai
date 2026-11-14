@@ -26,6 +26,10 @@ describe('a deliberately failing inference test', () => {
     expect(outcome.output).toContain(scenario.claim);
   });
 
+  it('shows the facts the failed call was judged against', () => {
+    expect(outcome.output).toContain(`${ReportLine.Facts} ${scenario.fact}`);
+  });
+
   it('shows what the judge extracted, and why, under the failed run', () => {
     expect(outcome.output).toMatch(
       ReportPattern.strictExtractionWithReasoning(`"${extraction.target}" as number → null`),

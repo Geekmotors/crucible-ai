@@ -13,6 +13,7 @@ type TypedResult = { value: unknown; exact: true };
 class ExtractResultTyping {
   private static TEXT = 'I have two apples.';
   private static DESCRIPTION = 'the number of apples';
+  private static FACT = 'The basket held two apples.';
 
   async withoutOptions(): Promise<TypedResult> {
     const value = await crucible.extract(ExtractResultTyping.TEXT, ExtractResultTyping.DESCRIPTION);
@@ -118,6 +119,33 @@ class ExtractResultTyping {
     );
     const exact: Exactly<typeof value, string | null> = true;
     return { value, exact };
+  }
+
+  async asNumberWithFacts(): Promise<TypedResult> {
+    const value = await crucible.extract(
+      ExtractResultTyping.TEXT,
+      ExtractResultTyping.DESCRIPTION,
+      { as: 'number', facts: [ExtractResultTyping.FACT] },
+    );
+    const exact: Exactly<typeof value, number | null> = true;
+    return { value, exact };
+  }
+
+  async factsWithoutType(): Promise<TypedResult> {
+    const value = await crucible.extract(
+      ExtractResultTyping.TEXT,
+      ExtractResultTyping.DESCRIPTION,
+      { facts: ExtractResultTyping.FACT },
+    );
+    const exact: Exactly<typeof value, string | null> = true;
+    return { value, exact };
+  }
+
+  async withNonStringFacts(): Promise<unknown> {
+    return crucible.extract(ExtractResultTyping.TEXT, ExtractResultTyping.DESCRIPTION, {
+      // @ts-expect-error facts are strings
+      facts: 42,
+    });
   }
 
   async withNonBooleanStrict(): Promise<unknown> {

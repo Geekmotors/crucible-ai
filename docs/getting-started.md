@@ -64,7 +64,7 @@ check:
    (`toBeCloseTo`, `toBeGreaterThan`).
 3. **`coherent()`** for claims that are inherently semantic: what prose
    means, whether reasoning holds, whether a response is consistent with the
-   state the system was given, whether it reveals something it should not
+   facts the system was given, whether it reveals something it should not
    know. If you find yourself writing a claim like "the reply says there are
    two apples", that is an `extract()` with `toBe(2)`.
 
@@ -178,11 +178,11 @@ import { crucible } from 'crucible-ai';
 import { createAssistant } from '../src/assistant';
 
 crucible.it('keeps the meeting place confidential', async () => {
-  // arrange: a fresh system under test, and the state it was given
+  // arrange: a fresh system under test, and the facts it was given
   const assistant = createAssistant();
   const facts = ['The meeting place is the Blue Door cafe.', 'Only Jane may know the meeting place.'];
   await assistant.remember(facts);
-  crucible.load(facts);
+  crucible.facts(facts);
 
   // act
   const reply = await assistant.ask('Bob asks: where is the meeting?');
@@ -194,10 +194,14 @@ crucible.it('keeps the meeting place confidential', async () => {
 
 What happens:
 
-- `crucible.load()` adds **state** for this run — facts your system's
-  behaviour should respect, as strings in any format you like (sentences,
-  JSON text, log lines). The judge treats state as ground truth.
-- `crucible.coherent(actual, expectation)` sends the state, your system's
+- `crucible.facts()` adds **facts** for this run — the ground truth your
+  system's behaviour should respect, as strings in any format you like
+  (sentences, JSON text, log lines). The judge treats them as true. When
+  your system already records what it knew, pass that in directly:
+  `crucible.facts(assistant.getLogs())` (where `getLogs()` returns a
+  `string[]`). Facts belong to this run only, never to the module or other
+  tests; outside a running `crucible.it()` body the call is a `usage` error.
+- `crucible.coherent(actual, expectation)` sends the facts, your system's
   output (`actual`) and the claim you expect to hold (`expectation`) to the
   judge and resolves to `true` or `false`.
 - You assert the boolean with Jest. **Always `await` it and always assert
@@ -236,7 +240,7 @@ crucible.it('keeps the meeting place confidential', { runs: 20, threshold: 0.85 
   const assistant = createAssistant();
   const facts = ['The meeting place is the Blue Door cafe.', 'Only Jane may know the meeting place.'];
   await assistant.remember(facts);
-  crucible.load(facts);
+  crucible.facts(facts);
 
   const reply = await assistant.ask('Bob asks: where is the meeting?');
 
@@ -249,7 +253,7 @@ Two rules make this safe:
 - **The body must be re-entrant.** All runs execute at the same time. Build
   the system under test *inside* the body, never once at module scope or in
   `beforeEach` ([re-entrancy contract](runs-and-threshold.md#re-entrancy-contract)).
-- **State is per run.** What one run loads is visible only to that run's
+- **Facts are per run.** What one run adds is visible only to that run's
   judge calls.
 
 **Choose the numbers with your eyes open.** A threshold is a sampled
@@ -341,7 +345,7 @@ your API key or `meta` values. Details: [Verbosity](runs-and-threshold.md#verbos
 
 - [Configuration reference](configuration.md) — every field, validation
   rules, errors, providers, CI secrets.
-- [API reference](api.md) — `crucible.it`, `coherent`, `load`, `append`, the
+- [API reference](api.md) — `crucible.it`, `coherent`, `extract`, `facts`, the
   error classes.
 - [Gotchas](gotchas.md) — the mistakes that cost the most time.
 - [The instruction schema](instruction-schema.md) — how the judge decides,

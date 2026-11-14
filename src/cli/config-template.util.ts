@@ -18,7 +18,7 @@ class ConfigTemplate {
     '  // Every line below shows a default. Uncomment a line to change it.',
     '  // "apiKeyEnv": "CRUCIBLE_JUDGE_KEY", // the variable holding the key, never the key',
     '  // "verbosity": "default", // "default", "full" or "debug"',
-    '  // "excerptChars": 500, // response excerpt length in failure reports',
+    '  // "excerptChars": 500, // length of the response excerpt and Facts in failure reports',
     '  // "testDefaults": {',
     '  //   "runs": 10,',
     '  //   "threshold": 0.9, // at least 9 of 10 runs must pass',

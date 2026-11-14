@@ -352,3 +352,13 @@
 - source_spec: 6-4-lenient-strict-extract.md
   summary: Built-in `strict: false` lives in both `RunScope.enterRun`'s parameter default and `RunOptionsResolver.DEFAULT_STRICT`.
   evidence: `src/core/state.ts`, `src/core/run-options-resolver.util.ts`.
+
+## Deferred from: code review of 6-5-facts-per-call-and-per-run.md (2026-11-14)
+
+- Errored judge calls (`ErrorRecord`) record no facts, so the failure report shows no `Facts:` for a call that errored, and a per-call `{ facts }` is lost for it. Evidence: `src/core/state.ts`, `src/core/reporter.util.ts`.
+- Surplus arguments to `crucible.facts`/`load`/`append`/`coherent` are silently ignored (`describe` rejects surplus). Evidence: `src/api/crucible.ts`.
+
+## From Story 6.5 review decisions (2026-11-14)
+
+- **Multi-line facts read as several facts** (report and wire both join with `\n`). Accepted for now; consider numbering facts in the report or the STATE section if users hit it (wire change needs conformance).
+- **Empty / whitespace-only facts are accepted** (pre-existing for `load`/`append`). Consider rejecting as `usage` at 1.0 alongside alias removal.

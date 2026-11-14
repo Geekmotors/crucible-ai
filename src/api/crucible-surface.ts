@@ -1,5 +1,6 @@
 import type { TestBody } from '../bindings/jest.js';
 import type { ExtractedValueFor } from '../core/extract-type.js';
+import type { CoherentOptions } from './coherent-options.js';
 import type { ExtractOptions } from './extract-options.js';
 import type { RunOptions } from './run-options.js';
 
@@ -85,13 +86,17 @@ type CrucibleSurface = {
   describe(name: string, options: RunOptions, fn: () => void): void;
   /**
    * Asks the judge whether `actual` is semantically consistent with
-   * `expectation`, given the state the current run has loaded. Resolves to
-   * the verdict; never throws on `false`. One judge call per run.
+   * `expectation`, given the run's facts (from `crucible.facts()`) and any
+   * `options.facts` for this call. Resolves to the verdict; never throws on
+   * `false`. One judge call per run.
    *
    * @param actual - Your system's output.
    * @param expectation - A natural-language claim about it.
+   * @param options - `facts`: facts for this call only, sent after the
+   *   run's facts and not kept for later calls. Unknown keys are a `usage`
+   *   error.
    */
-  coherent(actual: string, expectation: string): Promise<boolean>;
+  coherent(actual: string, expectation: string, options?: CoherentOptions): Promise<boolean>;
   /**
    * Asks the judge for one value stated in `text`, typed as `options.as`
    * asks, or `null` when the text commits to none. Lenient by default: the
@@ -102,7 +107,9 @@ type CrucibleSurface = {
    * @param description - What to extract, in natural language.
    * @param options - `as`: `'string'`, `'number'` or `'boolean'`
    *   (default `'string'`); `strict`: `true` to treat any hedge as `null`
-   *   (default: the test's resolved `strict`, else `false`).
+   *   (default: the test's resolved `strict`, else `false`); `facts`:
+   *   facts for this call only, sent after the run's facts and not kept for
+   *   later calls.
    */
   extract<O extends ExtractOptions | undefined = undefined>(
     text: string,
@@ -110,17 +117,27 @@ type CrucibleSurface = {
     options?: O,
   ): Promise<ExtractedValueFor<O>>;
   /**
-   * Adds state to the current run while arranging, before the act. The
-   * judge treats it as ground truth for every later assertion in this run.
-   * Behaves exactly like `append`.
+   * Adds facts to the current run: the ground truth your system worked
+   * from, such as its logs or the data it was given. The judge treats them
+   * as true for every later `coherent()` and `extract()` call in this run.
+   * Append-only; each run starts with none, and concurrent runs never see
+   * each other's. Each assertion uses the facts added before it was called.
+   * Only works inside a running `crucible.it()` body.
    *
+   * @param fact - One fact or several.
+   */
+  facts(fact: string | readonly string[]): void;
+  /**
+   * Adds facts to the current run. Behaves exactly like `crucible.facts()`.
+   *
+   * @deprecated Use `crucible.facts()`. Planned for removal in 1.0.
    * @param state - One fact or several.
    */
   load(state: string | readonly string[]): void;
   /**
-   * Adds state to the current run for facts that arise after an act.
-   * Behaves exactly like `load`.
+   * Adds facts to the current run. Behaves exactly like `crucible.facts()`.
    *
+   * @deprecated Use `crucible.facts()`. Planned for removal in 1.0.
    * @param state - One fact or several.
    */
   append(state: string | readonly string[]): void;

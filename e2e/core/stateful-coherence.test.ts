@@ -4,12 +4,12 @@ import scenario from './fixtures/room-booking.json' with { type: 'json' };
 import { Gate } from '../test/gate.enum.js';
 
 crucible.it(
-  'judges replies against loaded and appended run state',
+  'judges replies against the run facts as they grow',
   { runs: Gate.Runs, threshold: Gate.Threshold },
   async () => {
-    crucible.load(scenario.state);
+    crucible.facts(scenario.state);
     const verdicts = scenario.steps.map((step) => {
-      crucible.append(step.append);
+      crucible.facts(step.append);
       return crucible.coherent(step.response, step.claim);
     });
     expect(await Promise.all(verdicts)).toEqual(scenario.steps.map((step) => step.expected));

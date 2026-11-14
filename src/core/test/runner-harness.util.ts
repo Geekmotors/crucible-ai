@@ -269,6 +269,7 @@ class RunnerHarness {
       verdict,
       reasoning: 'the reasoning',
       response: 'the response',
+      facts: [],
     };
   }
 }

@@ -46,7 +46,7 @@
       "default": "default"
     },
     "excerptChars": {
-      "description": "Length of the response excerpt in failure reports, in characters.",
+      "description": "Length of the response excerpt and of the Facts field in failure reports, in characters.",
       "type": "integer",
       "minimum": 1,
       "default": 500

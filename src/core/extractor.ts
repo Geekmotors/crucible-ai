@@ -1,6 +1,8 @@
 import { CrucibleError } from './errors.js';
 import type { ExtractedValue, ExtractMode, ExtractOptions, ExtractType } from './extract-type.js';
+import { FactList } from './fact-list.util.js';
 import { JudgeExchange } from './judge-exchange.js';
+import { OptionBag } from './option-bag.util.js';
 import type { SchemaTextSupplier } from './judge-exchange.js';
 import { PayloadAssembler } from './payload-assembler.util.js';
 import { RunScope, runScope } from './state.js';
@@ -9,6 +11,7 @@ import { TraceReporter } from './trace-reporter.js';
 type ExtractRequest = {
   readonly type: ExtractType;
   readonly strict?: boolean;
+  readonly facts: readonly string[];
 };
 
 type ParsedExtraction = {
@@ -21,9 +24,11 @@ class Extractor {
   private static readonly CONTRACT = '{ "value": <requested type> | null, "reasoning": string }';
   private static readonly TYPES: readonly ExtractType[] = ['string', 'number', 'boolean'];
   private static readonly DEFAULT_TYPE: ExtractType = 'string';
-  private static readonly OPTION_KEYS: ReadonlySet<string> = new Set(['as', 'strict']);
+  private static readonly OPTION_KEYS: ReadonlySet<string> = new Set(['as', 'strict', 'facts']);
 
   private readonly assembler = new PayloadAssembler();
+  private readonly factList = new FactList();
+  private readonly optionBag = new OptionBag();
 
   constructor(
     private readonly schemaText: SchemaTextSupplier,
@@ -37,12 +42,12 @@ class Extractor {
     description: string,
     options?: ExtractOptions,
   ): Promise<ExtractedValue> {
-    const { type, strict } = this.requested(text, description, options);
+    const { type, strict, facts: callFacts } = this.requested(text, description, options);
     const mode = this.modeFor(strict ?? this.scope.strict());
-    const state = this.scope.context().state;
+    const facts = [...this.scope.context().state, ...callFacts];
     const parsed = await this.exchange.ask({
       system: this.schemaText(),
-      prompt: this.assembler.assemble(state, [
+      prompt: this.assembler.assemble(facts, [
         { header: 'RESPONSE', content: text },
         { header: 'TARGET', content: description },
         { header: 'TYPE', content: type },
@@ -59,6 +64,7 @@ class Extractor {
       value: parsed.value,
       reasoning: parsed.reasoning,
       response: text,
+      facts,
     });
     this.trace.judgeRecorded(record);
     return parsed.value;
@@ -76,15 +82,12 @@ class Extractor {
       );
     }
     if (options === undefined) {
-      return { type: Extractor.DEFAULT_TYPE };
+      return { type: Extractor.DEFAULT_TYPE, facts: [] };
     }
-    if (typeof options !== 'object' || options === null || Array.isArray(options)) {
+    if (!this.optionBag.accepts(options, Extractor.OPTION_KEYS)) {
       throw this.badOptions();
     }
-    if (Object.keys(options).some((key) => !Extractor.OPTION_KEYS.has(key))) {
-      throw this.badOptions();
-    }
-    const { as: requested, strict } = options as { as?: unknown; strict?: unknown };
+    const { as: requested, strict, facts } = options;
     const type = requested === undefined ? Extractor.DEFAULT_TYPE : requested;
     if (!Extractor.TYPES.some((known) => known === type)) {
       throw this.badOptions();
@@ -92,13 +95,13 @@ class Extractor {
     if (strict !== undefined && typeof strict !== 'boolean') {
       throw this.badOptions();
     }
-    return { type: type as ExtractType, strict };
+    return { type: type as ExtractType, strict, facts: this.factList.optional(facts) };
   }
 
   private badOptions(): CrucibleError {
     return new CrucibleError(
       'usage',
-      `crucible.extract options take { as?: ${Extractor.TYPES.map((type) => `'${type}'`).join(' | ')}, strict?: boolean }.`,
+      `crucible.extract options take { as?: ${Extractor.TYPES.map((type) => `'${type}'`).join(' | ')}, strict?: boolean, facts?: string | string[] }.`,
     );
   }
 

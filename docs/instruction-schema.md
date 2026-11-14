@@ -20,7 +20,7 @@ as its instructions on every call. For `coherent()` that file is
 Crucible is split in two:
 
 - a **deterministic shell** — running the test body `runs` times, keeping each
-  run's state apart, calling the provider, retrying, counting passes,
+  run's facts apart, calling the provider, retrying, counting passes,
   rendering reports. This part is specific to a language and test framework
   (v1: TypeScript and Jest);
 - a **non-deterministic core** — the rules the judge follows to decide a
@@ -108,9 +108,12 @@ The reply does not reveal the meeting place to Bob
 >>>
 ```
 
-- `STATE` holds the run's state entries in the order they were added, one per
-  line (an entry that contains line breaks keeps them). The section is left
-  out when the run has no state.
+- `STATE` carries the **facts** the call is judged against: the run's facts
+  ([`crucible.facts()`](api.md#cruciblefacts)) in the order they were added,
+  then any facts passed with this call (`{ facts }`), one per line (a fact
+  that contains line breaks keeps them). The API calls them facts; the wire
+  name is `STATE`, and the schemas speak of state. The section is left out
+  when the call has no facts.
 - `RESPONSE` is the `actual` argument of `crucible.coherent(actual, expectation)`
   and `CLAIM` is its `expectation`, both verbatim.
 - A content line consisting solely of `<<<` or `>>>` is prefixed with a space,
@@ -123,10 +126,10 @@ and the system prompt's length.
 
 ### Things the schemas do not define (v1)
 
-- **Conflicting state.** There is no rule for state entries that contradict
-  each other, such as an appended fact that supersedes an earlier one. Keep
-  state consistent: add facts, do not overturn them (see
-  [gotchas](gotchas.md#keep-state-consistent)).
+- **Conflicting state.** There is no rule for facts that contradict each
+  other, such as a later fact that supersedes an earlier one. Keep facts
+  consistent: add facts, do not overturn them (see
+  [gotchas](gotchas.md#keep-facts-consistent)).
 - **Line endings.** Content is split on `\n`; a fence-only line ending in
   `\r` (CRLF input) is not neutralised.
 
@@ -178,7 +181,8 @@ lenient
 >>>
 ```
 
-- `STATE` — the run's state, omitted when empty, exactly as for `coherent()`.
+- `STATE` — the facts (the run's, then the call's own), omitted when empty,
+  exactly as for `coherent()`.
 - `RESPONSE` — the `text` argument, verbatim.
 - `TARGET` — the `description` argument, verbatim.
 - `TYPE` — `string`, `number` or `boolean` (the `as` option; `string` when

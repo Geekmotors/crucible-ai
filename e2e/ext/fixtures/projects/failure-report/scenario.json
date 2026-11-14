@@ -1,7 +1,8 @@
 {
-  "description": "Deliberately failing scenario: the reply contradicts the claim and the test insists the claim holds, so every run fails semantically and the verdict report is produced. Run counts come from this project's testDefaults; the excerpt bound from its excerptChars.",
+  "description": "Deliberately failing scenario: the reply contradicts the claim and the test insists the claim holds, so every run fails semantically and the verdict report is produced. The call carries one per-call fact so the report shows a Facts line. Run counts come from this project's testDefaults; the excerpt bound from its excerptChars.",
   "name": "insists on a claim the reply contradicts",
   "response": "The traffic light at the corner of King Street turned red, and every car came to a stop.",
   "claim": "The reply says the traffic light turned green.",
+  "fact": "King Street has one traffic light.",
   "insisted": true
 }
