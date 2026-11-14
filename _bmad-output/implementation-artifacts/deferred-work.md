@@ -327,3 +327,18 @@
 - source_spec: 6-2-commented-config-and-init.md
   summary: `ConfigStore.fileName` is mutable state set as a side effect of `readRaw`; file names are chosen by tuple index (`CONFIG_FILE_NAMES[1]`).
   evidence: `src/core/config.ts`, `src/cli/config-template.util.ts`.
+
+## Deferred from: code review of 6-3-describe-group-settings.md (2026-11-14)
+
+- source_spec: 6-3-describe-group-settings.md
+  summary: No in-repo real-Jest fixture covers `crucible.describe` (nested plain describe, describe.skip/only/each); unit tests rely on `DescribeRegistrarFake`, real Jest checked by manual smoke only.
+  evidence: `src/bindings/test/describe-registrar.fake.ts`.
+
+- source_spec: 6-3-describe-group-settings.md
+  summary: `NodeProjectFiles.exists` treats any stat error as "exists", so `init` in a sandbox that refuses lookups of missing files reports an existing config and writes nothing.
+  evidence: `src/cli/node-project-files.ts`.
+
+## From Story 6.3 review decisions (2026-11-14)
+
+- **Sync-only describe callback lives in core.** Vitest allows async suite callbacks. When the Vitest adapter is built, move the thenable check into the Jest binding (or make it per-binding). Decided: keep shared for now.
+- **One settings stack per loaded module copy.** Mixing `index.cjs` and `index.js`, or `jest.isolateModules`, silently drops describe inheritance (config and state behave the same today). Decided: document in gotchas when the Vitest epic touches the binding layer; detection not worth it yet.

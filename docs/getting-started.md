@@ -279,6 +279,19 @@ Each judge call is a paid request: one `coherent()` per run at `runs: 20` is
 20 judge calls per test execution. `"testDefaults": { "runs": 1, "threshold": 1 }`
 makes every test a single run that must pass, the built-in behaviour up to 0.3.0.
 
+To share a bar between the tests of one group instead, wrap them in
+[`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe);
+each `crucible.it()` inside inherits the group's options and can still
+override any field:
+
+```ts
+crucible.describe('confidentiality', { runs: 20, threshold: 0.85 }, () => {
+  crucible.it('keeps the meeting place from Bob', async () => {
+    /* 20 runs, 17 must pass */
+  });
+});
+```
+
 ## 7. Read a failure
 
 When the gate fails, the test fails with a `CrucibleVerdictError` whose

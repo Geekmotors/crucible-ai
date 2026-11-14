@@ -8,6 +8,7 @@ import { ManualTimer } from '../../core/test/manual-timer.fake.js';
 import { RunnerHarness } from '../../core/test/runner-harness.util.js';
 import { TimeBudget } from '../../core/time-budget.util.js';
 import { JestBinding } from '../jest.js';
+import { DescribeRegistrarFake } from './describe-registrar.fake.js';
 import { RegistrarFake } from './registrar.fake.js';
 
 class JestBindingHarness {
@@ -16,8 +17,13 @@ class JestBindingHarness {
     scope: RunScope = new RunScope(),
     defaults: RunOptions = {},
     timer: ManualTimer = new ManualTimer(),
+    describes: DescribeRegistrarFake = new DescribeRegistrarFake(),
   ): JestBinding {
-    return JestBindingHarness.over(RunnerHarness.runner(scope, timer, defaults), registrar);
+    return JestBindingHarness.over(
+      RunnerHarness.runner(scope, timer, defaults),
+      registrar,
+      describes,
+    );
   }
 
   static registeredTimeout(
@@ -29,8 +35,12 @@ class JestBindingHarness {
     return registrar.registrations[0]?.timeout;
   }
 
-  static over(runner: Runner, registrar: RegistrarFake): JestBinding {
-    return new JestBinding(runner, registrar.register);
+  static over(
+    runner: Runner,
+    registrar: RegistrarFake,
+    describes: DescribeRegistrarFake = new DescribeRegistrarFake(),
+  ): JestBinding {
+    return new JestBinding(runner, registrar.register, describes.register);
   }
 
   static runnerBudget(runs: number): number {

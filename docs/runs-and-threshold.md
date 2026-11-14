@@ -54,10 +54,10 @@ test.
 
 | Option | Default | Valid values | Meaning |
 | --- | --- | --- | --- |
-| `runs` | `testDefaults.runs`, else `10` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
-| `threshold` | `testDefaults.threshold`, else `0.9` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
-| `inferenceTimeout` | `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
-| `testTimeout` | the trailing `timeout` argument, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
+| `runs` | the enclosing `crucible.describe`, else `testDefaults.runs`, else `10` | integer ≥ 1 | How many times the whole body (arrange, act, assert) executes |
+| `threshold` | the enclosing `crucible.describe`, else `testDefaults.threshold`, else `0.9` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
+| `inferenceTimeout` | the enclosing `crucible.describe`, else `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
+| `testTimeout` | the trailing `timeout` argument, else the enclosing `crucible.describe`, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
 
 With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
 the test is a reliability gate: 10 runs, and at least 9 must pass. Each run
@@ -105,9 +105,13 @@ the config file:
 
 Each option is resolved **per field**, in this order:
 
-1. the value passed to `crucible.it()`
-2. the value in `testDefaults`
-3. the built-in default (`runs: 10`, `threshold: 0.9`, `inferenceTimeout:
+1. the value passed to `crucible.it()` (a trailing timeout number is its
+   `testTimeout`)
+2. the value in the innermost enclosing
+   [`crucible.describe`](#group-settings-crucibledescribe) that sets it, then
+   the next one out
+3. the value in `testDefaults`
+4. the built-in default (`runs: 10`, `threshold: 0.9`, `inferenceTimeout:
    30000`, `testTimeout: 30000 + 1000 × (runs − 1)`)
 
 So with the config above:
@@ -130,6 +134,56 @@ own run count also applies to a smaller declared `runs`. In the second row,
 0.85 of 5 runs needs all 5 to pass, so the test is in effect a strict gate.
 When you lower `runs`, check the [headroom](#headroom-patterns) and pass
 `threshold` as well if needed.
+
+### Group settings: `crucible.describe()`
+
+To share settings between the tests of one group instead of the whole
+project, wrap them in `crucible.describe(name, options, fn)`. It registers a
+Jest `describe` block named `name`, and every `crucible.it()` inside `fn`
+inherits `options`, at any depth; plain Jest `describe` blocks inside or
+around it keep inheritance working.
+
+```ts
+crucible.describe('refund policy', { runs: 20 }, () => {
+  crucible.it('explains the 30-day window', async () => {
+    /* 20 runs; threshold from testDefaults, else 0.9 */
+  });
+
+  crucible.describe('strict cases', { threshold: 1 }, () => {
+    crucible.it('never promises cash', async () => {
+      /* 20 runs, all must pass */
+    });
+    crucible.it('smoke check', { runs: 1 }, async () => {
+      /* 1 run, must pass */
+    });
+  });
+});
+```
+
+The full chain, per field, last wins:
+
+```text
+built-in default → testDefaults → outer crucible.describe → inner crucible.describe → crucible.it options / trailing timeout
+```
+
+**The test timeout and groups.** The built-in test timeout is computed from
+the **resolved** `runs`, wherever it came from: the group `{ runs: 20 }`
+above gives each test 49 s. As soon as a `testTimeout` is declared at any
+level — `testDefaults`, a group, or the test — the nearest declared one wins
+and the formula no longer applies, so a group that raises `runs` under a
+fixed `testDefaults.testTimeout` may need its own `testTimeout`. A group
+`testTimeout` plus a trailing timeout on a test inside is fine (the test
+wins); a trailing timeout plus `testTimeout` in the same test's options stays
+a `usage` error.
+
+Group options are validated when `crucible.describe()` is called, with the
+same rules as `crucible.it()` options. Invalid options, a missing or
+non-function `fn`, an argument after `fn`, or an `fn` that returns a value —
+a promise included, since Jest collects `describe` blocks synchronously —
+throw a `CrucibleError` of kind `usage` while Jest collects the file. Jest's
+`describe.skip`, `describe.only` and `describe.each` work around or inside a
+group and keep inheritance. Settings end with the group: a
+sibling group or a later test never sees them, even when `fn` throws.
 
 `testDefaults` is validated when the config is loaded, with the same rules as
 the `crucible.it()` options. Any of the following throws a `CrucibleError` of
@@ -401,13 +455,15 @@ Crucible has two time budgets, both in milliseconds:
 | `inferenceTimeout` | each `crucible.coherent()` or `crucible.extract()` judge reply attempt, including the provider retries inside it | `30000` |
 
 The built-in test timeout uses the **resolved** run count — the value from
-`crucible.it()`, `testDefaults`, or the built-in: 30 s in smoke mode, 39 s for
+`crucible.it()`, an enclosing [`crucible.describe`](#group-settings-crucibledescribe),
+`testDefaults`, or the built-in: 30 s in smoke mode, 39 s for
 the built-in 10 runs, 49 s for
 `runs: 20`, 79 s for `runs: 50`.
 
 Set either per test, or for the whole project in
 [`testDefaults`](#project-wide-defaults-testdefaults); each resolves per field
-(declared, then `testDefaults`, then the built-in). The test timeout can also
+(declared, then enclosing `crucible.describe` groups, then `testDefaults`,
+then the built-in). The test timeout can also
 be passed the Jest way, as a trailing number:
 
 ```ts
@@ -452,7 +508,8 @@ runs carry on.
 
 Jest still gets a timeout as a backstop that never fires before Crucible's
 deadline: 5 s above the test timeout (never above 2147483647) when it is declared (as the trailing
-argument or the `testTimeout` option), and the largest timeout Jest supports
+argument, the `testTimeout` option or an enclosing `crucible.describe`'s
+`testTimeout`), and the largest timeout Jest supports
 (about 24.8 days) when it is not — at registration Crucible cannot know the
 test timeout `testDefaults` will supply without loading the config, so the
 backstop must not undercut it.

@@ -56,6 +56,24 @@ contain breaking changes, and they are marked **Breaking** below.
   `schemas/crucible.config.schema.json`, describing every field with its
   default; set `"$schema"` to it for editor autocomplete and hover docs.
   Crucible ignores `"$schema"`.
+- `crucible.describe(name, fn)` and `crucible.describe(name, options, fn)`
+  register a Jest `describe` block whose run options (`runs`, `threshold`,
+  `inferenceTimeout`, `testTimeout`) every `crucible.it()` inside inherits,
+  at any depth. Each field resolves on its own, last wins: built-in default,
+  `testDefaults`, outer group, inner group, the test's own options. Without
+  a `testTimeout` at any level, the test timeout follows the resolved
+  `runs`. Invalid options, a missing callback, a surplus argument or a
+  callback that returns a value (an async one included) are a `usage` error
+  at collection. Tests outside a group are unchanged.
+
+### Fixed
+
+- A config file that does not exist no longer stops config loading when the
+  operating system refuses the lookup instead of reporting it missing
+  (`EPERM`/`EACCES` in some sandboxes, or `ENOTDIR`): it is treated as absent,
+  so a lone `crucible.config.json` or `crucible.config.jsonc` loads. A file
+  that exists but cannot be read is still a `config` error naming that file
+  and the cause.
 
 ## 0.3.0
 
