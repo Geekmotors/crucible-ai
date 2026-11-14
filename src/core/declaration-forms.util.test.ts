@@ -67,17 +67,6 @@ describe('DeclarationForms — groups', () => {
     expect(forms.group(DeclarationSubject.Describe, args).options).toEqual(expected);
   });
 
-  it.each(DeclarationFormsHarness.invalidGroupOptions())(
-    'rejects group options %j as usage',
-    (groupOptions) => {
-      expect(
-        DeclarationFormsHarness.kind(() =>
-          forms.group(DeclarationSubject.Describe, [groupOptions, callback]),
-        ),
-      ).toBe('usage');
-    },
-  );
-
   it.each(DeclarationFormsHarness.invalidGroups())('rejects %s as usage', (_label, args) => {
     expect(DeclarationFormsHarness.kind(() => forms.group(DeclarationSubject.Describe, args))).toBe(
       'usage',

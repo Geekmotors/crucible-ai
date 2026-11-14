@@ -1,0 +1,237 @@
+{
+  "area": "verdict",
+  "operation": "compute",
+  "description": "Compute a test's verdict from the number of runs that ended in each status and the threshold.",
+  "cases": [
+    {
+      "id": "verdict-compute-lenient-gate-passes",
+      "description": "7 of 20 runs passing at threshold 0.35 meets the 7 needed.",
+      "input": { "threshold": 0.35, "statuses": { "passed": 7, "failed": 13 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 7, "passed": 7, "failed": 13, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-lenient-gate-fails",
+      "description": "6 of 20 runs passing at threshold 0.35 is one short and nothing errored.",
+      "input": { "threshold": 0.35, "statuses": { "passed": 6, "failed": 14 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 7, "passed": 6, "failed": 14, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-strict-gate-passes",
+      "description": "19 of 20 runs passing at threshold 0.95 meets the 19 needed.",
+      "input": { "threshold": 0.95, "statuses": { "passed": 19, "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 19, "passed": 19, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-strict-gate-errored",
+      "description": "18 passed and 1 errored of 20 at 0.95: the errored run could have made the 19 needed, so the verdict is errored.",
+      "input": { "threshold": 0.95, "statuses": { "passed": 18, "failed": 1, "errored": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 19, "passed": 18, "failed": 1, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-strict-gate-fails",
+      "description": "18 passed and 2 failed of 20 at 0.95: even with no errors it cannot reach 19.",
+      "input": { "threshold": 0.95, "statuses": { "passed": 18, "failed": 2 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 19, "passed": 18, "failed": 2, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-single-passed",
+      "description": "A single passed run at threshold 1 passes.",
+      "input": { "threshold": 1, "statuses": { "passed": 1 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 1, "passed": 1, "failed": 0, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-single-failed",
+      "description": "A single failed run at threshold 1 fails.",
+      "input": { "threshold": 1, "statuses": { "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 1, "passed": 0, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-single-errored",
+      "description": "A single errored run at threshold 1 is errored.",
+      "input": { "threshold": 1, "statuses": { "errored": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 1, "passed": 0, "failed": 0, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-mixed-errored",
+      "description": "1 passed, 1 errored and 1 failed of 3 at 0.5 need 2: passed plus errored reach it, so errored.",
+      "input": { "threshold": 0.5, "statuses": { "passed": 1, "failed": 1, "errored": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 2, "passed": 1, "failed": 1, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-counts-each-status",
+      "description": "Passed, failed and errored runs are each counted.",
+      "input": { "threshold": 0.5, "statuses": { "passed": 1, "failed": 2, "errored": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 2, "passed": 1, "failed": 2, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-discarded-beside-failed",
+      "description": "A discarded run counts toward the run total but in no zone: beside a failed run the verdict fails.",
+      "input": { "threshold": 0.5, "statuses": { "failed": 1, "discarded": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 1, "passed": 0, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-discarded-beside-errored",
+      "description": "A discarded run counts in no zone: beside an errored run the verdict is errored.",
+      "input": { "threshold": 0.5, "statuses": { "errored": 1, "discarded": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 1, "passed": 0, "failed": 0, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-discarded-lowers-pass-chance",
+      "description": "Discarded runs still count toward the need: 2 passed and 1 discarded at threshold 1 fail.",
+      "input": { "threshold": 1, "statuses": { "passed": 2, "discarded": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 3, "passed": 2, "failed": 0, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-minuscule-threshold-needs-one",
+      "description": "At least one pass is always needed: a single failed run at a minuscule threshold fails.",
+      "input": { "threshold": 1e-12, "statuses": { "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 1, "passed": 0, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-minuscule-threshold-one-pass",
+      "description": "At a minuscule threshold one passed run among many passes.",
+      "input": { "threshold": 1e-12, "statuses": { "passed": 1, "failed": 9 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 1, "passed": 1, "failed": 9, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-default-gate-passes",
+      "description": "The default 10 runs at 0.9 need 9 passes.",
+      "input": { "threshold": 0.9, "statuses": { "passed": 9, "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 9, "passed": 9, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-default-gate-errored",
+      "description": "8 passed, 1 errored, 1 failed of 10 at 0.9 is errored.",
+      "input": { "threshold": 0.9, "statuses": { "passed": 8, "failed": 1, "errored": 1 } },
+      "expect": {
+        "value": { "outcome": "errored", "need": 9, "passed": 8, "failed": 1, "errored": 1 }
+      }
+    },
+    {
+      "id": "verdict-compute-rounds-need-up-five-runs",
+      "description": "0.9 of 5 runs is 4.5, rounded up to 5 needed: 4 passes fail.",
+      "input": { "threshold": 0.9, "statuses": { "passed": 4, "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 5, "passed": 4, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-rounds-need-up-five-runs-passes",
+      "description": "0.9 of 5 runs needs all 5.",
+      "input": { "threshold": 0.9, "statuses": { "passed": 5 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 5, "passed": 5, "failed": 0, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-rounds-need-up-three-runs",
+      "description": "0.5 of 3 runs is 1.5, rounded up to 2 needed.",
+      "input": { "threshold": 0.5, "statuses": { "passed": 1, "failed": 2 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 2, "passed": 1, "failed": 2, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-float-product-not-bumped",
+      "description": "0.28 x 25 is 7.000000000000001 in binary floating point; the need is 7, not 8.",
+      "input": { "threshold": 0.28, "statuses": { "passed": 7, "failed": 18 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 7, "passed": 7, "failed": 18, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-float-product-not-bumped-hundred-runs",
+      "description": "0.07 × 100 is 7.000000000000001 in doubles and still needs only 7.",
+      "input": { "threshold": 0.07, "statuses": { "passed": 7, "failed": 93 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 7, "passed": 7, "failed": 93, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-certain-threshold-needs-every-run",
+      "description": "At threshold 1 every one of 10 runs must pass, so 9 passes fail.",
+      "input": { "threshold": 1, "statuses": { "passed": 9, "failed": 1 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 10, "passed": 9, "failed": 1, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-certain-threshold-every-run-passes",
+      "description": "At threshold 1, 10 passes out of 10 runs pass.",
+      "input": { "threshold": 1, "statuses": { "passed": 10 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 10, "passed": 10, "failed": 0, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-float-product-just-below-integer",
+      "description": "0.57 × 100 is 56.99999999999999 in doubles and still needs 57.",
+      "input": { "threshold": 0.57, "statuses": { "passed": 57, "failed": 43 } },
+      "expect": {
+        "value": { "outcome": "passed", "need": 57, "passed": 57, "failed": 43, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-product-above-epsilon-rounds-up",
+      "description": "0.7000001 × 10 = 7.000001 is above 7 by far more than 1e-9, so 8 are needed.",
+      "input": { "threshold": 0.7000001, "statuses": { "passed": 7, "failed": 3 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 8, "passed": 7, "failed": 3, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-every-run-discarded",
+      "description": "When every run is discarded nothing passed, so the test fails.",
+      "input": { "threshold": 0.5, "statuses": { "discarded": 2 } },
+      "expect": {
+        "value": { "outcome": "failed", "need": 1, "passed": 0, "failed": 0, "errored": 0 }
+      }
+    },
+    {
+      "id": "verdict-compute-large-run-count",
+      "description": "A million runs at threshold 0.9 need exactly 900000 passes.",
+      "input": { "threshold": 0.9, "statuses": { "passed": 900000, "failed": 100000 } },
+      "expect": {
+        "value": {
+          "outcome": "passed",
+          "need": 900000,
+          "passed": 900000,
+          "failed": 100000,
+          "errored": 0
+        }
+      }
+    }
+  ]
+}

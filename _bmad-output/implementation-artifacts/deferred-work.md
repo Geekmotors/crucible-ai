@@ -396,3 +396,7 @@
 - Binding tests hand-build expected row names and use inline error literals and run counters (same as `jest.test.ts`).
 - `package-lock.json` carries transitive tsdown/rolldown bumps (`@oxc-project/types`, `@emnapi/*`, sourcemap-codec) unrelated to the story; confirm intended before merge.
 - `VitestBindingHarness` wires `Gate`/`GroupSettings` by hand instead of through `CompositionRoot`.
+
+## Deferred from: code review of 8-1-spec-run-options-and-verdicts (2026-11-14)
+
+- Per-operation input schemas for spec fixtures (`input` is free-form in `spec/fixture.schema.json`, so a misspelt input key goes unnoticed) — do in Story 8.2.

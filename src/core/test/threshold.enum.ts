@@ -1,6 +1,5 @@
 enum Threshold {
   Minuscule = 1e-12,
-  FloatBump = 0.07,
   Lenient = 0.35,
   Half = 0.5,
   BuiltIn = 0.9,

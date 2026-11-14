@@ -4,7 +4,6 @@ enum InvalidDeclaration {
   TwoBodies = 'two bodies',
   TimeoutInPlaceOfBody = 'a timeout in place of the body',
   InvalidOptions = 'invalid options',
-  NonObjectOptions = 'options that are not an object',
   InvalidTimeout = 'an invalid trailing timeout',
   TimeoutAndTestTimeout = 'a trailing timeout and a testTimeout option',
   ArgumentAfterTimeout = 'an argument after the timeout',

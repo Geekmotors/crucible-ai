@@ -4,7 +4,6 @@ import { Capture } from './capture.util.js';
 import { CustomTimeout } from './custom-timeout.enum.js';
 import { GroupBodyResult } from './group-body-result.enum.js';
 import { InvalidDeclaration } from './invalid-declaration.enum.js';
-import { InvalidTestDefault } from './invalid-test-default.enum.js';
 import { InvalidTimeout } from './invalid-timeout.enum.js';
 import { RunCount } from './run-count.enum.js';
 
@@ -20,8 +19,6 @@ class DeclarationFormsHarness {
       [InvalidDeclaration.OptionsWithoutBody, [options]],
       [InvalidDeclaration.TwoBodies, [body, body]],
       [InvalidDeclaration.TimeoutInPlaceOfBody, [options, CustomTimeout.Short]],
-      [InvalidDeclaration.InvalidOptions, [{ runs: RunCount.Single - 1 }, body]],
-      [InvalidDeclaration.NonObjectOptions, [RunCount.Single, body]],
       [InvalidDeclaration.InvalidTimeout, [body, InvalidTimeout.Zero]],
       [
         InvalidDeclaration.TimeoutAndTestTimeout,
@@ -54,22 +51,6 @@ class DeclarationFormsHarness {
       [InvalidDeclaration.OptionsWithoutCallback, [options]],
       [InvalidDeclaration.TextInPlaceOfCallback, [options, GroupBodyResult.Value]],
       [InvalidDeclaration.ObjectInPlaceOfCallback, [options, {}]],
-    ];
-  }
-
-  static invalidGroupOptions(): unknown[][] {
-    return [
-      [{ runs: InvalidTestDefault.Zero }],
-      [{ runs: InvalidTestDefault.Fractional }],
-      [{ threshold: InvalidTestDefault.Zero }],
-      [{ threshold: InvalidTestDefault.AboveOne }],
-      [{ testTimeout: InvalidTimeout.Zero }],
-      [{ inferenceTimeout: InvalidTimeout.AboveTimerMax }],
-      [{ strict: String(true) }],
-      [{ run: RunCount.Smaller }],
-      [null],
-      [undefined],
-      [[]],
     ];
   }
 

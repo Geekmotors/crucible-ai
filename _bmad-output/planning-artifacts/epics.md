@@ -653,3 +653,95 @@ So that I can use Crucible without switching test runners.
 **And** the Jest entry point is unchanged; the core is shared, not duplicated
 **And** Vitest differences are resolved and documented (async describe callbacks allowed or rejected consistently, timeouts, `test.concurrent`, watch-mode cost)
 **And** an e2e suite runs the core scenarios on Vitest; README and docs cover Vitest setup
+
+## Epic 8: A shared, language-neutral spec
+
+Move Crucible's pure behaviour into a language-neutral `spec/` of JSON fixtures that every port (TypeScript today; C#, Python, Java later) runs through its own code, so ports share one answer key instead of re-writing thousands of lines of tests, and cannot drift. The judge instruction schemas (`schemas/*.md`) and the conformance cases are already shared this way; this epic extends the idea to everything that is pure input → output. Design rule: a fixture describes inputs and the observable output (a value, exact text, or an error kind) — never internal structure; each port has one small fixture runner; TypeScript runs the full suite in its normal test command, and unit tests duplicated by fixtures are removed.
+
+### Story 8.1: Fixture format, runner and the first area — run options and verdicts
+
+As a maintainer porting Crucible to another language,
+I want the rules for resolving and validating run options and for computing verdicts written as shared fixtures,
+So that a port proves it matches by running the same cases.
+
+**Acceptance Criteria:**
+
+**Given** `spec/` at the repository root
+**Then** it holds a README (purpose, fixture format, how a port implements a runner, versioning), a JSON Schema for fixture files, and fixture files grouped by area
+**And** a fixture case has an id, a description, inputs, and exactly one expected outcome: a value, exact text, or an error kind (`usage`, `config`, `infra`, with `retryable` where relevant) — never message text
+
+**Given** the area "run options"
+**Then** fixtures cover precedence (built-in → config `testDefaults` → outer/inner group → test → call), per-field merging, the default `testTimeout` formula and nearest-declared rule, `strict`, and every validation rule with its error kind (`usage` vs `config`)
+
+**Given** the area "verdict"
+**Then** fixtures cover run statuses → outcome (passed / failed / errored), the three-zone verdict, discarded runs, required pass counts and rounding (e.g. 0.9 of fewer than 10 runs)
+
+**And** a TypeScript fixture runner executes every fixture as part of `npm test`; unit tests whose cases are now fully covered by fixtures are removed; the gate stays green
+
+### Story 8.2: Exact text — judge payloads and failure reports
+
+As a maintainer porting Crucible,
+I want the exact judge request payloads and the exact failure report text as fixtures,
+So that every port sends byte-identical prompts and prints identical reports.
+
+**Acceptance Criteria:**
+
+**Given** the area "payload"
+**Then** fixtures map coherent/extract inputs (facts, per-call facts, response, claim/target, type, mode) to the exact payload text, including fencing and injection-safety cases
+
+**Given** the area "report"
+**Then** fixtures map run records (statuses, verdicts, extractions with modes, facts, errors) and verbosity to the exact report text, including truncation at `excerptChars`
+
+**And** duplicated TypeScript unit tests are removed; the conformance harness's jq payload builder is checked against the same payload fixtures
+
+### Story 8.3: Parsing and provider rules
+
+As a maintainer porting Crucible,
+I want config parsing, provider envelopes and retry classification as fixtures,
+So that ports read the same files and treat provider failures identically.
+
+**Acceptance Criteria:**
+
+**Given** the areas "config" and "jsonc"
+**Then** fixtures cover JSONC parsing (comments, trailing commas, strings, BOM, CRLF, unterminated constructs → `config`), config validation per field and provider (`baseUrl`, `apiKeyEnv`, key-like values never echoed), both-files and missing-file outcomes
+
+**Given** the area "provider"
+**Then** fixtures cover request shape per provider (URL, which fields are sent), response envelopes → judge reply or error kind, HTTP status → retryable or fatal, judge reply validation (strict JSON, extract value types)
+
+**And** duplicated TypeScript unit tests are removed
+
+### Story 8.4: Porting guide and fixture coverage check
+
+As a maintainer starting a new port,
+I want a guide that says exactly what a port must implement and how to prove it,
+So that the C# port starts from a checklist, not from reading TypeScript.
+
+**Acceptance Criteria:**
+
+**Given** `spec/README.md` and a porting guide
+**Then** they list the public API a port provides (functions, options, defaults, error kinds), what is runner-specific (registration, timeouts, async context), what the fixtures cover, and what each port still tests itself (runner adapter, live e2e)
+**And** a coverage check fails CI when a public option, error kind or report field has no fixture
+
+### Story 8.5: Live tests only where a real judge is the point
+
+As the maintainer paying for judge calls,
+I want e2e tests to call OpenRouter only when the real provider or a real model is what's being tested,
+So that `make e2e` and CI are cheap, deterministic and not flaky, while model behaviour stays covered by the conformance harness.
+
+**Acceptance Criteria:**
+
+**Given** the conformance matrices run through the TS API (`e2e/ext/coherent-conformance.test.ts`, `extract-conformance.test.ts`)
+**Then** they leave `make e2e` (deleted, or an opt-in `make e2e-conformance`); a unit golden test (or the Story 8.2 payload fixtures) proves the TS payload equals the jq harness payload for every conformance case
+
+**Given** `e2e/core/stateful-coherence.test.ts` and `e2e/ext/knowledge-boundary.test.ts`
+**Then** their judged steps become cases in `coherent-conformance.json` (with full state) and the tests are deleted
+
+**Given** a `StubJudgeServer` (node:http, loopback, scripted by fixture JSON, OpenAI chat-completions envelope)
+**Then** the child-process projects `debug-trace`, `failure-report`, `openai-compatible` and the runner suites `plain-runner-gate`, `runner-variants`, `vitest/core-scenarios` judge against it via `openai-compatible` on `http://127.0.0.1:<port>/v1` — real Jest/Vitest processes kept, outcomes deterministic, no key needed
+**And** the debug-trace leak check uses a sentinel key; a no-key stub target runs in the PR CI job
+
+**And** exactly one live OpenRouter smoke remains in `make e2e` and CI (CJS build: coherent + extract, ≤ 2 calls)
+**Given** model semantics are covered only by `make conformance` after this story
+**Then** CI runs `make conformance` automatically when `schemas/`, the conformance cases or the payload-building code change, and on a weekly schedule (catches provider/model drift); the release checklist requires a passing conformance run before tagging
+
+**And** `make e2e` drops from 72 to ≤ 3 live judge calls and CI per main push from 22 to ≤ 2; docs (RELEASING.md, judge-models/conformance docs) say where model semantics are covered (`make conformance`, run before releases)

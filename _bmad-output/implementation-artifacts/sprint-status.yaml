@@ -104,3 +104,12 @@ development_status:
   7-2-generic-runner-wrapper: done
   7-3-vitest-adapter: done
   epic-7-retrospective: optional
+
+  # Epic 8: A shared, language-neutral spec
+  epic-8: in-progress
+  8-1-spec-run-options-and-verdicts: done
+  8-2-spec-payloads-and-reports: backlog
+  8-3-spec-parsing-and-providers: backlog
+  8-4-porting-guide-and-coverage: backlog
+  8-5-live-tests-only-where-needed: backlog
+  epic-8-retrospective: optional

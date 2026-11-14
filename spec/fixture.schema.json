@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Geekmotors/crucible-ai/blob/main/spec/fixture.schema.json",
+  "title": "Crucible spec fixture file",
+  "description": "One file of language-neutral cases for one operation of one area. See spec/README.md.",
+  "type": "object",
+  "required": ["area", "operation", "description", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "area": { "$ref": "#/definitions/name" },
+    "operation": { "$ref": "#/definitions/name" },
+    "description": { "$ref": "#/definitions/prose" },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/case" } }
+  },
+  "definitions": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+    "prose": { "type": "string", "minLength": 1 },
+    "case": {
+      "type": "object",
+      "required": ["id", "description", "input", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/definitions/name" },
+        "description": { "$ref": "#/definitions/prose" },
+        "input": {},
+        "expect": { "$ref": "#/definitions/expect" }
+      }
+    },
+    "expect": {
+      "oneOf": [
+        { "$ref": "#/definitions/valueOutcome" },
+        { "$ref": "#/definitions/textOutcome" },
+        { "$ref": "#/definitions/errorOutcome" }
+      ]
+    },
+    "valueOutcome": {
+      "type": "object",
+      "required": ["value"],
+      "additionalProperties": false,
+      "properties": { "value": {} }
+    },
+    "textOutcome": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": { "text": { "type": "string" } }
+    },
+    "errorOutcome": {
+      "type": "object",
+      "required": ["error"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "oneOf": [{ "$ref": "#/definitions/plainError" }, { "$ref": "#/definitions/infraError" }]
+        }
+      }
+    },
+    "plainError": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": { "kind": { "enum": ["usage", "config"] } }
+    },
+    "infraError": {
+      "type": "object",
+      "required": ["kind", "retryable"],
+      "additionalProperties": false,
+      "properties": { "kind": { "enum": ["infra"] }, "retryable": { "type": "boolean" } }
+    }
+  }
+}
