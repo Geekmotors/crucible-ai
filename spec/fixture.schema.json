@@ -366,6 +366,35 @@
           }
         }
       }
+    },
+    {
+      "properties": {
+        "area": {
+          "enum": ["assertion"]
+        },
+        "operation": {
+          "enum": ["call"]
+        },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": {
+                "$ref": "#/definitions/assertionCallInput"
+              },
+              "expect": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/textOutcome"
+                  },
+                  {
+                    "$ref": "#/definitions/errorOutcome"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "definitions": {
@@ -656,6 +685,25 @@
         },
         "mode": {
           "$ref": "#/definitions/extractMode"
+        }
+      }
+    },
+    "assertionCallInput": {
+      "type": "object",
+      "required": ["assertion", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "assertion": {
+          "enum": ["coherent", "extract"]
+        },
+        "facts": {
+          "type": "array"
+        },
+        "strict": {
+          "type": "boolean"
+        },
+        "args": {
+          "type": "array"
         }
       }
     },

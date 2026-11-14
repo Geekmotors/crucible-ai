@@ -16,12 +16,19 @@ port sends them word for word.
 
 `spec/` lives in the repository only. It is not in the npm package.
 
+Starting a new port? Read the [porting guide](PORTING.md) first: the public
+API a port provides, what is runner-specific, what these fixtures cover and
+what each port tests itself, and the order to build it in.
+
 ## Layout
 
 ```
 spec/
   README.md                     this file: format, runner contract, operations
+  PORTING.md                    the checklist a new port follows
   fixture.schema.json           JSON Schema (draft-07) every fixture file follows
+  surface.json                  the public surface, each item with the cases that pin it
+  surface.schema.json           JSON Schema (draft-07) of surface.json
   run-options/
     resolve.json                operation "resolve"
     validate.json               operation "validate"
@@ -46,6 +53,8 @@ spec/
     plain-http-warning.json     operation "plain-http-warning"
   judge/
     reply.json                  operation "reply"
+  assertion/
+    call.json                   operation "call"
 ```
 
 A file holds the cases of one **operation** of one **area**. An operation
@@ -225,8 +234,10 @@ TypeScript runners: `src/core/run-options.spec-fixtures.test.ts`,
 `src/core/config.spec-fixtures.test.ts`,
 `src/providers/chat-completions-adapter.spec-fixtures.test.ts`,
 `src/providers/transport-security.util.spec-fixtures.test.ts`,
-`src/core/judge-exchange.spec-fixtures.test.ts` and
-`src/core/spec-fixtures.test.ts` (schema, ids, golden currency). Their
+`src/core/judge-exchange.spec-fixtures.test.ts`,
+`src/core/scoped-assertions.spec-fixtures.test.ts`,
+`src/core/spec-fixtures.test.ts` (schema, ids, golden currency) and
+`src/core/spec-surface.test.ts` (the [surface manifest](#surface-manifest-and-coverage-check)). Their
 harnesses live in `src/core/test/` and `src/providers/test/`. Where an
 operation's outcome is an HTTP request, the TypeScript runner gets it the
 way a user would see it: a fake HTTP boundary answers each request with the
@@ -384,8 +395,9 @@ These rules hold for every `text` outcome and every operation below.
   U+0000–U+001F as `\u00xx` (lowercase hex), and a lone surrogate as
   `\udxxx` (lowercase hex). Every other character, astral ones included, is
   written raw, never `\u`-escaped. C#: `System.Text.Json` escapes non-ASCII
-  even with `UnsafeRelaxedJsonEscaping` (astral characters, uppercase hex),
-  and Java/Python libraries differ too: write the string escaper yourself.
+  by default, and even `UnsafeRelaxedJsonEscaping` still escapes astral
+  characters, with uppercase hex; Java/Python libraries differ too: write
+  the string escaper yourself.
   Extracted values are only `null`, booleans, numbers and strings.
 - **The cut.** `cut(text, limit)` keeps the first `limit` code units. If the
   last kept unit is a high surrogate (U+D800–U+DBFF): with `limit > 1` it is
@@ -1011,6 +1023,57 @@ error `infra` with `retryable: true`.
    ask ends the call with that error unchanged (a fatal one stays
    `retryable: false`).
 
+### `assertion` / `call`
+
+Validates the arguments of `crucible.facts`, `crucible.coherent` and
+`crucible.extract` (and the same functions of the run context `t`) the way a
+test body calls them, and builds the user message the judge call sends. It
+pins how call options reach the payload; `payload` / `coherent` and
+`payload` / `extract` pin the payload text itself.
+
+**Input.** `{ "assertion": "coherent" | "extract", "facts"?: [<any>, …], "strict"?: <boolean>, "args": [<any>, …] }`:
+
+- `facts`: the argument of each `crucible.facts` call the run makes before
+  the assertion, in order (default none). A call takes one string or an
+  array of strings.
+- `strict`: the test's resolved `strict` (see `run-options` / `resolve`;
+  default `false`).
+- `args`: the arguments of the one `coherent` or `extract` call, in order.
+  A missing trailing argument is left out; `$special: undefined` is an
+  argument passed as unset.
+
+**Output.** Text: the user message, exactly as `payload` / `coherent` or
+`payload` / `extract` builds it. Or error kind `usage`.
+
+**Rules.**
+
+1. **Facts.** Each `facts` call adds its string, or each entry of its
+   array, to the run, in order. Anything else (a number, `null`, unset, an
+   object, an array holding anything but strings, nested arrays included) is
+   a `usage` error, and the assertion is never called.
+2. **Arguments.** `coherent(actual, expectation, options?)` and
+   `extract(text, description, options?)`: the first two arguments must be
+   strings (empty allowed); anything else, a missing one included, is a
+   `usage` error.
+3. **Options.** Absent or unset: no options. Otherwise a plain object (not
+   `null`, an array or a string) whose keys are all known, even when a
+   key's value is unset: `facts` for `coherent`; `as`, `strict` and `facts`
+   for `extract`. Else `usage`.
+4. **`facts` option**: unset is none, else as rule 1 for one call. The
+   call's facts follow the run's facts in `STATE` (`payload` input
+   `callFacts`); they are not added to the run.
+5. **`as`** (extract): unset is `string`; else exactly `string`, `number`
+   or `boolean` (case-sensitive), sent as `TYPE`. Else `usage`.
+6. **`strict`** (extract): unset keeps the test's `strict`; else `true` or
+   `false` (never coerced), and wins over the test's. `MODE` is `strict`
+   when the result is `true`, `lenient` otherwise. `coherent` has no mode.
+
+Options objects a JSON file cannot hold (a class instance, an object with
+an inherited key) are each port's business; TypeScript rejects anything but
+a plain object as `usage`. So is an argument after `options`: TypeScript's
+signature has no room for one and ignores it at run time, and no case
+passes one.
+
 ### Out of scope for fixtures
 
 Left to each port's own unit tests, because they depend on the language,
@@ -1035,6 +1098,11 @@ the clock or object identity:
 - `meta` values a JSON file cannot hold (TypeScript rejects a `meta` it
   cannot serialise as `usage`);
 - the line number a port may give for a JSONC failure;
+- the argument forms of `crucible.it`, `crucible.describe` and
+  `crucible.gate` (options before the body, the trailing timeout, two
+  bodies, an argument after the last one): they take functions, which a
+  fixture cannot hold. The [porting guide](PORTING.md#3-what-the-fixtures-cover-and-what-a-port-tests-itself)
+  lists them;
 - reading the files themselves (where the working directory is, which file
   system errors mean "missing" rather than "unreadable").
 
@@ -1051,10 +1119,53 @@ the clock or object identity:
   `additionalProperties` schema); config validity is what `config` / `load`
   tests.
 
+## Surface manifest and coverage check
+
+`surface.json` lists the public surface every port provides, item by item,
+each with the ids of the cases that pin it:
+
+| Section           | Items                                                                           | A cited case must                                        |
+| ----------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `operations`      | every `<area>/<operation>`                                                      | (the list equals the operations of the fixture files)    |
+| `functions`       | `crucible.*` and `t.*`, with `portTests`: what fixtures cannot pin              | exist                                                    |
+| `runOptions`      | `runs`, `threshold`, …, with `default` and `valid`                              | mention the option in its input                          |
+| `callOptions`     | `coherent.facts`, `extract.as`, …                                               | mention the option in its input; an `assertion` / `call` case must call that assertion and set the option in its `options` argument |
+| `configFields`    | every config file field, `required`, `default`, `values`                        | mention the field in its input                           |
+| `providers`       | each provider, its endpoint, `baseUrl` and key rule                             | mention the provider in its input                        |
+| `environment`     | `CRUCIBLE_JUDGE_KEY`, `CRUCIBLE_VERBOSE`                                         | mention the variable in its input                        |
+| `errorKinds`      | `usage`, `config`, `infra` with `retryable` `true` and `false`                  | expect exactly that error kind and `retryable`           |
+| `verdictOutcomes` | `passed`, `failed`, `errored`                                                   | be a `verdict` / `compute` case with that outcome        |
+| `reportText`      | every headline variant, section, field and trace line, as a fixed `text` marker | be a case of its `operation` whose expected text holds it |
+
+"Mention" is a plain check: the name is a key anywhere in the input, a
+string equal to it, or appears quoted (`"provider"`) inside a string (the
+config file texts).
+
+The TypeScript check (`src/core/spec-surface.test.ts`, part of `npm test`
+and so of CI) fails when an item cites no case, cites an id no case has, or
+cites a case that does not exercise it as above; when a section lists a
+name twice; when the manifest's
+operations differ from the fixture files'; or when the manifest and the
+TypeScript surface differ: the functions of `crucible` and `t`, the keys of
+`RunOptions`, `CoherentOptions` and `ExtractOptions`, the `ExtractType`
+values and the `CrucibleErrorKind`s, `infra` once per `retryable` value (from the exported types, through
+records the compiler checks for missing and extra keys), and the config
+fields, required fields, `testDefaults` keys, defaults, enumerations and
+providers of `schemas/crucible.config.schema.json`. So a new public option,
+config field, provider or error kind fails CI until it is listed and pinned
+by a fixture.
+
+A port reuses the manifest the same way: it checks that every item it
+exposes is in `surface.json` (and the reverse, except the deprecated
+aliases `crucible.load` and `crucible.append`, which a new port may
+omit), and its fixture runner, which runs every case, then proves each item. A port that skips a case by id
+sees which items that weakens by searching the manifest for the id.
+
 ## Versioning
 
 The spec is versioned with the repository. A port records the commit (or
-release tag) of the spec it passes.
+release tag) of the spec it passes; [the porting guide](PORTING.md#4-shared-assets-and-versioning)
+says how.
 
 - Adding cases, or a new operation or area, is not a behaviour change for
   ports that already pass. They pick up the new cases when they update.

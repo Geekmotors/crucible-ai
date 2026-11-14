@@ -67,15 +67,6 @@ describe('Extractor — unusable judge replies', () => {
 
 describe('Extractor — usage', () => {
   it.each([
-    ['a non-string text', undefined, ExtractTarget.Apples, undefined],
-    ['a non-string description', ExtractText.Response, 42, undefined],
-    ['an unknown type', ExtractText.Response, ExtractTarget.Apples, { as: 'date' }],
-    ['options that are not an object', ExtractText.Response, ExtractTarget.Apples, 'number'],
-    ['null options', ExtractText.Response, ExtractTarget.Apples, null],
-    ['a null type', ExtractText.Response, ExtractTarget.Apples, { as: null }],
-    ['a string strict', ExtractText.Response, ExtractTarget.Apples, { strict: String(true) }],
-    ['a null strict', ExtractText.Response, ExtractTarget.Apples, { strict: null }],
-    ['an unknown option', ExtractText.Response, ExtractTarget.Apples, { strcit: true }],
     ...FactsHarness.invalid().map(
       ([label, facts]) =>
         [`${label} as facts`, ExtractText.Response, ExtractTarget.Apples, { facts }] as const,

@@ -158,7 +158,7 @@ write_goldens() {
 }
 
 unregistered_fixtures() {
-  (cd "$REPO_DIR" && find spec -name '*.json' ! -name fixture.schema.json | sort) | while read -r file; do
+  (cd "$REPO_DIR" && find spec -name '*.json' ! -path spec/fixture.schema.json ! -path spec/surface.schema.json ! -path spec/surface.json | sort) | while read -r file; do
     grep -q "'../../../$file'" "$REGISTRY" || echo "$file"
   done
 }
