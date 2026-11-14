@@ -27,7 +27,7 @@ npm only lets you configure a trusted publisher on a package that already exists
 2. Go to **Access Tokens → Generate New Token → Granular Access Token**:
    - Permissions: **Read and write (stage only)**, packages: **All packages**. The package does not exist yet, so you cannot pick it. A stage-only token cannot put a version live, even if it leaks.
    - Expiry: as short as you like. It is only needed until Trusted Publishing is set up.
-3. In GitHub, go to **Geekmotors/crucible-ai → Settings → Secrets and variables → Actions → New repository secret**. Name it `NPM_TOKEN` and paste the token. A secret on the `npm` environment also works.
+3. In GitHub, go to **Geekmotors/crucible → Settings → Secrets and variables → Actions → New repository secret**. Name it `NPM_TOKEN` and paste the token. A secret on the `npm` environment also works.
 4. Optional: in **Settings → Environments → `npm`** (it appears after the first workflow run, or you can create it now), add yourself as a **Required reviewer**. Every publish then waits for your approval.
 5. Optional, recommended: **Settings → Rules → Rulesets → New tag ruleset** targeting `v*`, restricting creation, update and deletion to yourself, so only you can trigger a publish.
 6. Cut the release as described in [Every release](#every-release) (tag `v0.1.0`).
@@ -36,7 +36,7 @@ npm only lets you configure a trusted publisher on a package that already exists
 
 1. On npmjs.com, open **crucible → Settings → Trusted Publisher → GitHub Actions** and enter:
    - Organization or user: `Geekmotors`
-   - Repository: `crucible-ai` (the GitHub repository; it keeps its name unless renamed)
+   - Repository: `crucible`
    - Workflow filename: `publish.yml`
    - Environment: `npm`. You can leave it blank, but if you fill it in it must match the workflow's `environment: npm`.
 2. Delete the `NPM_TOKEN` GitHub secret and revoke the token on npmjs.com.
@@ -45,7 +45,7 @@ npm only lets you configure a trusted publisher on a package that already exists
 
 Check these before tagging, or the publish fails with an auth or provenance error:
 
-- `package.json` `repository.url` must stay `git+https://github.com/Geekmotors/crucible-ai.git`. Provenance checks it against the repository the workflow ran in.
+- `package.json` `repository.url` must stay `git+https://github.com/Geekmotors/crucible.git`. Provenance checks it against the repository the workflow ran in.
 - If you rename the workflow file or the environment, update the trusted publisher to match.
 - The repository must stay public. npm provenance is only generated for public source repositories.
 

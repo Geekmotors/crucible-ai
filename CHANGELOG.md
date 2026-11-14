@@ -6,7 +6,7 @@ contain breaking changes, and they are marked **Breaking** below.
 
 ## 0.5.0
 
-The package is renamed from `crucible-ai` to `crucible`. Install `crucible`, import from `'crucible'` (or `'crucible/vitest'`), and run `npx crucible init`. The CLI command is now `crucible`, and the `$schema` path in `crucible.config.jsonc` is `./node_modules/crucible/schemas/crucible.config.schema.json`. `crucible-ai` stays on npm at 0.3.0, deprecated. Versions 0.4.x are skipped because the `crucible` name was used for an unrelated package years ago and npm never reuses version numbers.
+The package is renamed from `crucible-ai` to `crucible`, and the repository moved to `Geekmotors/crucible` (GitHub redirects the old URLs). Install `crucible`, import from `'crucible'` (or `'crucible/vitest'`), and run `npx crucible init`. The CLI command is now `crucible`, and the `$schema` path in `crucible.config.jsonc` is `./node_modules/crucible/schemas/crucible.config.schema.json`. `crucible-ai` stays on npm at 0.3.0, deprecated. Versions 0.4.x are skipped because the `crucible` name was used for an unrelated package years ago and npm never reuses version numbers.
 
 **Migration:** `npm uninstall crucible-ai && npm install --save-dev crucible`, then replace `'crucible-ai'` with `'crucible'` in imports and the `$schema` path.
 
@@ -225,7 +225,7 @@ The package is renamed from `crucible-ai` to `crucible`. Install `crucible`, imp
 - `crucible.extract(text, description, { as })`: pull one typed value out of
   prose, or `null` when the text commits to none.
 - `crucible.coherent()` parameters are `(actual, expectation)`.
-- Repository moved to `Geekmotors/crucible-ai`.
+- Repository moved to `Geekmotors/crucible`.
 
 ## 0.1.0
 
