@@ -17,6 +17,7 @@ import type { RunOptions as ResolvableRunOptions } from '../core/run-options.js'
 import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
+import type { CoherentOptions } from './coherent-options.js';
 import type { CrucibleSurface } from './crucible-surface.js';
 import type { ExtractOptions } from './extract-options.js';
 import type { RunOptions } from './run-options.js';
@@ -121,8 +122,8 @@ const crucible: Readonly<CrucibleSurface> = Object.freeze({
   ): void {
     compositionRoot.jestBinding().group(name, optsOrFn, fn, ...surplus);
   },
-  coherent(actual: string, expectation: string): Promise<boolean> {
-    return compositionRoot.coherentJudge().judgeCoherent(actual, expectation);
+  coherent(actual: string, expectation: string, options?: CoherentOptions): Promise<boolean> {
+    return compositionRoot.coherentJudge().judgeCoherent(actual, expectation, options);
   },
   extract<O extends ExtractOptions | undefined = undefined>(
     text: string,
@@ -132,6 +133,9 @@ const crucible: Readonly<CrucibleSurface> = Object.freeze({
     return compositionRoot.valueExtractor().extract(text, description, options) as Promise<
       ExtractedValueFor<O>
     >;
+  },
+  facts(fact: string | readonly string[]): void {
+    runScope.appendState(fact);
   },
   load(state: string | readonly string[]): void {
     runScope.appendState(state);
@@ -143,5 +147,5 @@ const crucible: Readonly<CrucibleSurface> = Object.freeze({
 
 export { crucible, CrucibleError, CrucibleVerdictError };
 export type { VerdictOutcome } from '../core/verdict-error.js';
-export type { ExtractedValue, ExtractOptions, ExtractType, RunOptions, TestBody };
+export type { CoherentOptions, ExtractedValue, ExtractOptions, ExtractType, RunOptions, TestBody };
 export type { CrucibleErrorKind } from '../core/errors.js';

@@ -13,6 +13,9 @@ import { ExtractModeName } from './test/extract-mode-name.enum.js';
 import { ExtractorHarness } from './test/extractor-harness.util.js';
 import { TraceHarness } from './test/trace-harness.util.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
+import { FactsHarness } from './test/facts-harness.util.js';
+import { OptionsHarness } from './test/options-harness.util.js';
+import { StateFact } from './test/state-fact.enum.js';
 
 describe('Extractor — typed values', () => {
   it('resolves the number the judge extracted when a number is requested', async () => {
@@ -137,6 +140,13 @@ describe('Extractor — usage', () => {
     ['a string strict', ExtractText.Response, ExtractTarget.Apples, { strict: String(true) }],
     ['a null strict', ExtractText.Response, ExtractTarget.Apples, { strict: null }],
     ['an unknown option', ExtractText.Response, ExtractTarget.Apples, { strcit: true }],
+    ...FactsHarness.invalid().map(
+      ([label, facts]) =>
+        [`${label} as facts`, ExtractText.Response, ExtractTarget.Apples, { facts }] as const,
+    ),
+    ...OptionsHarness.nonPlain().map(
+      ([label, options]) => [label, ExtractText.Response, ExtractTarget.Apples, options] as const,
+    ),
   ])('rejects %s as a usage error', async (_label, text, description, options) => {
     const error = await ExtractorHarness.usageFailure(text, description, options);
     expect(error).toBeInstanceOf(CrucibleError);
@@ -152,6 +162,93 @@ describe('Extractor — usage', () => {
       extractor.extract(ExtractText.Response, ExtractTarget.Apples),
     );
     expect((error as CrucibleError).kind).toBe('usage');
+  });
+});
+
+describe('Extractor — facts', () => {
+  it('extracts against the run facts followed by the call’s own facts', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Casino, StateFact.Home]);
+    const value = await scope.enterRun(() => {
+      scope.appendState(StateFact.Casino);
+      return extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        as: 'number',
+        facts: [StateFact.Home],
+      });
+    });
+    expect(value).toBe(ExtractValue.Two);
+  });
+
+  it('sends a single per-call fact when the run has none', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Letter]);
+    const value = await scope.enterRun(() =>
+      extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        as: 'number',
+        facts: StateFact.Letter,
+      }),
+    );
+    expect(value).toBe(ExtractValue.Two);
+  });
+
+  it('a later call does not see an earlier call’s facts', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Casino]);
+    const value = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        as: 'number',
+        facts: StateFact.Home,
+      });
+      return extractor.extract(ExtractText.Response, ExtractTarget.Apples, { as: 'number' });
+    });
+    expect(value).toBe(ExtractValue.Two);
+  });
+
+  it('extracts against the facts as given when the caller mutates its array mid-call', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Home]);
+    const value = await scope.enterRun(() => {
+      const facts = [StateFact.Home];
+      const pending = extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        as: 'number',
+        facts,
+      });
+      facts.push(StateFact.Letter);
+      return pending;
+    });
+    expect(value).toBe(ExtractValue.Two);
+  });
+
+  it('per-call facts never enter the run’s facts', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Casino]);
+    const state = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        facts: StateFact.Home,
+      });
+      return scope.context().state;
+    });
+    expect(state).toEqual([StateFact.Casino]);
+  });
+
+  it('records the facts each extraction used', async () => {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.factExtractor(scope, [StateFact.Casino]);
+    const extractions = await scope.enterRun(async () => {
+      scope.appendState(StateFact.Casino);
+      await extractor.extract(ExtractText.Response, ExtractTarget.Apples, {
+        as: 'number',
+        facts: StateFact.Home,
+      });
+      await extractor.extract(ExtractText.Response, ExtractTarget.Apples, { as: 'number' });
+      return scope.context().extractions;
+    });
+    expect(extractions.map((record) => record.facts)).toEqual([
+      [StateFact.Casino, StateFact.Home],
+      [StateFact.Casino],
+    ]);
   });
 });
 

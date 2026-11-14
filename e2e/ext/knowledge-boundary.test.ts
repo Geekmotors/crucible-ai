@@ -7,7 +7,7 @@ crucible.it(
   'holds a character to the knowledge the run state grants her',
   { runs: Gate.Runs, threshold: Gate.Threshold },
   async () => {
-    crucible.load(scenario.state);
+    crucible.facts(scenario.state);
     const verdicts = scenario.steps.map((step) => crucible.coherent(step.response, step.claim));
     expect(await Promise.all(verdicts)).toEqual(scenario.steps.map((step) => step.expected));
   },

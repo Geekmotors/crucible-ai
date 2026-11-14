@@ -28,6 +28,7 @@ class ReportHarness {
       verdict: false,
       reasoning: 'the reasoning',
       response: 'the response',
+      facts: [],
       seq: 0,
       ...overrides,
     };
@@ -42,6 +43,7 @@ class ReportHarness {
       value: null,
       reasoning: 'the reasoning',
       response: 'the response',
+      facts: [],
       seq: 0,
       ...overrides,
     };

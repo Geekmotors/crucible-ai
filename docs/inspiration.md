@@ -25,7 +25,7 @@ crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
   const story = await sut.createNewStory("The Long Weekend");
   await sut.memory("Bob is at the casino");
   await sut.memory("Jane is at home");
-  crucible.load(story.getLogs());
+  crucible.facts(story.getLogs());
 
   // act
   const response = await sut.input("Jane looks for Bob");
@@ -42,7 +42,7 @@ crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
 
 Three ideas shape it:
 
-- **State is a first-class input.** Whether a reply is right depends on what the system knew at the time. `crucible.load()` and `crucible.append()` hand that ground truth to the judge, so "Jane can't know where Bob is" is something a test can check.
+- **Facts are a first-class input.** Whether a reply is right depends on what the system knew at the time. `crucible.facts()` hands that ground truth to the judge, for a whole run or a single assertion, so "Jane can't know where Bob is" is something a test can check.
 - **Reliability is a gate, not a lucky run.** `crucible.it()` re-runs the whole body (arrange, act, assert) many times in parallel and passes only when the pass rate reaches the threshold. That is a pass-rate threshold you can put in CI. It is not τ-bench's pass^k, which counts a task as passed only when all k runs succeed: a `{ runs: 20, threshold: 0.95 }` gate tolerates one failure in 20. `threshold: 1` is the all-runs-must-pass case. A threshold is a sampled estimate, so read [Runs and threshold](runs-and-threshold.md) before picking numbers.
 - **Assertions stay native.** The judge returns a value, and you assert it with plain Jest (`toBe(true)`). When a run fails, Crucible prints the judge's reasoning.
 
@@ -85,7 +85,7 @@ void janeLooksForBob() throws Exception {
     var story = sut.createNewStory("The Long Weekend");
     sut.memory("Bob is at the casino");
     sut.memory("Jane is at home");
-    Crucible.load(story.getLogs());
+    Crucible.facts(story.getLogs());
 
     // act
     var response = sut.input("Jane looks for Bob");
@@ -109,7 +109,7 @@ async def test_jane_looks_for_bob():
     story = await sut.create_new_story("The Long Weekend")
     await sut.memory("Bob is at the casino")
     await sut.memory("Jane is at home")
-    crucible.load(story.get_logs())
+    crucible.facts(story.get_logs())
 
     # act
     response = await sut.input("Jane looks for Bob")

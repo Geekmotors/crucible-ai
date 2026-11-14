@@ -9,6 +9,8 @@ import { Capture } from './capture.util.js';
 import { ExtractTarget } from './extract-target.enum.js';
 import { ExtractText } from './extract-text.enum.js';
 import { JudgeHarness } from './judge-harness.util.js';
+import { FactAwareJudge } from './fact-aware-judge.fake.js';
+import { ExtractReply } from './extract-reply.enum.js';
 import { ModeAwareJudge } from './mode-aware-judge.fake.js';
 import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { TraceHarness } from './trace-harness.util.js';
@@ -25,6 +27,13 @@ class ExtractorHarness {
       JudgeHarness.exchange(adapter, scope, deadline, trace),
       scope,
       trace,
+    );
+  }
+
+  static factExtractor(scope: RunScope, facts: readonly string[]): Extractor {
+    return ExtractorHarness.extractor(
+      new FactAwareJudge(facts, ExtractReply.Two, ExtractReply.Hedged),
+      scope,
     );
   }
 

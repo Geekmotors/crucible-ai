@@ -43,8 +43,8 @@ contain breaking changes, and they are marked **Breaking** below.
   hedge was `null`. To keep the old behaviour, pass `strict: true` on the
   call, the test or a `crucible.describe` group, or set
   `"testDefaults": { "strict": true }` in the config file.
-- **Breaking:** `crucible.extract()` options other than `as` and `strict`
-  are a `usage` error, as they already are for `crucible.it()`,
+- **Breaking:** `crucible.extract()` options other than `as`, `strict` and
+  `facts` are a `usage` error, as they already are for `crucible.it()`,
   `crucible.describe()` and `testDefaults`; before, a misspelt key such as
   `{ strcit: true }` was silently ignored.
 - Failure report and trace lines for an extraction name its mode, for
@@ -55,6 +55,15 @@ contain breaking changes, and they are marked **Breaking** below.
 - The extract schema (`schemas/extract.md`) defines both modes and takes a
   new `MODE` section (`lenient` or `strict`) after `TYPE`; another
   implementation assembling extract payloads must send it.
+- **Breaking:** `crucible.coherent()` validates a third argument: anything
+  other than `undefined` or a plain options object with only `facts` is a
+  `usage` error. Before, a third argument was ignored.
+- `crucible.extract()` options must be a plain object: a class instance
+  such as a `Map` or `Date`, or an object inheriting an option, is a `usage`
+  error.
+- The failure report shows, under each judged call, the facts it was judged
+  against as a `Facts:` field (bounded by `excerptChars`), for anyone
+  parsing reports.
 
 ### Added
 
@@ -93,6 +102,23 @@ contain breaking changes, and they are marked **Breaking** below.
   applies to every assertion that supports it (today `extract()`). A value
   that is not a boolean is a `usage` error (a `config` error in
   `testDefaults`). The config JSON Schema and the `init` template list it.
+- `crucible.facts(fact)` adds one fact or an array of facts to the current
+  run, exactly as `crucible.load()` and `crucible.append()` do: append-only,
+  per run (never shared between runs or tests), read when an assertion is
+  called, and a `usage` error outside a running `crucible.it()` body. Facts
+  still travel to the judge as the `STATE` section; the instruction schemas
+  are unchanged.
+- Per-call facts: `crucible.coherent(actual, expectation, { facts })` and
+  `crucible.extract(text, description, { as, strict, facts })` send facts
+  with that call only, after the run's facts. They are not added to the run,
+  so later calls do not see them. `facts` must be a string or an array of
+  strings, else a `usage` error. The `CoherentOptions` type is exported.
+
+### Deprecated
+
+- `crucible.load()` and `crucible.append()` are deprecated aliases of
+  `crucible.facts()`, with identical behaviour and no runtime warning; your
+  editor marks them. They are planned for removal in 1.0.
 
 ### Fixed
 

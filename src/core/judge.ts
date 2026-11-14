@@ -1,5 +1,8 @@
+import type { CoherentOptions } from './assertion-options.js';
 import { CrucibleError } from './errors.js';
+import { FactList } from './fact-list.util.js';
 import { JudgeExchange } from './judge-exchange.js';
+import { OptionBag } from './option-bag.util.js';
 import type { SchemaTextSupplier } from './judge-exchange.js';
 import { PayloadAssembler } from './payload-assembler.util.js';
 import { RunScope, runScope } from './state.js';
@@ -13,8 +16,11 @@ type ParsedVerdict = {
 class Judge {
   private static readonly ASSERTION = 'coherent';
   private static readonly CONTRACT = '{ "verdict": boolean, "reasoning": string }';
+  private static readonly OPTION_KEYS: ReadonlySet<string> = new Set(['facts']);
 
   private readonly assembler = new PayloadAssembler();
+  private readonly factList = new FactList();
+  private readonly optionBag = new OptionBag();
 
   constructor(
     private readonly schemaText: SchemaTextSupplier,
@@ -23,12 +29,17 @@ class Judge {
     private readonly trace: TraceReporter = new TraceReporter(),
   ) {}
 
-  async judgeCoherent(response: string, claim: string): Promise<boolean> {
+  async judgeCoherent(
+    response: string,
+    claim: string,
+    options?: CoherentOptions,
+  ): Promise<boolean> {
     this.requireStrings(response, claim);
-    const state = this.scope.context().state;
+    const callFacts = this.callFacts(options);
+    const facts = [...this.scope.context().state, ...callFacts];
     const parsed = await this.exchange.ask({
       system: this.schemaText(),
-      prompt: this.assembler.assemble(state, [
+      prompt: this.assembler.assemble(facts, [
         { header: 'RESPONSE', content: response },
         { header: 'CLAIM', content: claim },
       ]),
@@ -41,6 +52,7 @@ class Judge {
       verdict: parsed.verdict,
       reasoning: parsed.reasoning,
       response,
+      facts,
     });
     this.trace.judgeRecorded(record);
     return parsed.verdict;
@@ -53,6 +65,19 @@ class Judge {
         'crucible.coherent needs a string actual and a string expectation.',
       );
     }
+  }
+
+  private callFacts(options: unknown): string[] {
+    if (options === undefined) {
+      return [];
+    }
+    if (!this.optionBag.accepts(options, Judge.OPTION_KEYS)) {
+      throw new CrucibleError(
+        'usage',
+        'crucible.coherent options take { facts?: string | string[] }.',
+      );
+    }
+    return this.factList.optional(options.facts);
   }
 
   private verdict(reply: unknown): ParsedVerdict | undefined {

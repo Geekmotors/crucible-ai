@@ -1,12 +1,14 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
 import type { ExtractedValue, ExtractMode, ExtractType } from './extract-type.js';
+import { FactList } from './fact-list.util.js';
 import { TimeBudget } from './time-budget.util.js';
 
 type JudgedRecord = {
   readonly assertion: string;
   readonly reasoning: string;
   readonly response: string;
+  readonly facts: readonly string[];
   readonly seq: number;
 };
 
@@ -46,6 +48,7 @@ type RunStore = {
 
 class RunScope {
   private readonly storage = new AsyncLocalStorage<RunStore>();
+  private readonly factList = new FactList();
 
   enterRun<T>(
     body: () => T,
@@ -89,7 +92,7 @@ class RunScope {
 
   appendState(entries: unknown): void {
     const store = this.store();
-    for (const entry of this.stateEntries(entries)) {
+    for (const entry of this.factList.entries(entries)) {
       store.context.state.push(entry);
     }
   }
@@ -113,17 +116,6 @@ class RunScope {
     const record = { ...error, seq: this.takeSeq(store) };
     store.context.errors.push(record);
     return record;
-  }
-
-  private stateEntries(entries: unknown): string[] {
-    const candidates: unknown[] = Array.isArray(entries) ? Array.from(entries) : [entries];
-    if (!candidates.every((entry) => typeof entry === 'string')) {
-      throw new CrucibleError(
-        'usage',
-        'crucible.load and crucible.append take a string or an array of strings.',
-      );
-    }
-    return candidates as string[];
   }
 
   private takeSeq(store: RunStore): number {

@@ -14,6 +14,7 @@ import { ReportBound } from './test/report-bound.enum.js';
 import { ReportHarness } from './test/report-harness.util.js';
 import { ReportText } from './test/report-text.enum.js';
 import { RunCount } from './test/run-count.enum.js';
+import { StateFact } from './test/state-fact.enum.js';
 import { Threshold } from './test/threshold.enum.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
 
@@ -778,5 +779,96 @@ describe('Reporter — passing report', () => {
     );
     expect(message).toContain(`${ReportText.PassedRun} Run #2`);
     expect(message).toContain(ClaimText.NamesPrice);
+  });
+});
+
+describe('Reporter — facts each judged call used', () => {
+  it('shows the facts under the first failed assertion, one per line', () => {
+    const message = ReportHarness.renderedFailure([
+      ReportHarness.falseVerdict({ facts: [StateFact.Casino, StateFact.Home] }),
+    ]);
+    expect(message).toContain(
+      [
+        `  Claim: ${ClaimText.Default}`,
+        `  Facts: ${StateFact.Casino}`,
+        `    ${StateFact.Home}`,
+        '  Judge reasoning:',
+      ].join('\n'),
+    );
+  });
+
+  it('shows no facts line for a call that used none', () => {
+    const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict()]);
+    expect(message).not.toContain(ReportText.Facts);
+  });
+
+  it('shows the facts an extraction used under it', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.extractingRun('failed', [
+          ReportHarness.extraction({ facts: [StateFact.Letter] }),
+        ]),
+      ],
+      Threshold.Certain,
+    );
+    expect(message).toContain(
+      [
+        `  Extraction 1 of 1 (lenient): "${ExtractTarget.Apples}" as number → null`,
+        `    Facts: ${StateFact.Letter}`,
+        '    Judge reasoning:',
+      ].join('\n'),
+    );
+  });
+
+  it('shows each judge call’s facts at full verbosity', () => {
+    const message = ReportHarness.renderedVerdict(
+      [
+        ReportHarness.extractingRun(
+          'failed',
+          [ReportHarness.extraction({ facts: [StateFact.Letter], seq: 1 })],
+          [ReportHarness.falseVerdict({ facts: [StateFact.Casino], seq: 0 })],
+        ),
+      ],
+      Threshold.Certain,
+      ReportHarness.fullReporter(),
+    );
+    expect(message).toContain(
+      [`    Claim: ${ClaimText.Default}`, `    Facts: ${StateFact.Casino}`].join('\n'),
+    );
+    expect(message).toContain(
+      [
+        `  Judge call 2 of 2: extract (lenient) "${ExtractTarget.Apples}" as number → null`,
+        `    Facts: ${StateFact.Letter}`,
+      ].join('\n'),
+    );
+  });
+
+  it('bounds long facts at the configured excerpt length and states the full length', () => {
+    const fact = StateFact.Casino.repeat(ExcerptChars.Short);
+    const message = ReportHarness.renderedFailure(
+      [ReportHarness.falseVerdict({ facts: [fact] })],
+      undefined,
+      [],
+      ReportHarness.reporter(ExcerptChars.Short),
+    );
+    expect(message).toContain(
+      `Facts (first ${ExcerptChars.Short} of ${fact.length} chars): ${fact.slice(0, ExcerptChars.Short)}…`,
+    );
+  });
+
+  it('marks the facts left out on their own line when the bound ends on a whole fact', () => {
+    const facts = [StateFact.Casino, StateFact.Home];
+    const message = ReportHarness.renderedFailure(
+      [ReportHarness.falseVerdict({ facts })],
+      undefined,
+      [],
+      ReportHarness.reporter(StateFact.Casino.length),
+    );
+    expect(message).toContain(
+      [
+        `  Facts (first ${StateFact.Casino.length} of ${facts.join('\n').length} chars): ${StateFact.Casino}`,
+        '    …',
+      ].join('\n'),
+    );
   });
 });

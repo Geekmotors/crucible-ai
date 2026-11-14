@@ -46,6 +46,7 @@ class Reporter {
   private static readonly CONTINUATION_INDENT = '    ';
   private static readonly NESTED_INDENT = '    ';
   private static readonly TRUNCATION_MARKER = '…';
+  private static readonly FACT_SEPARATOR = '\n';
   private static readonly FATAL_ADVICE =
     'Fix the provider setup (API key, model) or configuration and rerun.';
   private static readonly EXPIRY_ADVICE =
@@ -216,6 +217,7 @@ class Reporter {
     return [
       this.field(heading, `${record.assertion} verdict ${String(record.verdict)}`),
       this.field('Claim', record.claim, Reporter.NESTED_INDENT),
+      ...this.factsField(record.facts, Reporter.NESTED_INDENT),
       this.field('Judge reasoning', record.reasoning, Reporter.NESTED_INDENT),
       this.excerptField(record.response, Reporter.NESTED_INDENT),
     ].join('\n');
@@ -297,6 +299,7 @@ class Reporter {
   private extractionLines(heading: string, summary: string, record: ExtractionRecord): string {
     return [
       this.field(heading, summary),
+      ...this.factsField(record.facts, Reporter.NESTED_INDENT),
       this.field('Judge reasoning', record.reasoning, Reporter.NESTED_INDENT),
       this.excerptField(record.response, Reporter.NESTED_INDENT),
     ].join('\n');
@@ -328,6 +331,7 @@ class Reporter {
         `${first.record.assertion} (assertion ${first.position} of ${first.judged} judged in this run)`,
       ),
       this.field('Claim', first.record.claim),
+      ...this.factsField(first.record.facts),
       this.field('Judge reasoning', first.record.reasoning),
       this.excerptField(first.record.response),
       thrown,
@@ -368,14 +372,32 @@ class Reporter {
   }
 
   private excerptField(response: string, indent: string = Reporter.FIELD_INDENT): string {
+    return this.boundedField('Response excerpt', response, indent);
+  }
+
+  private factsField(facts: readonly string[], indent: string = Reporter.FIELD_INDENT): string[] {
+    return facts.length === 0
+      ? []
+      : [
+          this.boundedField(
+            'Facts',
+            facts.join(Reporter.FACT_SEPARATOR),
+            indent,
+            Reporter.FACT_SEPARATOR,
+          ),
+        ];
+  }
+
+  private boundedField(label: string, value: string, indent: string, separator?: string): string {
     const limit = this.settings().excerptChars;
-    if (response.length <= limit) {
-      return this.field('Response excerpt', response, indent);
+    if (value.length <= limit) {
+      return this.field(label, value, indent);
     }
-    const cut = this.text.cut(response, limit);
+    const cut = this.text.cut(value, limit);
+    const endsOnWhole = separator !== undefined && value.startsWith(separator, cut.length);
     return this.field(
-      `Response excerpt (first ${cut.length} of ${response.length} chars)`,
-      cut + Reporter.TRUNCATION_MARKER,
+      `${label} (first ${cut.length} of ${value.length} chars)`,
+      cut + (endsOnWhole ? separator : '') + Reporter.TRUNCATION_MARKER,
       indent,
     );
   }

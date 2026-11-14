@@ -19,6 +19,8 @@ import { ManualTimer } from './manual-timer.fake.js';
 import { TimedDeadline } from './timed-deadline.fake.js';
 import { TraceText } from './trace-text.enum.js';
 import { TraceHarness } from './trace-harness.util.js';
+import { FactAwareJudge } from './fact-aware-judge.fake.js';
+import { VerdictReply } from './verdict-reply.enum.js';
 
 class JudgeHarness {
   static schemaText = (): string => 'judge schema text';
@@ -44,6 +46,13 @@ class JudgeHarness {
       JudgeHarness.exchange(adapter, scope, deadline),
       scope,
       new TraceReporter(),
+    );
+  }
+
+  static factJudge(scope: RunScope, facts: readonly string[]): Judge {
+    return JudgeHarness.judge(
+      new FactAwareJudge(facts, VerdictReply.Coherent, VerdictReply.Contradicted),
+      scope,
     );
   }
 

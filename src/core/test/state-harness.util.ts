@@ -10,6 +10,7 @@ class StateHarness {
       verdict: true,
       reasoning: 'consistent',
       response: 'the response',
+      facts: [],
     };
   }
 
@@ -22,6 +23,7 @@ class StateHarness {
       value: 2,
       reasoning: 'names two apples',
       response: 'the response',
+      facts: [],
     };
   }
 }

@@ -3,6 +3,7 @@ enum ReportLine {
   ExcerptBound = 'Response excerpt (first 40 of',
   FirstStrictExtraction = 'Extraction 1 of 1 (strict):',
   JudgeReasoning = 'Judge reasoning:',
+  Facts = 'Facts:',
 }
 
 export { ReportLine };

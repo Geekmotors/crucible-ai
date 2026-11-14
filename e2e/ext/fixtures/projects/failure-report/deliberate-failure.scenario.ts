@@ -3,5 +3,7 @@ import { crucible } from 'crucible-ai';
 import scenario from './scenario.json' with { type: 'json' };
 
 crucible.it(scenario.name, async () => {
-  expect(await crucible.coherent(scenario.response, scenario.claim)).toBe(scenario.insisted);
+  expect(await crucible.coherent(scenario.response, scenario.claim, { facts: scenario.fact })).toBe(
+    scenario.insisted,
+  );
 });

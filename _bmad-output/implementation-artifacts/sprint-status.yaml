@@ -90,10 +90,17 @@ development_status:
   epic-5-retrospective: optional
 
   # Epic 6: Ergonomics
-  epic-6: in-progress
+  epic-6: done
   6-1-sensible-defaults: done
   6-2-commented-config-and-init: done
   6-3-describe-group-settings: done
   6-4-lenient-strict-extract: done
-  6-5-facts-per-call-and-per-run: backlog
+  6-5-facts-per-call-and-per-run: done
   epic-6-retrospective: optional
+
+  # Epic 7: The gate, a generic runner wrapper and Vitest
+  epic-7: backlog
+  7-1-gate-and-run-context: backlog
+  7-2-generic-runner-wrapper: backlog
+  7-3-vitest-adapter: backlog
+  epic-7-retrospective: optional

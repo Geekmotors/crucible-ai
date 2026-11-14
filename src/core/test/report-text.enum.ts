@@ -15,6 +15,7 @@ enum ReportText {
   ThrownOnlyLabel = 'thrown without a false verdict',
   NearMissRate = 'pass rate 0.949',
   JudgeCallErrored = 'errored after 3 attempt(s)',
+  Facts = 'Facts:',
 }
 
 export { ReportText };

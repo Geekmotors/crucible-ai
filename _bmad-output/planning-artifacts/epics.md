@@ -601,3 +601,55 @@ So that the common case reads naturally and multi-step tests stay possible.
 **And** the judge payload section stays `STATE` (instruction schema unchanged; conformance unaffected); docs call the concept "facts" and explain the wire name once
 **And** README and guides use `crucible.facts()`, with an example showing facts taken from the system under test (e.g. `crucible.facts(assistant.getLogs())`), and the Quick start shows a first test without facts
 **And** CHANGELOG `## Unreleased` lists the new function, the per-call option and the deprecations
+
+## Epic 7: The gate, a generic runner wrapper and Vitest
+
+Make the pass-rate gate the runner-neutral primitive, rebuild `crucible.it` / `crucible.describe` as a generic wrapper over the runner's own functions so every variant comes free, and run on Vitest. Design rule: all run behaviour (runs, threshold, context, deadlines, report) lives in the gate; the wrapper only strips options, wraps bodies/callbacks and forwards to the runner; a runner adapter supplies only the runner's functions and types. The current `crucible.it` / `crucible.describe` API keeps working unchanged.
+
+### Story 7.1: The gate and a context for each run
+
+As a developer who wants test scope to be visible and runner-independent,
+I want a `crucible.gate(...)` body wrapper that runs my body N times with a per-run context,
+So that I can use any runner's own `it` (with every variant) and see which run my facts and judgements belong to.
+
+**Acceptance Criteria:**
+
+**Given** `it(name, crucible.gate([options,] async (t, ...args) => { ... }))` with the runner's own `it` (including `it.only`, `it.each`, etc.)
+**Then** the gate runs the body `runs` times concurrently, gates on `threshold`, throws the same verdict errors and report as `crucible.it`, and passes the runner's own arguments (e.g. `it.each` row values) after `t`
+**And** options resolve as for `crucible.it` (built-in → config `testDefaults` → enclosing `crucible.describe` → the gate's options); the gate enforces its own test deadline (it cannot set the runner's timeout; docs explain passing the runner timeout, and the gate's deadline wins if shorter)
+**And** the returned function declares zero parameters (so Jest never treats it as a `done`-callback test) and forwards any runner-supplied arguments
+
+**Given** the run context `t`
+**Then** it exposes `facts`, `coherent` and `extract` with the same signatures as the `crucible.*` functions, bound to that run; each concurrent run has its own `t`; `t` and the global functions share the same run state
+**And** `t` keeps working from callbacks that lost the async context until its run ends; afterwards it is a `usage` error
+**And** `crucible.it` bodies receive `t` too (`async (t) => ...`), and existing zero-argument bodies keep working
+**And** docs present `t` as the recommended style and the gate for plain-runner users
+
+### Story 7.2: `crucible.it` and `crucible.describe` as a generic runner wrapper
+
+As a developer used to Jest's `only`, `skip`, `todo` and `each`,
+I want every variant of the runner's `it` and `describe` on `crucible.it` and `crucible.describe`,
+So that I focus, skip, plan and parameterise inference tests exactly as I do other tests.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.it` and `crucible.describe`
+**Then** they are built generically over the runner's `it` / `describe`: any property path (`only`, `skip`, `todo`, `each`, `only.each`, `skip.each`, and functions those return) forwards to the runner's same path, after stripping Crucible options, wrapping the body with the gate (or the describe callback with the settings scope), and supplying the computed timeout where the runner takes one
+**And** `crucible.it.each(table)(name, [options,] async (t, ...row) => { ... })` registers one gated test per row with the runner's own name formatting
+**And** variants with no body (`todo`) pass straight through; `failing` and `concurrent` are blocked with a `usage` error and documented (pass-rate semantics; runs already concurrent)
+**And** existing behaviour, validation and tests of `crucible.it` / `crucible.describe` are unchanged; the hand-written registration paths are replaced by the wrapper
+**And** every supported variant is typed (overloads/mapped types with JSDoc), `crucible` stays readonly, type tests cover each variant; docs replace the "no `.only`, `.skip` or `.each`" note
+
+### Story 7.3: Run on Vitest
+
+As a developer whose project uses Vitest,
+I want `import { crucible } from 'crucible-ai/vitest'` to give me the same API,
+So that I can use Crucible without switching test runners.
+
+**Acceptance Criteria:**
+
+**Given** the Vitest entry point
+**Then** the same wrapper is pointed at Vitest's `test` / `describe`; `crucible.it`, `crucible.describe`, their variants, the gate, `t`, facts, `coherent`, `extract` and every setting behave as on Jest
+**And** the Jest entry point is unchanged; the core is shared, not duplicated
+**And** Vitest differences are resolved and documented (async describe callbacks allowed or rejected consistently, timeouts, `test.concurrent`, watch-mode cost)
+**And** an e2e suite runs the core scenarios on Vitest; README and docs cover Vitest setup

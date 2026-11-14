@@ -11,7 +11,7 @@ describe('extract conformance matrix through the public API', () => {
       `${conformanceCase.id} (${conformanceCase.mode})`,
       { runs: Gate.Smoke },
       async () => {
-        crucible.load(conformanceCase.state);
+        crucible.facts(conformanceCase.state);
         const value = await crucible.extract(conformanceCase.response, conformanceCase.target, {
           as: conformanceCase.type as ExtractType,
           strict: conformanceCase.mode === ExtractMode.Strict,

@@ -38,7 +38,7 @@ writes `crucible.config.jsonc` in the current directory:
   // Every line below shows a default. Uncomment a line to change it.
   // "apiKeyEnv": "CRUCIBLE_JUDGE_KEY", // the variable holding the key, never the key
   // "verbosity": "default", // "default", "full" or "debug"
-  // "excerptChars": 500, // response excerpt length in failure reports
+  // "excerptChars": 500, // length of the response excerpt and Facts in failure reports
   // "testDefaults": {
   //   "runs": 10,
   //   "threshold": 0.9, // at least 9 of 10 runs must pass
@@ -127,7 +127,7 @@ a wrong path only loses the editor hints.
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
 | `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647), and `strict` (`true` or `false`) | `{}` (built-ins: `runs` 10, `threshold` 0.9, `strict` false) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)); a [`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe) group or the test itself overrides them per field. With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass; `"strict": true` makes every `crucible.extract()` treat a hedged reply as `null` ([extract](api.md#crucibleextract)) |
-| `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
+| `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt, and of the `Facts` field, in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
 
 No other top-level field is accepted.
 
