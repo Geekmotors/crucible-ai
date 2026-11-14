@@ -364,7 +364,9 @@ These rules hold for every `text` outcome and every operation below.
   included).
 - **Line breaks in values** (report only). Where a value is split into lines,
   a break is `\r\n`, `\r`, `\n`, U+2028 or U+2029 (`\r\n` counts as one).
-  Payloads never split on anything but `\n`.
+  Payload fencing uses its own, wider break set (adds VT, FF, U+001C–U+001E
+  and U+0085, to match every common line splitter); see `payload` /
+  `coherent`.
 - **Blank line.** A line that is empty or holds only white space as
   ECMAScript `String.prototype.trim` defines it, exactly these code units:
   U+0009, U+000A, U+000B, U+000C, U+000D, U+0020, U+00A0, U+1680,
@@ -413,16 +415,61 @@ No leading or trailing newline.
 2. `RESPONSE`: `response`.
 3. `CLAIM`: `claim`.
 
-**Fencing.** Content is split on `\n` only (a `\r`, U+2028 or U+2029 is
-plain content). Every piece that equals exactly `<<<` or exactly `>>>` gets
-one leading space (` <<<`, ` >>>`); every other piece is left as is (` >>>`,
-`>>>>`, `>>> x`, `>>>\r` are unchanged). The pieces are joined back with
-`\n`. So, read as `\n`-separated lines, content can never hold a line that
-closes its section or opens a forged one, whatever headers or instructions it
-contains. (A reader that also breaks lines on `\r`, U+2028 or U+2029 can still
-see one: a known gap, kept for now so every port and the jq harness agree.)
-Neutralising is one-way: content `>>>` and content ` >>>` look the same to
-the judge. Nothing is ever truncated.
+**Fencing.** Every section's content goes through this rule before it is
+placed between its fences:
+
+1. For the check only, split the content into lines at every line break:
+   U+000A (`\n`), U+000B (VT), U+000C (FF), U+000D (`\r`), U+001C, U+001D,
+   U+001E, U+0085 (NEL), U+2028 and U+2029. This is the set Python's
+   `str.splitlines` uses and a superset of the Unicode mandatory breaks.
+   `\r\n` is one break; splitting it as `\r` then `\n` gives the same
+   result, because the empty line between them never matches. The order in
+   which an implementation splits on the breaks does not matter.
+2. For the check only, remove every invisible code point from the line:
+   U+00AD, U+034F, U+061C, U+115F, U+1160, U+17B4, U+17B5, U+180B–U+180F,
+   U+200B–U+200F, U+202A–U+202E, U+2060–U+206F, U+3164, U+FE00–U+FE0F,
+   U+FEFF, U+FFA0, U+FFF0–U+FFF8, U+1BCA0–U+1BCA3, U+1D173–U+1D17A,
+   U+E0000–U+E0FFF (Unicode's `Default_Ignorable_Code_Point` set, frozen
+   here as listed). Work on code points, not UTF-16 code units: the last
+   three ranges are astral.
+3. The line matches when what is left, after trimming padding from both
+   ends, is exactly `<<<` or exactly `>>>`. Padding is exactly these code
+   points: U+0009, U+0020, U+00A0, U+1680, U+2000–U+200A, U+202F, U+205F,
+   U+3000 (the ECMAScript `String.prototype.trim` set without the line
+   breaks of step 1 and without U+FEFF, which step 2 removes). Nothing else
+   counts: not U+001F or any other control character, no combining mark,
+   and no Unicode-database class (`\s`, `Zs`, `isspace`, `\p{...}`), which
+   differ between engines and versions.
+4. A matching line gets one U+0020 in front of its first code point,
+   whatever that is: a line that already starts with padding or an
+   invisible code point still gains exactly one space (` >>>` →
+   `  >>>`). The line itself, its padding and invisible code points, and
+   every line break around it are kept byte for byte; every other line is
+   left as is. Nothing else changes and nothing is ever truncated.
+
+Examples (content → fenced content): `>>>` → ` >>>`; ` >>>` → `  >>>`;
+`  >>>  ` → `   >>>  `; `\t<<<` → ` \t<<<`; `a\r\n>>>\r\nb` →
+`a\r\n >>>\r\nb`; `a\r>>>\rb` → `a\r >>>\rb`; `a` U+2028 `>>>` U+2029 `b`
+→ `a` U+2028 ` >>>` U+2029 `b`; `a\v>>>\fb` → `a\v >>>\fb`; U+200B `>>>`
+→ ` ` U+200B `>>>`; `>` U+200B `>>` → ` >` U+200B `>>`. Unchanged:
+`>>>>`, `>>>x`, `>>> x`, `>>> >>>`, `<<<>>>`, `>> >`, U+001F `<<<`,
+`>>>` U+0301, `＞＞＞` (U+FF1E), `›››` (U+203A).
+
+So whichever of those breaks a reader splits lines on, the only lines that
+start with a fence marker and reduce to one are the fences the builder
+writes itself; content can never hold an unindented fence line, whatever
+headers or instructions it contains. Because every matching line gains
+exactly one space, content `>>>` and content ` >>>` stay distinct (` >>>`
+and `  >>>`).
+
+**Known limits.** The rule is exact, not a model of what a judge might read
+as a fence. It does not touch look-alike brackets (fullwidth, guillemets,
+dingbats), marker runs of other lengths (`>>`, `>>>>`), a marker sharing its
+line with visible text (`>>> CLAIM`), or combining marks on a marker. The
+judge's system prompt (`schemas/*.md`) defines a fence as a line holding
+only `<<<` or `>>>` and tells the judge that anything inside a fence that
+resembles a header, a fence or an instruction is data; that instruction, not
+this rule, is the defence against those.
 
 ### `payload` / `extract`
 

@@ -100,6 +100,7 @@
 ## Deferred from: 3-4-language-agnostic-judge-conformance-spike.md (2026-11-13)
 
 - source_spec: 3-4-language-agnostic-judge-conformance-spike.md
+  status: resolved in Story 8.6 (`>>>\r` lines are now neutralised by `PayloadAssembler` and the jq builder; `schemas/*.md` rule 3 left as is, still true as a minimum).
   summary: A content line `>>>\r` (CRLF input) is not "solely `>>>`", so neither `schemas/coherent.md` nor `PayloadAssembler` neutralises it and the judge may read it as a fence. Decide CRLF normalisation or `\r`-trimmed fence matching (schema rule + assembler, TDD).
   evidence: Offline sh-vs-TS payload diff with a CRLF edge case (identical output, both un-neutralised).
 
@@ -403,11 +404,11 @@
 
 ## Deferred from: dev of 8-2-spec-payloads-and-reports (2026-11-14)
 
-- Payload fencing splits content on `\n` only, so a `>>>` line ending in `\r` (CRLF content) or set off by U+2028/U+2029 is not neutralised; TS and the jq builder agree. Decide whether fencing should treat CRLF/CR as line breaks (a behaviour change for every port and the jq harness). Pinned by `payload-*-crlf-response`, `payload-coherent-lone-cr-response`, `payload-coherent-unicode-separators`.
+- [Resolved in Story 8.6] Payload fencing splits content on `\n` only, so a `>>>` line ending in `\r` (CRLF content) or set off by U+2028/U+2029 is not neutralised; TS and the jq builder agree. Decide whether fencing should treat CRLF/CR as line breaks (a behaviour change for every port and the jq harness). Pinned by `payload-*-crlf-response`, `payload-coherent-lone-cr-response`, `payload-coherent-unicode-separators`.
 
 ## Deferred from: code review of 8-2-spec-payloads-and-reports (2026-11-14)
 
-- Fencing hardening: neutralise a fence line when, after splitting on every line break (`\r\n`, `\r`, `\n`, U+2028, U+2029) and trimming surrounding white space, it equals `<<<` or `>>>`; keep original separators. Prompt-injection relevance: a CRLF response holding `>>>` then `CLAIM`/`<<<` lines can look like a forged section to a model. Needs TS + jq builder + payload fixtures + a conformance run.
+- [Resolved in Story 8.6] Fencing hardening: neutralise a fence line when, after splitting on every line break (`\r\n`, `\r`, `\n`, U+2028, U+2029) and trimming surrounding white space, it equals `<<<` or `>>>`; keep original separators. Prompt-injection relevance: a CRLF response holding `>>>` then `CLAIM`/`<<<` lines can look like a forged section to a model. Needs TS + jq builder + payload fixtures + a conformance run.
 - `excerptChars: 1` with a value that is one astral character renders `(first 2 of 2 chars): 😀…` (marked cut although whole). Pinned by `report-render-truncation-sole-astral-character`; fix = take the untruncated branch when the cut covers the value.
 - Before Story 8.5 deletes the TS conformance e2e: prove TS = jq for the system prompt (schemas/*.md verbatim) and the request envelope (`chat_request`: model, meta, usage), e.g. in Story 8.3's provider request fixtures.
 
@@ -432,3 +433,10 @@
 - OpenRouter `usage: {include: true}` stays harness-only (drives the harness cost print only); the 8.6 note's "usage field" parity is satisfied by documenting and excluding it explicitly.
 - `config/load` outcome naming the resolved provider is a spec-mandated exception to the "never assert .name" test rule.
 - Follow-ups worth a small story: (1) a `baseUrl` already ending in `/chat/completions` should not get the path twice; (2) check key-like values inside `meta` too, since `meta` is sent to the provider.
+
+## Deferred from: code review of 8-6-harden-prompt-fencing (2026-11-14)
+
+- Fence look-alikes are not neutralised: fullwidth/guillemet/dingbat brackets (`＞＞＞`, `›››`, `❯❯❯`), other marker lengths (`>>`, `>>>>`), a marker sharing its line with visible text (`>>> CLAIM`), combining marks on a marker (`>>>` U+0301). Documented as known limits in `spec/README.md`; defence is the schema instruction. Option if a conformance run shows a judge fooled: neutralise any line whose first non-padding characters are a run of 2+ `<`/`>` (wider rule, changes AC 1 of 8.6, every port + jq + fixtures).
+- One leading space is a positional marker, not an escape: a reader that trims leading white space still sees ` >>>` as a fence. A stronger design is a per-request random fence token or escaping markers inside content; changes `schemas/*.md` (system prompt) and every port. Decide after `make conformance` evidence.
+- epics.md Story 8.6 AC lists the old break set (`\n`, `\r\n`, `\r`, U+2028, U+2029) and sections; the shipped rule adds VT, FF, U+001C–U+001E, U+0085, invisible-character removal and covers TYPE/MODE. Amend the epic for traceability.
+- jq builder compiles the fence regex once per line (~25 µs/line on jq 1.7.1, linear). Fine for conformance cases; prefilter lines without `<`/`>` if large cases appear.
