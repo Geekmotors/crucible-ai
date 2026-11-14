@@ -12,6 +12,121 @@
     "description": { "$ref": "#/definitions/prose" },
     "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/case" } }
   },
+  "oneOf": [
+    {
+      "properties": {
+        "area": { "enum": ["run-options"] },
+        "operation": { "enum": ["resolve"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/runOptionsResolveInput" },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/definitions/valueOutcome" },
+                  { "$ref": "#/definitions/errorOutcome" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["run-options"] },
+        "operation": { "enum": ["validate"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/runOptionsValidateInput" },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/definitions/valueOutcome" },
+                  { "$ref": "#/definitions/errorOutcome" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["verdict"] },
+        "operation": { "enum": ["compute"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/verdictComputeInput" },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/definitions/valueOutcome" },
+                  { "$ref": "#/definitions/errorOutcome" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["payload"] },
+        "operation": { "enum": ["coherent"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/payloadCoherentInput" },
+              "expect": { "$ref": "#/definitions/textOutcome" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["payload"] },
+        "operation": { "enum": ["extract"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/payloadExtractInput" },
+              "expect": { "$ref": "#/definitions/textOutcome" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["report"] },
+        "operation": { "enum": ["render"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/reportRenderInput" },
+              "expect": { "$ref": "#/definitions/textOutcome" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": { "enum": ["report"] },
+        "operation": { "enum": ["trace"] },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": { "$ref": "#/definitions/reportTraceInput" },
+              "expect": { "$ref": "#/definitions/textOutcome" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "definitions": {
     "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
     "prose": { "type": "string", "minLength": 1 },
@@ -66,6 +181,372 @@
       "required": ["kind", "retryable"],
       "additionalProperties": false,
       "properties": { "kind": { "enum": ["infra"] }, "retryable": { "type": "boolean" } }
-    }
+    },
+    "runOptionsLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runs": {},
+        "threshold": {},
+        "inferenceTimeout": {},
+        "testTimeout": {},
+        "strict": {}
+      }
+    },
+    "runOptionsResolveInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "testDefaults": { "$ref": "#/definitions/runOptionsLayer" },
+        "groups": { "type": "array", "items": { "$ref": "#/definitions/runOptionsLayer" } },
+        "test": { "$ref": "#/definitions/runOptionsLayer" },
+        "call": { "type": "object", "additionalProperties": false, "properties": { "strict": {} } }
+      }
+    },
+    "runOptionsValidateInput": {
+      "type": "object",
+      "required": ["source", "options"],
+      "additionalProperties": false,
+      "properties": { "source": { "enum": ["test", "group", "config"] }, "options": {} }
+    },
+    "verdictComputeInput": {
+      "type": "object",
+      "required": ["threshold", "statuses"],
+      "additionalProperties": false,
+      "properties": {
+        "threshold": { "type": "number" },
+        "statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "errored": { "type": "integer" },
+            "discarded": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "payloadCoherentInput": {
+      "type": "object",
+      "required": ["response", "claim"],
+      "additionalProperties": false,
+      "properties": {
+        "facts": { "type": "array", "items": { "type": "string" } },
+        "callFacts": { "type": "array", "items": { "type": "string" } },
+        "response": { "type": "string" },
+        "claim": { "type": "string" }
+      }
+    },
+    "payloadExtractInput": {
+      "type": "object",
+      "required": ["response", "target", "type", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "facts": { "type": "array", "items": { "type": "string" } },
+        "callFacts": { "type": "array", "items": { "type": "string" } },
+        "response": { "type": "string" },
+        "target": { "type": "string" },
+        "type": { "$ref": "#/definitions/extractType" },
+        "mode": { "$ref": "#/definitions/extractMode" }
+      }
+    },
+    "extractType": { "enum": ["string", "number", "boolean"] },
+    "extractMode": { "enum": ["lenient", "strict"] },
+    "runStatus": { "enum": ["passed", "failed", "errored", "discarded"] },
+    "cause": {
+      "type": "object",
+      "required": ["name", "message"],
+      "additionalProperties": false,
+      "properties": { "name": { "type": "string" }, "message": { "type": "string" } }
+    },
+    "judgeCall": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["verdict"],
+          "additionalProperties": false,
+          "properties": {
+            "verdict": {
+              "type": "object",
+              "required": ["claim", "verdict", "reasoning", "response"],
+              "additionalProperties": false,
+              "properties": {
+                "claim": { "type": "string" },
+                "verdict": { "type": "boolean" },
+                "reasoning": { "type": "string" },
+                "response": { "type": "string" },
+                "facts": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["extraction"],
+          "additionalProperties": false,
+          "properties": {
+            "extraction": {
+              "type": "object",
+              "required": ["description", "type", "mode", "value", "reasoning", "response"],
+              "additionalProperties": false,
+              "properties": {
+                "description": { "type": "string" },
+                "type": { "$ref": "#/definitions/extractType" },
+                "mode": { "$ref": "#/definitions/extractMode" },
+                "value": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "type": "null" }
+                  ]
+                },
+                "reasoning": { "type": "string" },
+                "response": { "type": "string" },
+                "facts": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["error"],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "type": "object",
+              "required": ["cause", "attempts"],
+              "additionalProperties": false,
+              "properties": {
+                "cause": { "$ref": "#/definitions/cause" },
+                "attempts": { "$ref": "#/definitions/positiveInteger" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "runRecord": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/definitions/runStatus" },
+        "cause": { "$ref": "#/definitions/cause" },
+        "calls": { "type": "array", "items": { "$ref": "#/definitions/judgeCall" } }
+      }
+    },
+    "reportRenderInput": {
+      "type": "object",
+      "required": ["settings", "runs", "threshold", "ending", "results"],
+      "additionalProperties": false,
+      "properties": {
+        "settings": {
+          "type": "object",
+          "required": ["excerptChars", "verbosity"],
+          "additionalProperties": false,
+          "properties": {
+            "excerptChars": { "$ref": "#/definitions/positiveInteger" },
+            "verbosity": { "enum": ["default", "full", "debug"] }
+          }
+        },
+        "runs": { "$ref": "#/definitions/positiveInteger" },
+        "threshold": { "type": "number" },
+        "ending": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["kind"],
+              "additionalProperties": false,
+              "properties": { "kind": { "enum": ["verdict"] } }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "fatalRun"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": { "enum": ["aborted"] },
+                "fatalRun": { "$ref": "#/definitions/positiveInteger" }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "deadlineMs"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": { "enum": ["expired"] },
+                "deadlineMs": { "$ref": "#/definitions/count" }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/runRecord" }
+        }
+      }
+    },
+    "reportTraceInput": {
+      "type": "object",
+      "required": ["settings", "events"],
+      "additionalProperties": false,
+      "properties": {
+        "settings": {
+          "type": "object",
+          "required": ["verbosity", "provider", "model", "testDefaults", "excerptChars"],
+          "additionalProperties": false,
+          "properties": {
+            "verbosity": { "enum": ["default", "full", "debug"] },
+            "provider": { "type": "string" },
+            "model": { "type": "string" },
+            "meta": { "type": "object" },
+            "testDefaults": { "$ref": "#/definitions/runOptionsLayer" },
+            "excerptChars": { "$ref": "#/definitions/positiveInteger" }
+          }
+        },
+        "events": { "type": "array", "items": { "$ref": "#/definitions/traceEvent" } }
+      }
+    },
+    "traceEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["event", "runs", "threshold", "deadlineMs"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["test-started"] },
+            "runs": { "$ref": "#/definitions/positiveInteger" },
+            "threshold": { "type": "number" },
+            "deadlineMs": { "$ref": "#/definitions/count" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "number", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["run-settled"] },
+            "number": { "$ref": "#/definitions/positiveInteger" },
+            "status": { "$ref": "#/definitions/runStatus" },
+            "cause": { "$ref": "#/definitions/cause" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "cause", "discarded"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["test-aborted"] },
+            "cause": { "$ref": "#/definitions/cause" },
+            "discarded": { "$ref": "#/definitions/count" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "deadlineMs", "discarded"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["test-expired"] },
+            "deadlineMs": { "$ref": "#/definitions/count" },
+            "discarded": { "$ref": "#/definitions/count" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "outcome", "need", "passed", "failed", "errored", "runs"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["verdict-reached"] },
+            "outcome": { "enum": ["passed", "failed", "errored"] },
+            "need": { "$ref": "#/definitions/count" },
+            "passed": { "$ref": "#/definitions/count" },
+            "failed": { "$ref": "#/definitions/count" },
+            "errored": { "$ref": "#/definitions/count" },
+            "runs": { "$ref": "#/definitions/positiveInteger" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "provider", "model", "prompt", "attempt"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["provider-request"] },
+            "provider": { "type": "string" },
+            "model": { "type": "string" },
+            "system": { "type": "string" },
+            "meta": { "type": "object" },
+            "prompt": { "type": "string" },
+            "attempt": { "$ref": "#/definitions/positiveInteger" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "attempt", "reply"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["provider-response"] },
+            "attempt": { "$ref": "#/definitions/positiveInteger" },
+            "reply": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "attempt", "cause", "next", "delayMs"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["provider-failure"] },
+            "attempt": { "$ref": "#/definitions/positiveInteger" },
+            "cause": { "$ref": "#/definitions/cause" },
+            "next": { "enum": ["retry"] },
+            "delayMs": { "type": "number", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "attempt", "cause", "next"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["provider-failure"] },
+            "attempt": { "$ref": "#/definitions/positiveInteger" },
+            "cause": { "$ref": "#/definitions/cause" },
+            "next": { "enum": ["fatal", "exhausted", "aborted"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "ask", "cause"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["judge-reply-rejected"] },
+            "ask": { "$ref": "#/definitions/positiveInteger" },
+            "cause": { "$ref": "#/definitions/cause" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["event", "call"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "$ref": "#/definitions/positiveInteger" },
+            "event": { "enum": ["judge-recorded"] },
+            "call": { "$ref": "#/definitions/judgeCall" }
+          }
+        }
+      ]
+    },
+    "positiveInteger": { "type": "integer", "minimum": 1 },
+    "count": { "type": "integer", "minimum": 0 }
   }
 }

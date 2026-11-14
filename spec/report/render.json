@@ -1,0 +1,2489 @@
+{
+  "area": "report",
+  "operation": "render",
+  "description": "Renders the report of one test from its run records, settings and how it ended.",
+  "cases": [
+    {
+      "id": "report-render-smoke-failed",
+      "description": "A failed smoke run (runs 1) is headlined without a pass rate or counts line, then its failed-run section.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-smoke-errored",
+      "description": "An errored smoke run is headlined as errored with no verdict.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) hit an infrastructure problem, so there is no verdict.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3"
+      }
+    },
+    {
+      "id": "report-render-failed-verdict",
+      "description": "A failing verdict: headline with passed/runs, floored pass rate, threshold and need, the counts line, and one section per failed run.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The capital is Paris.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 2/3 runs passed (pass rate 0.666) against threshold 1 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The capital is Paris.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-pass-rate-floored",
+      "description": "The pass rate is floored to three decimals: 6 of 7 is 0.857, never rounded up.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 7,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "passed" },
+          { "status": "passed" },
+          { "status": "passed" },
+          { "status": "passed" },
+          { "status": "passed" },
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 6/7 runs passed (pass rate 0.857) against threshold 0.9 (need 7).\nRuns: 6 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #7\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-pass-rate-just-under-threshold",
+      "description": "A pass rate just under the threshold is floored, so it never appears to meet it: 2 of 3 at 0.667 shows 0.666.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 0.667,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "passed" },
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 2/3 runs passed (pass rate 0.666) against threshold 0.667 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-threshold-formatting",
+      "description": "Threshold prints as the shortest decimal that reads back as the same number.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 0.95,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 1/2 runs passed (pass rate 0.5) against threshold 0.95 (need 2).\nRuns: 1 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-errored-zone",
+      "description": "When errored runs decide the verdict the headline says ERRORED, not failed, with the errored count; failed sections come before errored ones.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 0.5,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 2
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": { "name": "FetchError", "message": "socket hang up" },
+            "calls": [
+              {
+                "error": {
+                  "cause": { "name": "CrucibleError", "message": "socket hang up" },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: 1/4 runs passed (pass rate 0.25) against threshold 0.5 (need 2); 2 errored run(s) left the result inconclusive.\nRuns: 1 passed, 1 failed, 2 errored, 0 discarded.\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 2\n\n[ERRORED] Run #4 (infrastructure, not a semantic failure)\n  Cause: FetchError: socket hang up\n  Judge attempts: 3"
+      }
+    },
+    {
+      "id": "report-render-errored-run-without-judge-error",
+      "description": "An errored run with no recorded judge error shows its cause and no Judge attempts line.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "errored",
+            "cause": { "name": "Error", "message": "connect ECONNREFUSED 127.0.0.1:443" }
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) hit an infrastructure problem, so there is no verdict.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: Error: connect ECONNREFUSED 127.0.0.1:443"
+      }
+    },
+    {
+      "id": "report-render-errored-run-lowest-order-attempts",
+      "description": "Judge attempts comes from the run's earliest judge error.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": { "name": "CrucibleError", "message": "first failure" },
+                  "attempts": 2
+                }
+              },
+              {
+                "error": {
+                  "cause": { "name": "CrucibleError", "message": "second failure" },
+                  "attempts": 5
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) hit an infrastructure problem, so there is no verdict.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 2"
+      }
+    },
+    {
+      "id": "report-render-passed-report",
+      "description": "A passing verdict renders the PASSED headline and counts line; at default verbosity passed runs get no section.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded."
+      }
+    },
+    {
+      "id": "report-render-passed-smoke",
+      "description": "A passing smoke run is headlined without a pass rate.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": { "text": "PASSED: the smoke run (runs: 1) passed." }
+    },
+    {
+      "id": "report-render-passed-report-full",
+      "description": "At full verbosity a passing report lists every passed run with its judge calls.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The reply is polite.",
+                  "verdict": true,
+                  "reasoning": "It thanks the user.",
+                  "response": "Thank you!"
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "extraction": {
+                  "description": "the greeting",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "Hi",
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\n\n[PASSED] Run #1\n  Judge call 1 of 1: coherent verdict true\n    Claim: The reply is polite.\n    Judge reasoning: It thanks the user.\n    Response excerpt: Thank you!\n\n[PASSED] Run #2\n  Judge call 1 of 1: extract (lenient) \"the greeting\" as string → \"Hi\"\n    Judge reasoning: The response states it.\n    Response excerpt: The response text."
+      }
+    },
+    {
+      "id": "report-render-passed-smoke-full",
+      "description": "A passing smoke run at full verbosity shows the run and its judge call.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": { "claim": "c", "verdict": true, "reasoning": "Fine.", "response": "r" }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "PASSED: the smoke run (runs: 1) passed.\n\n[PASSED] Run #1\n  Judge call 1 of 1: coherent verdict true\n    Claim: c\n    Judge reasoning: Fine.\n    Response excerpt: r"
+      }
+    },
+    {
+      "id": "report-render-debug-renders-like-full",
+      "description": "Debug verbosity renders the report exactly like full.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "debug" },
+        "runs": 2,
+        "threshold": 0.5,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": { "claim": "c", "verdict": true, "reasoning": "Fine.", "response": "r" }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "PASSED: 1/2 runs passed (pass rate 0.5) against threshold 0.5 (need 1).\nRuns: 1 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: The answer is correct.\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[PASSED] Run #1\n  Judge call 1 of 1: coherent verdict true\n    Claim: c\n    Judge reasoning: Fine.\n    Response excerpt: r"
+      }
+    },
+    {
+      "id": "report-render-first-false-verdict-by-order",
+      "description": "The first failed assertion is the earliest false verdict; earlier true verdicts are skipped and counted in its position.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "first holds",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "second fails",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "third fails",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 2 of 3 judged in this run)\n  Claim: second fails\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-judge-error-before-false-verdict",
+      "description": "A judge error recorded before any false verdict is the first failure.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "CrucibleError", "message": "judge failed" },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge reply was not the expected JSON."
+                  },
+                  "attempts": 2
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "later claim",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: a judge call errored after 2 attempt(s)\n  Judge error: CrucibleError: The judge reply was not the expected JSON.\n  Thrown: CrucibleError: judge failed"
+      }
+    },
+    {
+      "id": "report-render-false-verdict-before-judge-error",
+      "description": "A false verdict recorded before a judge error is the first failure.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "earlier claim",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "error": {
+                  "cause": { "name": "CrucibleError", "message": "timed out" },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: earlier claim\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-thrown-without-verdict",
+      "description": "A failed run with no false verdict and no judge error says the body threw.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": {
+              "name": "TypeError",
+              "message": "Cannot read properties of undefined (reading 'x')"
+            },
+            "calls": []
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: TypeError: Cannot read properties of undefined (reading 'x')"
+      }
+    },
+    {
+      "id": "report-render-thrown-after-true-verdicts",
+      "description": "True verdicts alone do not count as a failure; the run threw.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "Error", "message": "boom" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "holds",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: Error: boom"
+      }
+    },
+    {
+      "id": "report-render-multi-line-values",
+      "description": "Continuation lines of a multi-line value are indented under their field; blank lines carry no indent.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected\nreceived" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "line one of the claim\nline two of the claim",
+                  "verdict": false,
+                  "reasoning": "First reason.\n\nThird line.",
+                  "response": "r1\nr2"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: line one of the claim\n    line two of the claim\n  Judge reasoning: First reason.\n\n    Third line.\n  Response excerpt: r1\n    r2\n  Thrown: AssertionError: expected\n    received"
+      }
+    },
+    {
+      "id": "report-render-whitespace-only-lines",
+      "description": "A line holding only whitespace counts as blank: no indent, and trailing spaces and tabs are trimmed from every line.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "claim  ",
+                  "verdict": false,
+                  "reasoning": "a\n   \t\nb\t ",
+                  "response": "r"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: claim\n  Judge reasoning: a\n\n    b\n  Response excerpt: r\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-blank-cause-messages",
+      "description": "Causes with empty, leading-break and whitespace-only lines leave no trailing whitespace on any line.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "failed", "cause": { "name": "Error", "message": "" }, "calls": [] },
+          { "status": "failed", "cause": { "name": "Error", "message": "\nafter" }, "calls": [] },
+          {
+            "status": "failed",
+            "cause": { "name": "Error", "message": "before\n   \nafter" },
+            "calls": []
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/3 runs passed (pass rate 0) against threshold 1 (need 3).\nRuns: 0 passed, 3 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: Error:\n\n[FAILED] Run #2\n  First failure: no assertion returned false; the body threw\n  Thrown: Error:\n    after\n\n[FAILED] Run #3\n  First failure: no assertion returned false; the body threw\n  Thrown: Error: before\n\n    after"
+      }
+    },
+    {
+      "id": "report-render-line-break-variants",
+      "description": "CRLF, a lone CR, U+2028 and U+2029 all break lines in report values and come out as \\n.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "crlf\r\nlone cr\rls ps end",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: crlf\n    lone cr\n    ls\n    ps\n    end\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-characters-that-are-not-breaks",
+      "description": "Only CR, LF, CRLF, U+2028 and U+2029 break lines; U+000B, U+0085 and U+001C do not. A line of only U+00A0 or U+FEFF is blank (no indent, kept as is); U+180E is not white space. JSON values escape control characters as lowercase \\u00xx and write astral characters raw.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "first\u000bsame line\u0085same line\u001csame line\n\u00a0\n\ufeff\n\u180e\nlast",
+                  "response": "The response text."
+                }
+              },
+              {
+                "extraction": {
+                  "description": "the code",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "esc\u001b😀 \"q\"",
+                  "reasoning": "r",
+                  "response": "s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: first\u000bsame line\u0085same line\u001csame line\n\u00a0\n\ufeff\n    \u180e\n    last\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Extraction 1 of 1 (lenient): \"the code\" as string → \"esc\\u001b😀 \\\"q\\\"\"\n    Judge reasoning: r\n    Response excerpt: s"
+      }
+    },
+    {
+      "id": "report-render-unicode-values",
+      "description": "Non-ASCII text is rendered unchanged.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "Zoë’s café is open ☕",
+                  "verdict": false,
+                  "reasoning": "مرحبا 👩‍💻",
+                  "response": "東京 𝔘𝔫𝔦"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: Zoë’s café is open ☕\n  Judge reasoning: مرحبا 👩‍💻\n  Response excerpt: 東京 𝔘𝔫𝔦\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-response-truncated",
+      "description": "A response longer than excerptChars is cut, marked with …, and labelled with the shown and full lengths.",
+      "input": {
+        "settings": { "excerptChars": 20, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 20 of 50 chars): abcdefghijklmnopqrst…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-response-at-limit",
+      "description": "A response exactly excerptChars long is shown whole, without a marker.",
+      "input": {
+        "settings": { "excerptChars": 20, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "abcdefghijklmnopqrst"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: abcdefghijklmnopqrst\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-truncation-holds-back-split-pair",
+      "description": "A cut that would split a surrogate pair holds the high surrogate back, and the label states the shorter length shown.",
+      "input": {
+        "settings": { "excerptChars": 5, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "abcd😀efgh"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 4 of 10 chars): abcd…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-truncation-pair-at-start",
+      "description": "At excerptChars 1 a leading surrogate pair is kept whole rather than shown empty.",
+      "input": {
+        "settings": { "excerptChars": 1, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "😀abc"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 2 of 5 chars): 😀…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-truncation-sole-astral-character",
+      "description": "Truncation is decided by code units alone: at excerptChars 1 a response that is one astral character (2 units) is shown whole, still marked as cut.",
+      "input": {
+        "settings": { "excerptChars": 1, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "😀"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 2 of 2 chars): 😀…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-facts-shown",
+      "description": "Facts the judged call used are listed one per line under the first failed assertion.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text.",
+                  "facts": ["Bob is at the casino.", "Jane is at home."]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Facts: Bob is at the casino.\n    Jane is at home.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-facts-empty-list",
+      "description": "A call that used no facts shows no Facts line.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text.",
+                  "facts": []
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-facts-truncated-mid-fact",
+      "description": "Facts are joined with \\n and bounded at excerptChars like any value.",
+      "input": {
+        "settings": { "excerptChars": 10, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text.",
+                  "facts": ["alpha beta gamma", "delta"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Facts (first 10 of 22 chars): alpha beta…\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 10 of 18 chars): The respon…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-facts-truncated-on-whole-fact",
+      "description": "When the cut ends exactly on a whole fact the marker goes on its own line.",
+      "input": {
+        "settings": { "excerptChars": 10, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text.",
+                  "facts": ["0123456789", "abc"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Facts (first 10 of 14 chars): 0123456789\n    …\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 10 of 18 chars): The respon…\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-extraction-in-failed-run",
+      "description": "A failed run lists its extractions after the failure fields, with mode, quoted description, type and JSON value.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected null to be 2" },
+            "calls": [
+              {
+                "extraction": {
+                  "description": "the number of apples",
+                  "type": "number",
+                  "mode": "strict",
+                  "value": null,
+                  "reasoning": "The response hedges.",
+                  "response": "Probably two, maybe three.",
+                  "facts": ["The basket held five."]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: AssertionError: expected null to be 2\n  Extraction 1 of 1 (strict): \"the number of apples\" as number → null\n    Facts: The basket held five.\n    Judge reasoning: The response hedges.\n    Response excerpt: Probably two, maybe three."
+      }
+    },
+    {
+      "id": "report-render-extraction-values",
+      "description": "Extracted values render as JSON: strings quoted and escaped, numbers, booleans and null.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "extraction": {
+                  "description": "a quote",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "She said \"hi\"\n\tthen left — ok ✓",
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "extraction": {
+                  "description": "a price",
+                  "type": "number",
+                  "mode": "strict",
+                  "value": 12.5,
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "extraction": {
+                  "description": "in stock",
+                  "type": "boolean",
+                  "mode": "lenient",
+                  "value": true,
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "extraction": {
+                  "description": "a count",
+                  "type": "number",
+                  "mode": "lenient",
+                  "value": -3,
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "extraction": {
+                  "description": "missing",
+                  "type": "string",
+                  "mode": "strict",
+                  "value": null,
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: AssertionError: expected false to be true\n  Extraction 1 of 5 (lenient): \"a quote\" as string → \"She said \\\"hi\\\"\\n\\tthen left — ok ✓\"\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n  Extraction 2 of 5 (strict): \"a price\" as number → 12.5\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n  Extraction 3 of 5 (lenient): \"in stock\" as boolean → true\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n  Extraction 4 of 5 (lenient): \"a count\" as number → -3\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n  Extraction 5 of 5 (strict): \"missing\" as string → null\n    Judge reasoning: The response states it.\n    Response excerpt: The response text."
+      }
+    },
+    {
+      "id": "report-render-extraction-with-false-verdict",
+      "description": "A false verdict stays the first failed assertion; the run's extractions follow it.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "extraction": {
+                  "description": "the day",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "Tuesday",
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The day is Monday.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The day is Monday.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Extraction 1 of 1 (lenient): \"the day\" as string → \"Tuesday\"\n    Judge reasoning: The response states it.\n    Response excerpt: The response text."
+      }
+    },
+    {
+      "id": "report-render-extraction-truncated",
+      "description": "An extraction's response excerpt is bounded at excerptChars too.",
+      "input": {
+        "settings": { "excerptChars": 20, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "extraction": {
+                  "description": "t",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "x",
+                  "reasoning": "The response states it.",
+                  "response": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: AssertionError: expected false to be true\n  Extraction 1 of 1 (lenient): \"t\" as string → \"x\"\n    Judge reasoning: The response states it.\n    Response excerpt (first 20 of 50 chars): abcdefghijklmnopqrst…"
+      }
+    },
+    {
+      "id": "report-render-three-failed-runs-shown",
+      "description": "At most three failed runs are shown in full; the rest are listed as ranges, and a tally counts each run's first failing claim, most frequent first.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 6,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "C",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/6 runs passed (pass rate 0) against threshold 1 (need 6).\nRuns: 0 passed, 6 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: B\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n+ 3 more failed run(s) not shown in full: #4-#6.\n\nFailing claims (first failure of each of the 6 failed runs):\n  3 run(s): coherent \"A\"\n  2 run(s): coherent \"B\"\n  1 run(s): coherent \"C\""
+      }
+    },
+    {
+      "id": "report-render-hidden-run-ranges",
+      "description": "Hidden run numbers are compressed into ranges of consecutive runs.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 9,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 2/9 runs passed (pass rate 0.222) against threshold 1 (need 9).\nRuns: 2 passed, 7 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n+ 4 more failed run(s) not shown in full: #5, #7-#9.\n\nFailing claims (first failure of each of the 7 failed runs):\n  4 run(s): coherent \"A\"\n  3 run(s): coherent \"B\""
+      }
+    },
+    {
+      "id": "report-render-tally-ties-keep-first-seen-order",
+      "description": "Claims with equal counts keep the order they were first seen.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 5,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "Z",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "Y",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "X",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "Y",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "Z",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/5 runs passed (pass rate 0) against threshold 1 (need 5).\nRuns: 0 passed, 5 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: Z\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: Y\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: X\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n+ 2 more failed run(s) not shown in full: #4-#5.\n\nFailing claims (first failure of each of the 5 failed runs):\n  2 run(s): coherent \"Z\"\n  2 run(s): coherent \"Y\"\n  1 run(s): coherent \"X\""
+      }
+    },
+    {
+      "id": "report-render-tally-kinds",
+      "description": "The tally names a judge-error first failure and a bare throw by their kind.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": { "name": "CrucibleError", "message": "bad reply" },
+                  "attempts": 2
+                }
+              }
+            ]
+          },
+          { "status": "failed", "cause": { "name": "Error", "message": "boom" }, "calls": [] },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/4 runs passed (pass rate 0) against threshold 1 (need 4).\nRuns: 0 passed, 4 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failure: a judge call errored after 2 attempt(s)\n  Judge error: CrucibleError: bad reply\n  Thrown: CrucibleError: The judge call did not finish within 30000 ms.\n\n[FAILED] Run #3\n  First failure: no assertion returned false; the body threw\n  Thrown: Error: boom\n\n+ 1 more failed run(s) not shown in full: #4.\n\nFailing claims (first failure of each of the 4 failed runs):\n  2 run(s): coherent \"A\"\n  1 run(s): a judge call errored\n  1 run(s): thrown without a false verdict"
+      }
+    },
+    {
+      "id": "report-render-tally-multi-line-claim",
+      "description": "A multi-line claim in the tally has its continuation lines indented by four spaces.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "first\nsecond",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "first\nsecond",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "first\nsecond",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "first\nsecond",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/4 runs passed (pass rate 0) against threshold 1 (need 4).\nRuns: 0 passed, 4 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: first\n    second\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: first\n    second\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: first\n    second\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n+ 1 more failed run(s) not shown in full: #4.\n\nFailing claims (first failure of each of the 4 failed runs):\n  4 run(s): coherent \"first\n    second\""
+      }
+    },
+    {
+      "id": "report-render-no-tally-when-all-shown",
+      "description": "With three or fewer failed runs there is no tally.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "C",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 0/3 runs passed (pass rate 0) against threshold 1 (need 3).\nRuns: 0 passed, 3 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: B\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: C\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-errored-runs-bounded-separately",
+      "description": "Errored runs are bounded to three on their own, after the failed runs.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 6,
+        "threshold": 0.1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 1
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 2
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 4
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 5
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: 0/6 runs passed (pass rate 0) against threshold 0.1 (need 1); 5 errored run(s) left the result inconclusive.\nRuns: 0 passed, 1 failed, 5 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 1\n\n[ERRORED] Run #3 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 2\n\n[ERRORED] Run #4 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3\n\n+ 2 more errored run(s) not shown in full: #5-#6."
+      }
+    },
+    {
+      "id": "report-render-discarded-in-verdict",
+      "description": "Discarded runs are listed as one line at default verbosity and count in no zone.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 6,
+        "threshold": 0.5,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "discarded" },
+          { "status": "discarded" },
+          { "status": "passed" },
+          { "status": "discarded" }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 2/6 runs passed (pass rate 0.333) against threshold 0.5 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 3 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[DISCARDED] Run(s) #3-#4, #6: still in flight when the test was cut off; counted in no zone."
+      }
+    },
+    {
+      "id": "report-render-aborted",
+      "description": "An aborted test is headlined as errored with the settled count and discarded runs, then the fatal run first.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 5,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 2 },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "errored",
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" }
+          },
+          { "status": "discarded" },
+          { "status": "discarded" }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: aborted on a fatal error after 2/5 runs settled; 2 in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.\nRuns: 1 passed, 0 failed, 1 errored, 2 discarded.\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: ProviderError: 401 Unauthorized\n\n[DISCARDED] Run(s) #3-#4: still in flight when the test was cut off; counted in no zone."
+      }
+    },
+    {
+      "id": "report-render-aborted-fatal-run-first",
+      "description": "The fatal run is shown first among errored runs, even past the three-run bound.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 4 },
+        "results": [
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 1
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 2
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          },
+          { "status": "errored", "cause": { "name": "ProviderError", "message": "invalid model" } }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: aborted on a fatal error after 4/4 runs settled. Fix the provider setup (API key, model) or configuration and rerun.\nRuns: 0 passed, 0 failed, 4 errored, 0 discarded.\n\n[ERRORED] Run #4 (infrastructure, not a semantic failure)\n  Cause: ProviderError: invalid model\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 1\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 2\n\n+ 1 more errored run(s) not shown in full: #3."
+      }
+    },
+    {
+      "id": "report-render-aborted-without-discarded",
+      "description": "Without discarded runs the abort headline states only the settled count.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 2 },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "errored", "cause": { "name": "Error", "message": "fatal" } }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: aborted on a fatal error after 2/3 runs settled. Fix the provider setup (API key, model) or configuration and rerun.\nRuns: 0 passed, 1 failed, 1 errored, 0 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: Error: fatal"
+      }
+    },
+    {
+      "id": "report-render-aborted-smoke",
+      "description": "An aborted smoke run is headlined without counts.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 1 },
+        "results": [
+          {
+            "status": "errored",
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" }
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) aborted on a fatal error. Fix the provider setup (API key, model) or configuration and rerun.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: ProviderError: 401 Unauthorized"
+      }
+    },
+    {
+      "id": "report-render-expired",
+      "description": "An expired test is headlined with its deadline and settled count, and keeps settled runs under their status.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "expired", "deadlineMs": 33000 },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "discarded" },
+          { "status": "discarded" }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the test did not finish within its 33000 ms deadline; 2/4 runs settled; 2 in-flight run(s) discarded to stop spend. Check for a slow system under test or a throttled judge provider.\nRuns: 1 passed, 1 failed, 0 errored, 2 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[DISCARDED] Run(s) #3-#4: still in flight when the test was cut off; counted in no zone."
+      }
+    },
+    {
+      "id": "report-render-expired-no-discarded",
+      "description": "An expired test with nothing in flight states the settled count only.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "expired", "deadlineMs": 1000 },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the test did not finish within its 1000 ms deadline; 2/4 runs settled. Check for a slow system under test or a throttled judge provider.\nRuns: 1 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-expired-smoke",
+      "description": "An expired smoke run is headlined with its deadline.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "expired", "deadlineMs": 30000 },
+        "results": [{ "status": "discarded" }]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) did not finish within its 30000 ms deadline. Check for a slow system under test or a throttled judge provider.\n\n[DISCARDED] Run(s) #1: still in flight when the test was cut off; counted in no zone."
+      }
+    },
+    {
+      "id": "report-render-full-every-run",
+      "description": "Full verbosity shows every failed and errored run beyond the bound, then passed and discarded runs, each with its judge calls in order.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 11,
+        "threshold": 0.5,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "C",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "D",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 1
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 2
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 4
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "ok",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "discarded",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "cut",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "discarded" }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: 1/11 runs passed (pass rate 0.09) against threshold 0.5 (need 6).\nRuns: 1 passed, 4 failed, 4 errored, 2 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: A\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: B\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: B\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: C\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: C\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #4\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: D\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: D\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[ERRORED] Run #5 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 1\n  Judge call 1 of 1: errored after 1 attempt(s)\n    Judge error: CrucibleError: The judge call did not finish within 30000 ms.\n\n[ERRORED] Run #6 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 2\n  Judge call 1 of 1: errored after 2 attempt(s)\n    Judge error: CrucibleError: The judge call did not finish within 30000 ms.\n\n[ERRORED] Run #7 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3\n  Judge call 1 of 1: errored after 3 attempt(s)\n    Judge error: CrucibleError: The judge call did not finish within 30000 ms.\n\n[ERRORED] Run #8 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 4\n  Judge call 1 of 1: errored after 4 attempt(s)\n    Judge error: CrucibleError: The judge call did not finish within 30000 ms.\n\n[PASSED] Run #9\n  Judge call 1 of 1: coherent verdict true\n    Claim: ok\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[DISCARDED] Run #10 (cut off in flight; counted in no zone)\n  Judge call 1 of 1: coherent verdict true\n    Claim: cut\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[DISCARDED] Run #11 (cut off in flight; counted in no zone)\n  Judge calls: none recorded"
+      }
+    },
+    {
+      "id": "report-render-full-judge-calls-in-order",
+      "description": "At full verbosity a run's judge calls are numbered in the order they were recorded, verdicts, extractions and errors mixed, with facts.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "extraction": {
+                  "description": "the count",
+                  "type": "number",
+                  "mode": "strict",
+                  "value": 2,
+                  "reasoning": "The response states it.",
+                  "response": "The response text.",
+                  "facts": ["f1"]
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "holds",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text.",
+                  "facts": ["f1", "f2"]
+                }
+              },
+              {
+                "error": {
+                  "cause": { "name": "FetchError", "message": "socket hang up" },
+                  "attempts": 2
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "fails",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: a judge call errored after 2 attempt(s)\n  Judge error: FetchError: socket hang up\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 4: extract (strict) \"the count\" as number → 2\n    Facts: f1\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n  Judge call 2 of 4: coherent verdict true\n    Claim: holds\n    Facts: f1\n      f2\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n  Judge call 3 of 4: errored after 2 attempt(s)\n    Judge error: FetchError: socket hang up\n  Judge call 4 of 4: coherent verdict false\n    Claim: fails\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text."
+      }
+    },
+    {
+      "id": "report-render-full-expired",
+      "description": "Full verbosity renders every run of an expired test.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 6,
+        "threshold": 1,
+        "ending": { "kind": "expired", "deadlineMs": 34000 },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "B",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "C",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "D",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          { "status": "discarded" }
+        ]
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the test did not finish within its 34000 ms deadline; 4/6 runs settled; 1 in-flight run(s) discarded to stop spend. Check for a slow system under test or a throttled judge provider.\nRuns: 0 passed, 4 failed, 0 errored, 1 discarded.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: A\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: B\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: B\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: C\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: C\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[FAILED] Run #4\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: D\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: D\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt: The response text.\n\n[DISCARDED] Run #5 (cut off in flight; counted in no zone)\n  Judge calls: none recorded"
+      }
+    },
+    {
+      "id": "report-render-full-excerpt-bounded",
+      "description": "Nested excerpts and facts at full verbosity stay bounded and indented one level deeper.",
+      "input": {
+        "settings": { "excerptChars": 10, "verbosity": "full" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx",
+                  "facts": ["0123456789", "abc"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: c\n  Facts (first 10 of 14 chars): 0123456789\n    …\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt (first 10 of 50 chars): abcdefghij…\n  Thrown: AssertionError: expected false to be true\n  Judge call 1 of 1: coherent verdict false\n    Claim: c\n    Facts (first 10 of 14 chars): 0123456789\n      …\n    Judge reasoning: The response contradicts the claim.\n    Response excerpt (first 10 of 50 chars): abcdefghij…"
+      }
+    },
+    {
+      "id": "report-render-full-no-judge-calls",
+      "description": "A run that recorded no judge calls says so at full verbosity.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          { "status": "failed", "cause": { "name": "Error", "message": "boom" }, "calls": [] }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: Error: boom\n  Judge calls: none recorded"
+      }
+    }
+  ]
+}

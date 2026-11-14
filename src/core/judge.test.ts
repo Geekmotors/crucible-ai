@@ -169,22 +169,6 @@ describe('Judge', () => {
 });
 
 describe('Judge — facts', () => {
-  it('judges against the run facts followed by the call’s own facts', async () => {
-    const scope = new RunScope();
-    const judge = JudgeHarness.factJudge(scope, [
-      StateFact.Casino,
-      StateFact.Home,
-      StateFact.Letter,
-    ]);
-    const verdict = await scope.enterRun(() => {
-      scope.appendState(StateFact.Casino);
-      return judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, {
-        facts: [StateFact.Home, StateFact.Letter],
-      });
-    });
-    expect(verdict).toBe(true);
-  });
-
   it('sends a single per-call fact when the run has none', async () => {
     const scope = new RunScope();
     const judge = JudgeHarness.factJudge(scope, [StateFact.Letter]);

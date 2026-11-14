@@ -400,3 +400,13 @@
 ## Deferred from: code review of 8-1-spec-run-options-and-verdicts (2026-11-14)
 
 - Per-operation input schemas for spec fixtures (`input` is free-form in `spec/fixture.schema.json`, so a misspelt input key goes unnoticed) — do in Story 8.2.
+
+## Deferred from: dev of 8-2-spec-payloads-and-reports (2026-11-14)
+
+- Payload fencing splits content on `\n` only, so a `>>>` line ending in `\r` (CRLF content) or set off by U+2028/U+2029 is not neutralised; TS and the jq builder agree. Decide whether fencing should treat CRLF/CR as line breaks (a behaviour change for every port and the jq harness). Pinned by `payload-*-crlf-response`, `payload-coherent-lone-cr-response`, `payload-coherent-unicode-separators`.
+
+## Deferred from: code review of 8-2-spec-payloads-and-reports (2026-11-14)
+
+- Fencing hardening: neutralise a fence line when, after splitting on every line break (`\r\n`, `\r`, `\n`, U+2028, U+2029) and trimming surrounding white space, it equals `<<<` or `>>>`; keep original separators. Prompt-injection relevance: a CRLF response holding `>>>` then `CLAIM`/`<<<` lines can look like a forged section to a model. Needs TS + jq builder + payload fixtures + a conformance run.
+- `excerptChars: 1` with a value that is one astral character renders `(first 2 of 2 chars): 😀…` (marked cut although whole). Pinned by `report-render-truncation-sole-astral-character`; fix = take the untruncated branch when the cut covers the value.
+- Before Story 8.5 deletes the TS conformance e2e: prove TS = jq for the system prompt (schemas/*.md verbatim) and the request envelope (`chat_request`: model, meta, usage), e.g. in Story 8.3's provider request fixtures.

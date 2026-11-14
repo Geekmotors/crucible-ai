@@ -1,4 +1,4 @@
-.PHONY: e2e-core e2e-ext e2e-vitest e2e e2e-key e2e-build conformance conformance-image
+.PHONY: e2e-core e2e-ext e2e-vitest e2e e2e-key e2e-build conformance conformance-image spec-payloads spec-payloads-check
 
 E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
 CONFORMANCE_IMAGE ?= crucible-ai-conformance
@@ -32,6 +32,12 @@ e2e-vitest: e2e-build
 	$(E2E_VITEST)
 
 e2e: e2e-core e2e-ext e2e-vitest
+
+spec-payloads:
+	sh e2e/ext/conformance/spec-payloads.sh write
+
+spec-payloads-check:
+	sh e2e/ext/conformance/spec-payloads.sh check
 
 conformance-image:
 	docker build --file e2e/ext/conformance/Dockerfile --tag $(CONFORMANCE_IMAGE) .

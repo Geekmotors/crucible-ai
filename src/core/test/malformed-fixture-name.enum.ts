@@ -16,6 +16,14 @@ enum MalformedFixtureName {
   NonKebabArea = 'an area that is not kebab-case',
   CasesNotList = 'cases that are not a list',
   NotObject = 'a file that is not an object',
+  UnknownInputKey = 'an unknown input key',
+  MissingInputKey = 'an input without a required key',
+  MistypedInput = 'an input value of the wrong type',
+  UnknownOperation = 'an operation the spec does not define',
+  OperationInWrongArea = 'an operation under another area',
+  ValueForTextOperation = 'a value outcome for an operation whose outcome is text',
+  ZeroExcerptChars = 'an excerpt bound below 1',
+  RetryWithoutDelay = 'a retried provider failure without its delay',
 }
 
 export { MalformedFixtureName };

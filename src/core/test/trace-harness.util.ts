@@ -48,10 +48,6 @@ class TraceHarness {
     trace.runSettled(1, ReportHarness.run('passed'));
     trace.testExpired(TimeoutBudget.SmokeMs, [ReportHarness.run('discarded')]);
   }
-
-  occurrences(fragment: string): number {
-    return this.output.text.split(fragment).length - 1;
-  }
 }
 
 export { TraceHarness };
