@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from 'vitest';
-import { crucible } from 'crucible/vitest';
-import type { RunContext } from 'crucible/vitest';
+import { crucible } from 'crucible-ai/vitest';
+import type { RunContext } from 'crucible-ai/vitest';
 import scenario from './fixtures/core-scenarios.json' with { type: 'json' };
 
 const options = { runs: scenario.runs, threshold: scenario.threshold };

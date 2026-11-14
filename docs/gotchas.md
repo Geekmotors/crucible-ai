@@ -36,7 +36,7 @@ protect you from.
 **Environment**
 
 - [Jest must inject its globals](#jest-must-inject-its-globals)
-- [On Vitest, import from `crucible/vitest`](#on-vitest-import-from-cruciblevitest)
+- [On Vitest, import from `crucible-ai/vitest`](#on-vitest-import-from-crucible-aivitest)
 - [On Vitest, bodies do not get the test context](#on-vitest-bodies-do-not-get-the-test-context)
 - [The config is read from the working directory](#the-config-is-read-from-the-working-directory)
 - [Behind a TLS-intercepting proxy, judge calls error](#behind-a-tls-intercepting-proxy-judge-calls-error)
@@ -337,21 +337,21 @@ calls, but calls your system under test makes in discarded runs keep running
 setting is not supported in v1; keep the default (`true`) for test files that
 use Crucible. Importing `expect` from `@jest/globals` is fine.
 
-## On Vitest, import from `crucible/vitest`
+## On Vitest, import from `crucible-ai/vitest`
 
-The root `crucible` entry registers tests through Jest's global `it`.
+The root `crucible-ai` entry registers tests through Jest's global `it`.
 Under Vitest (whose globals are off by default) that is a `usage` error, and
 with `globals: true` it would register through Vitest's global without the
-Vitest-specific handling. Import `crucible` from `crucible/vitest` in
+Vitest-specific handling. Import `crucible` from `crucible-ai/vitest` in
 every Vitest test file, and never mix the two entries: each has its own
 group settings, so a `crucible.describe` from one does not reach a
 `crucible.it` from the other. The same holds when a project loads both the
 ESM and the CommonJS build of one entry.
 
-`crucible/vitest` ships a CommonJS build and `.d.cts` types so
+`crucible-ai/vitest` ships a CommonJS build and `.d.cts` types so
 TypeScript projects in CommonJS mode type-check, but like Vitest itself it
 only loads through `import`: Vitest's test files always do, while a plain
-`require('crucible/vitest')` throws Vitest's own "cannot be imported in a
+`require('crucible-ai/vitest')` throws Vitest's own "cannot be imported in a
 CommonJS module" error.
 
 ## On Vitest, bodies do not get the test context

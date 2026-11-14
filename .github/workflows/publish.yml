@@ -52,7 +52,7 @@ jobs:
   publish:
     name: npm stage publish (provenance)
     needs: verify
-    if: github.repository == 'Geekmotors/crucible'
+    if: github.repository == 'Geekmotors/crucible-ai'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm

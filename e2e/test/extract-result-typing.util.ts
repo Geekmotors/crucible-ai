@@ -1,5 +1,5 @@
-import { crucible } from 'crucible';
-import type { ExtractOptions, ExtractType } from 'crucible';
+import { crucible } from 'crucible-ai';
+import type { ExtractOptions, ExtractType } from 'crucible-ai';
 
 type Exactly<Actual, Expected> =
   (<Probe>() => Probe extends Actual ? 1 : 2) extends <Probe>() => Probe extends Expected ? 1 : 2

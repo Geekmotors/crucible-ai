@@ -18,14 +18,14 @@ per-invocation.
 ## Create it with `init`
 
 ```sh
-npx crucible init
+npx crucible-ai init
 ```
 
 writes `crucible.config.jsonc` in the current directory:
 
 ```jsonc
 {
-  "$schema": "./node_modules/crucible/schemas/crucible.config.schema.json",
+  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
 
   // Judge provider: "openrouter", "openai" or "openai-compatible" (the last also needs
   // a "baseUrl", e.g. "http://localhost:11434/v1"). The API key comes from the environment.
@@ -62,7 +62,7 @@ writes `crucible.config.jsonc` in the current directory:
 - `init` never overwrites. If `crucible.config.json` or
   `crucible.config.jsonc` already exists, it writes nothing, says which file
   is in the way and exits with code 1. An unknown command prints usage and
-  exits with code 2; `npx crucible --help` prints usage and exits with 0.
+  exits with code 2; `npx crucible-ai --help` prints usage and exits with 0.
 - Run it from the directory you start Jest from.
 
 ## Where and when the file is read
@@ -89,7 +89,7 @@ markers inside strings are ordinary text, so `"baseUrl": "http://…"` is safe.
 A UTF-8 byte-order mark is tolerated.
 
 The package ships a JSON Schema,
-`node_modules/crucible/schemas/crucible.config.schema.json`. Point the
+`node_modules/crucible-ai/schemas/crucible.config.schema.json`. Point the
 config at it with `"$schema"` (as `init` does) and VS Code, and other editors
 that read JSON Schema, show each field's description and default on hover,
 autocomplete field names and values, and flag invalid values as you type.
@@ -98,10 +98,10 @@ The schema tells VS Code that comments and trailing commas are allowed, so
 it does not underline them in either file name.
 
 The `"$schema"` path that `init` writes is relative to the config file and
-assumes `crucible` is installed in the `node_modules` next to it. In a
+assumes `crucible-ai` is installed in the `node_modules` next to it. In a
 workspace (monorepo) where the package is hoisted to the root
 `node_modules`, change the path to point there (for example
-`"../../node_modules/crucible/schemas/crucible.config.schema.json"`);
+`"../../node_modules/crucible-ai/schemas/crucible.config.schema.json"`);
 a wrong path only loses the editor hints.
 
 ## Fields
@@ -161,7 +161,7 @@ With the config above, each request to OpenRouter is:
 
 ## Validation and errors
 
-Every config problem throws a `CrucibleError` (exported from `crucible`).
+Every config problem throws a `CrucibleError` (exported from `crucible-ai`).
 Check `error.kind`, not the message text. Checks run in this order and stop at
 the first problem:
 

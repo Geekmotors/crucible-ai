@@ -64,7 +64,7 @@ class PackVerifier {
         return [`${file} must import vitest as an external`];
       }
       if (!isVitestEntry && importsVitest) {
-        return [`${file} must not import vitest; only the crucible/vitest entry may`];
+        return [`${file} must not import vitest; only the crucible-ai/vitest entry may`];
       }
       return [];
     });
