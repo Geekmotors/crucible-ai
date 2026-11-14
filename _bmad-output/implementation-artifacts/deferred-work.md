@@ -410,3 +410,25 @@
 - Fencing hardening: neutralise a fence line when, after splitting on every line break (`\r\n`, `\r`, `\n`, U+2028, U+2029) and trimming surrounding white space, it equals `<<<` or `>>>`; keep original separators. Prompt-injection relevance: a CRLF response holding `>>>` then `CLAIM`/`<<<` lines can look like a forged section to a model. Needs TS + jq builder + payload fixtures + a conformance run.
 - `excerptChars: 1` with a value that is one astral character renders `(first 2 of 2 chars): 😀…` (marked cut although whole). Pinned by `report-render-truncation-sole-astral-character`; fix = take the untruncated branch when the cut covers the value.
 - Before Story 8.5 deletes the TS conformance e2e: prove TS = jq for the system prompt (schemas/*.md verbatim) and the request envelope (`chat_request`: model, meta, usage), e.g. in Story 8.3's provider request fixtures.
+
+## Deferred from: dev of 8-3-spec-parsing-and-providers (2026-11-14)
+
+- Request envelope TS ≠ jq harness: for `openrouter` the jq `chat_request` adds `"usage": { "include": true }` (cost report); Crucible never sends it. The request goldens drop that member (`harness_only_removed` in `e2e/ext/conformance/spec-goldens.sh`, explained in `spec/README.md`). Decide: send it from Crucible too (src change + fixtures), or keep it harness-only (status quo).
+- Key validation differs: Crucible accepts only printable ASCII U+0021–U+007E (rejects inner spaces, DEL, non-ASCII; allows `"` and `\`); the harness rejects only `"`, `\` and control characters. Pinned for Crucible by `provider-request-key-*`.
+- Loopback detection differs: Crucible uses the WHATWG-parsed host (`127.1`, `[0:0:0:0:0:0:0:1]`, decimal/hex IPv4 are loopback); the harness matches the raw text, so it warns for those. Pinned for Crucible by `provider-plain-http-warning-*`.
+- `baseUrl` handling differs: Crucible WHATWG-normalises (case, default port, dot segments) and accepts an upper-case scheme; the harness only strips trailing slashes and rejects `HTTPS://…`. Pinned by `provider-request-base-url-*`.
+- Observed quirks pinned as current behaviour (not changed): a `baseUrl` ending in `/chat/completions` gets the path twice; an invalid `CRUCIBLE_VERBOSE` (usage) is reported before invalid `testDefaults` / `excerptChars` (config); key-like names are only checked at the top level (`meta` is unchecked); a ```` ```json5 ```` or ```` ``` json ```` fence is not stripped from a judge reply.
+
+## Deferred from: code review of 8-3-spec-parsing-and-providers (2026-11-14)
+
+- Pinned quirk: `localhost.` (trailing dot) and `foo.localhost` count as remote for the plain-http warning, and `[::ffff:127.0.0.1]` is remote. Harmless (an extra warning); fix only together with the harness. Pinned by `provider-plain-http-warning-localhost-trailing-dot` / `-ipv4-mapped-ipv6`.
+- Pinned quirk: an embedded `error.code` of 200 (or any number outside 400–499) is retryable, and a fractional code in 400–499 is fatal. Pinned by `provider-response-embedded-error-success-code`.
+- The `jsonc` / `parse` runner maps `ok: false` to a `config` error itself (the production mapping is exercised through `config` / `load`). Low risk; would need a `JsoncReader` that throws, i.e. a src change.
+- `extract` request goldens cover only the harness config; the other provider shapes run on `coherent` only (the envelope does not depend on the suite). There is no `openai-compatible` + `apiKeyEnv` request golden. Add if the harness grows more configs.
+- The TS request-golden currency test checks config and prompt but not `system` against `schemas/*.md` (the shell check does, in CI).
+
+## From Story 8.3 review decisions (2026-11-14)
+
+- OpenRouter `usage: {include: true}` stays harness-only (drives the harness cost print only); the 8.6 note's "usage field" parity is satisfied by documenting and excluding it explicitly.
+- `config/load` outcome naming the resolved provider is a spec-mandated exception to the "never assert .name" test rule.
+- Follow-ups worth a small story: (1) a `baseUrl` already ending in `/chat/completions` should not get the path twice; (2) check key-like values inside `meta` too, since `meta` is sent to the provider.

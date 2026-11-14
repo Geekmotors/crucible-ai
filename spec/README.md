@@ -35,6 +35,17 @@ spec/
   report/
     render.json                 operation "render"
     trace.json                  operation "trace"
+  jsonc/
+    parse.json                  operation "parse"
+  config/
+    load.json                   operation "load"
+  provider/
+    request.json                operation "request"
+    request-conformance.json    operation "request", generated (see below)
+    response.json               operation "response"
+    plain-http-warning.json     operation "plain-http-warning"
+  judge/
+    reply.json                  operation "reply"
 ```
 
 A file holds the cases of one **operation** of one **area**. An operation
@@ -44,7 +55,7 @@ than one file: `<operation>.json` holds the hand-written cases and
 `<operation>-<source>.json` holds cases generated from another source. A
 runner runs every file whose `area` and `operation` name the operation.
 
-### Generated payload goldens
+### Generated goldens
 
 `payload/coherent-conformance.json` and `payload/extract-conformance.json`
 hold one case per conformance case (`e2e/ext/fixtures/*-conformance.json`).
@@ -52,16 +63,39 @@ Their expected text is produced by the conformance harness's own jq payload
 builder (`e2e/ext/conformance/payload-sections.jq` and
 `<suite>-payload.jq`), so a port that passes them sends, for every
 conformance case, the very payload `make conformance` sends to the model.
-Never edit them by hand:
 
-- `make spec-payloads` regenerates them (needs `jq` and the installed
-  `node_modules`, for Prettier; no network).
-- `make spec-payloads-check` (run in CI) fails when they are stale, also
-  runs the jq builder over every hand-written payload case (jq and every
-  port agree on the same text), and fails when a fixture file under `spec/`
-  is not registered with the TypeScript runner.
-- The TypeScript runner also checks, without jq, that the goldens hold exactly
-  the current conformance cases with their current inputs.
+`provider/request-conformance.json` holds the whole HTTP request the harness
+builds (`conformance.sh request <suite> <case index>`: its URL, its headers
+and the JSON body of its own `chat_request`, with the system prompt read from
+`schemas/<suite>.md`) for the first case of each suite with the repository's
+harness config (`e2e/crucible.config.json`), and for the first coherent case
+with one config of each other provider shape (`openai` with `apiKeyEnv`,
+`openai-compatible` with a trailing slash in `baseUrl`, `openai-compatible`
+without a key). The envelope does not depend on the case, and the payload of
+every case is already pinned by the payload goldens, so a port that passes
+both sends, for every conformance case, the request `make conformance`
+sends: same system prompt (the schema file verbatim), model, `meta` members,
+messages, URL and `Authorization` header. One difference is removed on
+purpose: for `openrouter` the harness adds `"usage": { "include": true }` to
+the body to print the cost of each call. Crucible does not send it (a port
+must not either), so the golden drops that member (keeping a `usage` the
+config's `meta` sets, which both send) and says so in the description of
+each `openrouter` case.
+
+Never edit generated goldens by hand:
+
+- `make spec-goldens` regenerates them (needs `jq` and the installed
+  `node_modules`, for Prettier; no network). `make spec-payloads` is an alias.
+- `make spec-goldens-check` (run in CI; alias `make spec-payloads-check`)
+  fails when any golden is stale (a changed schema file, conformance case,
+  harness config or harness builder makes them stale), also runs the jq
+  builder over every hand-written payload case (jq and every port agree on
+  the same text), and fails when a fixture file under `spec/` is not
+  registered with the TypeScript runner.
+- The TypeScript runner also checks, without jq, that the payload goldens
+  hold exactly the current conformance cases with their current inputs, and
+  that the request goldens hold the current harness config and the current
+  payload of each suite's first case.
 
 ## Fixture format
 
@@ -95,12 +129,23 @@ Never edit them by hand:
   - `{ "value": <JSON> }`: the operation returns this value.
   - `{ "text": "<string>" }`: the operation returns exactly this text,
     code unit for code unit (see [Text rules](#text-rules)). The payload and
-    report areas use it.
+    report areas and `provider` / `response` use it.
   - `{ "error": { "kind": "usage" | "config" } }` or
     `{ "error": { "kind": "infra", "retryable": <bool> } }`: the operation
     fails with a Crucible error of this kind. `retryable` is required for
     `infra` and never present for the other kinds. Message text is never part
     of a fixture.
+  - An `error` may also hold `"mustNotContain": ["<string>", …]` (at least
+    one non-empty string): the error's message, and anything else the port
+    shows the user for this error, must not contain any of these strings.
+    It is how a fixture says a secret (a key pasted into the wrong field, a
+    password in a URL) is never echoed. It says nothing else about the
+    message. "Contain" is a plain substring test on the string exactly as
+    the fixture gives it, applied to the error's message, its string form
+    and every error in its cause chain. An escaped or partial rendering of
+    the secret (`sk-spec\nsentinel` for a key holding a line break) reveals
+    it just the same, even though the substring test cannot see it: the
+    safe implementation never puts the value into an error at all.
 
 Cases only use inputs inside an operation's contract. What an operation does
 with input outside it (a status not listed, a threshold out of range where the
@@ -122,6 +167,7 @@ the single key `$special` stands for one of them:
 | `{ "$special": "NaN" }`             | IEEE 754 not-a-number                                                                                                                                                                       |
 | `{ "$special": "Infinity" }`        | positive infinity                                                                                                                                                                           |
 | `{ "$special": "-Infinity" }`       | negative infinity                                                                                                                                                                           |
+| `{ "$special": "unreadable" }`      | only as a file in the `files` input of `config` / `load`: the file exists but cannot be read (permissions, a directory, an I/O error). Nowhere else.                                                                         |
 | `{ "$special": "undefined" }`       | the value is present but unset: an explicit `undefined` in JavaScript, `None` in Python, `null` for a nullable option in C#. As a field value it means the same as leaving the field out. |
 
 `$special` is a reserved key: no fixture holds a plain object whose only key
@@ -148,6 +194,15 @@ A port needs one small runner per operation:
    - threw a Crucible error: `{ "error": { "kind": <kind> } }`, plus
      `retryable` when the error has one (`infra`)
    - threw anything else: fail the case (that is a bug, not an outcome).
+   - when `expect.error` holds `mustNotContain`, also keep, as
+     `mustNotContain` of the captured error, those strings of the expected
+     list that the error does **not** reveal (its message, string form and
+     cause chain, see above). The lists are then equal exactly when nothing
+     was revealed.
+   - where an input lists what the outside world answers in turn (the
+     `responses` of `provider` / `response`, the `replies` of `judge` /
+     `reply`), fail the case if the operation asks for more entries than
+     the list holds: that is a fixture bug, never a network failure.
 4. Compare the captured outcome with `expect` by deep equality:
    - objects compare by key, in any order. A key whose value is unset
      (`undefined`/`None`/`null` for an option) equals a missing key.
@@ -165,11 +220,21 @@ TypeScript runners: `src/core/run-options.spec-fixtures.test.ts`,
 `src/core/aggregator.util.spec-fixtures.test.ts`,
 `src/core/payload-assembler.util.spec-fixtures.test.ts`,
 `src/core/reporter.util.spec-fixtures.test.ts`,
-`src/core/trace-reporter.spec-fixtures.test.ts` and
-`src/core/spec-fixtures.test.ts` (schema, ids, golden currency). Their harnesses live in
-`src/core/test/`. A new fixture file is registered in
+`src/core/trace-reporter.spec-fixtures.test.ts`,
+`src/core/jsonc-reader.util.spec-fixtures.test.ts`,
+`src/core/config.spec-fixtures.test.ts`,
+`src/providers/chat-completions-adapter.spec-fixtures.test.ts`,
+`src/providers/transport-security.util.spec-fixtures.test.ts`,
+`src/core/judge-exchange.spec-fixtures.test.ts` and
+`src/core/spec-fixtures.test.ts` (schema, ids, golden currency). Their
+harnesses live in `src/core/test/` and `src/providers/test/`. Where an
+operation's outcome is an HTTP request, the TypeScript runner gets it the
+way a user would see it: a fake HTTP boundary answers each request with the
+request itself as the judge's reply, read back through the real judge
+exchange. A new fixture file is registered in
 `src/core/test/spec-fixtures.util.ts`; an unregistered file is neither checked
-nor run.
+nor run. The TypeScript runner compares header names exactly, which is
+stricter than rule 5 of `provider` / `request` requires.
 
 ## Operations
 
@@ -294,7 +359,9 @@ These rules hold for every `text` outcome and every operation below.
   indices (`"0"`, `"12"`): JavaScript lists those first.
 - **Line endings.** Output lines are separated by `\n` (U+000A) only. No
   `\r` is ever added. No `text` outcome ends with a newline unless its
-  contract says so (only `report` / `trace` does).
+  contract says so (`report` / `trace` does, and `provider` / `response`
+  returns the reply exactly as the provider sent it, trailing white space
+  included).
 - **Line breaks in values** (report only). Where a value is split into lines,
   a break is `\r\n`, `\r`, `\n`, U+2028 or U+2029 (`\r\n` counts as one).
   Payloads never split on anything but `\n`.
@@ -572,6 +639,331 @@ test-level events). With no events nothing is written, not even the header.
 | `judge-reply-rejected` | `ask`, `cause`                                             | `judge reply <ask> unusable: <describe(cause)>`                                                                                                      |                        |
 | `judge-recorded`       | `call` (a `render` judge call)                             | verdict: `judge verdict <verdict> for coherent "<claim>"` (`true` or `false`); extraction: `judge value <json(value)> for extract "<description>" as <type> (<mode>)`; error: `judge call errored after <attempts> attempt(s): <describe(cause)>` | verdict, extraction: `payload("reasoning", reasoning)` |
 
+### `jsonc` / `parse`
+
+Parses JSONC, the format of both config files (`crucible.config.json` and
+`crucible.config.jsonc` are read the same way).
+
+**Input.** `{ "text": <string> }`. **Output.** The parsed value (any JSON
+value), or error kind `config`. Crucible only ever parses config files, so
+every parse failure is a config error.
+
+**Rules.** JSONC here is JSON (RFC 8259, strict) plus exactly these
+additions, applied in one left-to-right scan:
+
+1. **Byte-order mark.** If the text starts with U+FEFF, that one character is
+   dropped. A U+FEFF anywhere else outside a string or comment (a second
+   one, or one after white space) is an error.
+2. **Strings** start at `"` and end at the next `"` not consumed by a
+   backslash: a `\` always takes the next code unit with it (`"C:\\"` ends
+   after the second backslash). Everything inside a string is text: `//`,
+   `/*`, `*/`, `,]`, `,}` there are never comments or trailing commas. A
+   string with no closing quote is an error. After the scan, strings must be
+   valid JSON strings (escapes as in JSON, no raw control characters such as
+   a line break).
+3. **Line comments** start at `//` outside a string and run up to, not
+   including, the next CR (U+000D) or LF (U+000A), or to the end of the text.
+   U+2028, U+2029 and other separators do not end them. A `/*` inside a line
+   comment opens nothing.
+4. **Block comments** start at `/*` outside a string and end at the first
+   `*/` after it. The `*` of the opener cannot be the `*` of the closer
+   (`/*/` does not close). A comment's content is never read: any character
+   in it (U+FEFF, U+00A0, a lone `"`) is fine. They do not nest: in `/* a /* b */ c */` the
+   comment ends at the first `*/` and ` c */` is an error. With no `*/` the
+   text is an error. A block comment separates tokens like white space, so
+   `1/**/0` is two numbers (an error), not `10`.
+5. **Trailing commas.** A comma is dropped when the next character that is
+   not white space or part of a comment is `]` or `}`, **and** the last
+   significant character before the comma (ignoring white space and
+   comments) is not `{`, `[`, `,` or `:`. So `[1,]`, `{"a":1,}`, `["a",]`,
+   `[1, // c\n]` are fine, while `[,]`, `{,}`, `[1,,]`, `{"a":,}` and a comma
+   after the root value (`{},`) are errors.
+6. Everything else is strict JSON. White space between tokens is only
+   U+0020, U+0009, U+000A and U+000D: U+00A0, form feed, vertical tab and
+   other Unicode spaces are errors. Duplicate object keys are allowed and the
+   last one wins. Empty text, white space only and comments only are errors.
+   The root may be any JSON value. Numbers are IEEE 754 doubles as in
+   JSON (an integer beyond 2^53 is the nearest double, not an exact big
+   integer); fixtures use none that overflow. A `\uD800`-style escape that
+   leaves a lone surrogate is outside the contract.
+
+A port may report the line of a failure (TypeScript does); it is not part of
+the outcome. The error never holds the text itself (a config file may hold a
+pasted key), only, at most, a position.
+
+### `config` / `load`
+
+Loads the config the way every test run does: reads the config file, checks
+it and resolves defaults and `CRUCIBLE_VERBOSE`.
+
+**Input.** `{ "files": { "crucible.config.json"?: <file>, "crucible.config.jsonc"?: <file> }, "env"?: { <name>: <string> } }`.
+A `<file>` is its text, or `{ "$special": "unreadable" }`. A missing name is
+a file that does not exist. `env` holds the environment variables that are
+set (default none); only `CRUCIBLE_VERBOSE` matters here.
+
+**Output.** `{ "provider", "model", "meta"?, "verbosity", "testDefaults", "excerptChars" }`:
+the provider's name, the model as written, `meta` only when the file sets it,
+the effective verbosity, the `testDefaults` object (`{}` when absent) and
+`excerptChars` (500 when absent).
+
+**Rules, in this order.** The first rule that fails decides the error. Every
+error is kind `config` except an invalid `CRUCIBLE_VERBOSE`, which is
+`usage` (the invocation set it, not the file); the order only matters
+between those two kinds, and is pinned by the `precedence-*` cases.
+
+1. **Files.** If either file is unreadable: error. If neither exists: error.
+   If both exist: error (keep one). Otherwise read the one that exists.
+2. **Syntax.** The text is parsed as `jsonc` / `parse`; failure is an error,
+   and that error never holds any of the file's text.
+3. **Root.** The value must be a JSON object (not an array, null, string or
+   number).
+4. **Key-like fields.** A top-level field whose name, lower-cased
+   (Unicode default lower-casing, independent of locale: ECMAScript
+   `toLowerCase`, Java `toLowerCase(Locale.ROOT)`, C#
+   `ToLowerInvariant`), is
+   `apikey`, `api_key`, `key`, `token`, `secret` or `authorization` is an
+   error, and the error never contains the field's value. (Only top-level
+   names are checked; `meta` is passed through unchecked.)
+5. **Unknown fields.** Every top-level field must be one of `provider`,
+   `model`, `meta`, `verbosity`, `testDefaults`, `excerptChars`, `baseUrl`,
+   `apiKeyEnv` or `$schema`, compared case-sensitively, whatever its value
+   (null included). `$schema` is ignored, whatever its value. An unknown
+   field's value is never echoed (its name may be).
+6. **`provider`**: a string that is not empty after ECMAScript `trim` (see
+   Text rules; Java's `String.trim` is not the same).
+7. **`baseUrl`** (when present, for any provider): a string with no `?` and
+   no `#` anywhere in the raw text (checked before parsing, so `%3F` is
+   fine), that parses as an absolute URL under the
+   [WHATWG URL Standard](https://url.spec.whatwg.org/) with scheme `http` or
+   `https` and no username or password. Its value is never echoed (it may
+   hold a password). The resolved base URL is the parsed URL's serialisation
+   (`href`) with every trailing `/` removed: the scheme and host are
+   lower-cased, a default port (`:80` for http, `:443` for https) is dropped,
+   `.` and `..` path segments are resolved, the path keeps its case. Use a
+   WHATWG parser: C#'s `Uri`, Java's `URI` and Python's `urllib` differ on
+   these points and on others the fixtures do not pin (WHATWG strips
+   leading and trailing spaces and control characters, drops tabs and line
+   breaks, reads `\` as `/`, percent-encodes the path and converts host
+   names to punycode). The `provider` / `request` cases are a sample, not
+   the whole rule.
+8. **`apiKeyEnv`** (when present, for any provider): a string whose whole
+   text matches `[A-Za-z_][A-Za-z0-9_]*` (ASCII only; `$` in Python and
+   Java also matches before a final line break, so use a full match). Its value is never echoed (a
+   key pasted here is a common mistake).
+9. **Provider name and settings.** `provider` must be exactly `openrouter`,
+   `openai` or `openai-compatible` (case-sensitive, not trimmed).
+   `openrouter` and `openai` take no `baseUrl` (even a valid one is an
+   error); `openai-compatible` requires one. All three take `apiKeyEnv`.
+10. **`model`**: a string that is not empty after ECMAScript `trim`. It is kept
+    exactly as written, surrounding white space included.
+11. **`meta`** (optional): a JSON object (not null or an array), kept as is.
+12. **`verbosity`** (optional): exactly `default`, `full` or `debug`.
+13. **`CRUCIBLE_VERBOSE`**: when set and not empty, it must be exactly
+    `default`, `full` or `debug` (not trimmed) and replaces the configured
+    verbosity; otherwise error kind `usage`. An empty value is ignored. It is
+    checked after the configured verbosity, so an invalid configured value
+    fails as `config` even beside a valid override.
+14. **`testDefaults`** (optional): as `run-options` / `validate` with source
+    `config`.
+15. **`excerptChars`** (optional): a number with no fractional part, at least
+    1 (`2.0` is 2; a string, boolean or null is an error). A port accepts
+    integers up to at least 2147483647; behaviour above 2^53 is unspecified.
+
+An optional field set to `null` is an error, never the same as leaving it
+out (except `$schema`, which is ignored whatever its value).
+
+Whether the key variable is set is not checked here; that happens when a
+request is built (`provider` / `request`).
+
+### `provider` / `request`
+
+Builds the HTTP request of one judge call.
+
+**Input.** `{ "config": <object>, "env"?: { <name>: <string> }, "system": <string>, "prompt": <string> }`:
+`config` is the content of the config file (the runner writes it as the
+text of `crucible.config.json`, the only file, and loads it with `config` /
+`load` and the same `env`, so a config that fails there fails here with the
+same error before any request), `env` the environment (default none), `system` the system
+prompt (for a judge call, the text of `schemas/<coherent|extract>.md` word
+for word) and `prompt` the user message (the `payload` text).
+
+**Output.**
+
+```json
+{
+  "method": "POST",
+  "url": "https://openrouter.ai/api/v1/chat/completions",
+  "headers": { "Authorization": "Bearer sk-spec-sentinel-key", "Content-Type": "application/json" },
+  "body": { "model": "…", "messages": [{ "role": "system", "content": "…" }, { "role": "user", "content": "…" }] }
+}
+```
+
+**Rules.**
+
+1. **URL.** `<base>/chat/completions` where `<base>` is
+   `https://openrouter.ai/api/v1` for `openrouter`,
+   `https://api.openai.com/v1` for `openai` and the resolved `baseUrl` (no
+   trailing `/`, see `config` / `load`) for `openai-compatible`. Nothing is
+   inferred from the path: a `baseUrl` already ending in `/chat/completions`
+   gets it twice. The method is always `POST`.
+2. **Key variable.** The key is read from the variable `apiKeyEnv` names,
+   or from `CRUCIBLE_JUDGE_KEY` when there is no `apiKeyEnv`. No other
+   variable is ever read (not `OPENROUTER_API_KEY`, not `OPENAI_API_KEY`).
+   The value is trimmed of white space (ECMAScript `trim`, see Text rules);
+   an unset, empty or blank value is no key.
+3. **No key.** `openrouter` and `openai` need a key: error kind `config`.
+   `openai-compatible` needs one only when `apiKeyEnv` is set; without
+   `apiKeyEnv` and with no key it sends the request with no `Authorization`
+   header (a local server).
+4. **Key characters.** The trimmed key must consist only of printable ASCII,
+   U+0021 to U+007E (quotes and backslashes are allowed; spaces, control
+   characters and non-ASCII are not). Otherwise error kind `config`, and the
+   error never contains the key. A key that is set is checked even where
+   none is required (keyless `openai-compatible`): it is never silently
+   dropped.
+5. **Headers.** The fixture lists exactly the headers Crucible sets:
+   `Authorization: Bearer <key>` when a key is sent, and
+   `Content-Type: application/json`. Header names are case-insensitive on the
+   wire: a runner compares them case-insensitively, and ignores headers its
+   HTTP client adds on its own (`Content-Length`, `User-Agent`, `Accept`,
+   `Host`, …). Values compare exactly. Fixtures use a sentinel key, never a
+   real one.
+6. **Body.** One JSON object: every `meta` member as given (nested values,
+   nulls and a `usage` member included), then `model` (the configured model,
+   verbatim) and `messages` = `[{ "role": "system", "content": system },
+   { "role": "user", "content": prompt }]`. `model` and `messages` always
+   come from Crucible: a `meta` member with either name is replaced. Nothing
+   else is added (no `temperature`, no `response_format`, no `usage`).
+   The body is compared as parsed JSON, so member order and number spelling
+   do not matter; send it as UTF-8 JSON with any valid escaping (TypeScript
+   sends meta members first, then `model`, then `messages`, and escapes only
+   what `JSON.stringify` escapes). Both texts are sent exactly, even when
+   empty.
+
+### `provider` / `response`
+
+Turns the HTTP responses of one judge call's attempts into the judge's reply
+text (before any JSON parsing of that text) or an error.
+
+**Input.** `{ "responses": [ … ] }`: one entry per attempt, in order. An
+entry is `{ "status": <integer>, "json": <any JSON> }` (a response whose body
+is that JSON), `{ "status": <integer>, "text": <string> }` (a body that is
+not JSON) or `{ "failure": "network" }` (no HTTP response: DNS, connection
+or TLS failure). A call never uses more entries than it makes attempts; the
+rest are never fetched. The rules are the same for every provider.
+
+**Output.** Text: the reply. Or error kind `infra` with `retryable`.
+
+**Rules.**
+
+1. **One attempt.** A status from 200 to 299 is a success response; its body
+   is parsed as JSON:
+   - not JSON: retryable failure;
+   - the body is an object with an `error` member that is not `null` (any
+     other value counts, `false`, `0` and `""` included; do not test
+     truthiness): if `error` is an object whose `code` is a JSON number, the
+     attempt fails as if the response had that status, classified by rule 2
+     on its numeric value (fatal exactly when `400 <= code < 500` and it is
+     not 408 or 429, fractions included; any other number, 200 included, is
+     retryable). Otherwise (not an object, no code, a string code) it is a
+     retryable failure. This holds even beside valid choices (some providers
+     report a failed generation with status 200);
+   - otherwise the reply is `choices[0].message.content` when `choices` is an
+     array whose first element has a `message` object whose `content` is a
+     string (empty included). Anything else (no choices, empty array,
+     `null` or array content, a root that is not an object) is a retryable
+     failure. Other members (`id`, `usage`, further choices,
+     `finish_reason`) are ignored, and the reply is kept exactly (white space
+     included).
+2. **Status classes.** Any other status fails the attempt without reading
+   the body. 400 to 499 are **fatal**, except 408 (request timeout) and 429
+   (rate limited), which are **retryable**; every other status (5xx, 3xx,
+   anything outside 400 to 499) is retryable. A fatal response is a request
+   the provider will refuse again (bad key, no credit, unknown model, bad
+   body): retrying only burns time and money. Everything else may succeed on
+   the next attempt.
+3. A network failure is retryable.
+4. **Attempts.** A call makes at most 3 attempts. A retryable failure is
+   retried while attempts remain; a success ends the call with its reply.
+   A fatal failure ends the call at once: error `infra`, `retryable: false`.
+   A third retryable failure ends it: error `infra`, `retryable: true` (the
+   test reports the run as errored, not failed). The wait between attempts
+   is timing, not part of this operation.
+
+### `provider` / `plain-http-warning`
+
+Decides whether a judge call writes the warning that the key travels
+unencrypted (TypeScript writes it to stderr, once per provider instance; the
+wording is each port's business).
+
+**Input.** `{ "baseUrl": <string>, "keySent": <boolean> }`: an
+`openai-compatible` `baseUrl` that `config` / `load` accepts, and whether
+the call sends a key. **Output.** `true` or `false`.
+
+**Rule.** `true` exactly when a key is sent, the scheme is `http` and the
+host, after WHATWG URL parsing, is not loopback. Loopback is the host
+`localhost` (after parsing, so any letter case), the IPv6 address `[::1]`
+(after parsing, so `[0:0:0:0:0:0:0:1]` too) or an IPv4 address
+`127.x.y.z` (after parsing, so the shorthand `127.1` too). A host name that
+merely starts like one (`localhost.example.com`, `127.0.0.1.example.com`)
+is remote, and so are private and unspecified addresses (`192.168.x.y`,
+`0.0.0.0`). The test is on the parsed host:
+
+- IPv4 written any way WHATWG accepts (`127.1`, decimal `2130706433`, hex
+  `0x7f.1`, a trailing dot `127.0.0.1.`) is parsed to an address first;
+- a host name keeps its trailing dot, so `localhost.` is remote, and so is
+  `foo.localhost`;
+- only `[::1]` is IPv6 loopback: an IPv4-mapped address
+  (`[::ffff:127.0.0.1]`) is remote, whatever a platform's `IsLoopback`
+  says.
+
+The call is made either way.
+
+### `judge` / `reply`
+
+Reads the judge's reply text into the result of a `coherent` or `extract`
+call, asking the judge once more after an unusable reply.
+
+**Input.** `{ "ask": "coherent", "replies": [<string>, …] }` or
+`{ "ask": "extract", "type": "string" | "number" | "boolean", "replies": [<string>, …] }`:
+the reply text of each ask, in order (one, or two when the first is
+unusable). **Output.** `{ "verdict": <boolean>, "reasoning": <string> }` for
+`coherent`, `{ "value": <value>, "reasoning": <string> }` for `extract`, or
+error `infra` with `retryable: true`.
+
+**Rules.**
+
+1. **Unwrap.** Trim the reply (ECMAScript `trim`, so a leading U+FEFF goes
+   too). If it starts with three backticks followed by zero or more ASCII
+   letters (any case), remove those and the white space after them (white
+   space here and below is the `trim` set, line breaks included). If it
+   then ends with three backticks, optionally followed by white space,
+   remove those. Trim again. So `` ```json `` and `` ```JSON `` fences, unclosed or unopened
+   fences and fences on one line are removed, while `` ```json5 `` (the `5`
+   stays) and `` ``` json `` (the tag stays) leave text that is not JSON, and
+   `~~~` fences are not removed. Text before or after the JSON is never
+   removed.
+2. **Parse** the result as strict JSON (no comments, no trailing commas, one
+   value; duplicate keys: the last wins). Numbers are IEEE 754 doubles: an
+   integer beyond 2^53 becomes the nearest double, and one that overflows
+   (`1e999`) is infinity. A lone-surrogate escape is outside the contract.
+3. **Shape.** `coherent`: an object with a boolean `verdict` and a string
+   `reasoning` (empty allowed). `extract`: an object with a `value` member
+   (present; `null` allowed for every type) and a string `reasoning`; a
+   non-null `value` must be a JSON string for `string`, a finite number for
+   `number` (`2.0` is 2; infinity is unusable), a boolean for `boolean`.
+   Objects and arrays are never values. Other members are ignored; key order
+   does not matter.
+4. **Re-ask once.** If the reply is unusable (rules 1 to 3), the judge is
+   asked again with the same request. A usable second reply is the result;
+   a second unusable reply is error `infra`, `retryable: true` (an
+   infrastructure problem: the model broke its output contract). A usable
+   first reply ends the call; the judge is not asked again. Each ask is a
+   full `provider` / `response` call with its own attempts. Only unusable
+   reply text triggers the re-ask: a `provider` / `response` error on either
+   ask ends the call with that error unchanged (a fatal one stays
+   `retryable: false`).
+
 ### Out of scope for fixtures
 
 Left to each port's own unit tests, because they depend on the language,
@@ -587,8 +979,17 @@ the clock or object identity:
   backoff timing, stack traces;
 - that a broken output stream never fails the caller, and that the passing
   report is written (followed by `\n`) only at `full` and `debug`;
-- the provider wire format around the payload (request JSON, headers),
-  covered by the provider area (Story 8.3) and the conformance harness.
+- the inference timeout, the test deadline, aborts, and the waits between
+  provider attempts (timing). Their classification is fixed, though: an ask
+  that runs out of time fails as `infra`, `retryable: true`, and is not
+  re-asked;
+- that the plain-http warning is written once per provider and never holds
+  the key, and its wording;
+- `meta` values a JSON file cannot hold (TypeScript rejects a `meta` it
+  cannot serialise as `usage`);
+- the line number a port may give for a JSONC failure;
+- reading the files themselves (where the working directory is, which file
+  system errors mean "missing" rather than "unreadable").
 
 ## Known limits
 
@@ -598,6 +999,10 @@ the clock or object identity:
   outside a contract are a fixture bug, not a port's.
 - Values inside run options layers stay free-form in the schema (any JSON or
   `$special`), because invalid values are what `validate` tests.
+- `env` objects and the `config` of `provider` / `request` are free-form
+  objects in the schema (the in-house checker supports no
+  `additionalProperties` schema); config validity is what `config` / `load`
+  tests.
 
 ## Versioning
 

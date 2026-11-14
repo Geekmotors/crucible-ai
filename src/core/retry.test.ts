@@ -10,43 +10,6 @@ import { TraceText } from './test/trace-text.enum.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
 
 describe('RetryingCompleter', () => {
-  it('resolves a first-attempt success', async () => {
-    const adapter = new ScriptedAdapter([{ resolve: 'verdict' }], 'retryable');
-    await expect(RetryHarness.run(adapter)).resolves.toBe('verdict');
-  });
-
-  it('retries a retryable failure and resolves the next success', async () => {
-    const adapter = new ScriptedAdapter(
-      [{ reject: new Error('flake') }, { resolve: 'verdict' }],
-      'retryable',
-    );
-    await expect(RetryHarness.run(adapter)).resolves.toBe('verdict');
-  });
-
-  it('exhausts persistent retryable failures as a retryable infra error', async () => {
-    const adapter = new ScriptedAdapter(
-      [
-        { reject: new Error('first') },
-        { reject: new Error('second') },
-        { reject: new Error('third') },
-      ],
-      'retryable',
-    );
-    const error = await RetryHarness.failure(adapter);
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('infra');
-    expect((error as CrucibleError).retryable).toBe(true);
-  });
-
-  it('gives a fatal failure exactly one attempt — retrying it would burn judge spend for nothing', async () => {
-    const adapter = new ScriptedAdapter([{ reject: new Error('unauthorized') }], 'fatal');
-    const error = await RetryHarness.failure(adapter);
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('infra');
-    expect((error as CrucibleError).retryable).toBe(false);
-    expect(adapter.calls).toBe(1);
-  });
-
   it('propagates an abort rejection as-is without attempting', async () => {
     const reason = new Error('caller gave up');
     const adapter = new ScriptedAdapter([], 'retryable');
@@ -57,13 +20,6 @@ describe('RetryingCompleter', () => {
       new SleepRecorder().sleep,
     ).complete(adapter, RetryHarness.request, controller.signal);
     await expect(rejection).rejects.toBe(reason);
-  });
-
-  it('rethrows a fatal crucible error unchanged so its kind survives', async () => {
-    const configError = new CrucibleError('config', 'set the key');
-    const adapter = new ScriptedAdapter([{ reject: configError }], 'fatal');
-    const error = await RetryHarness.failure(adapter);
-    expect(error).toBe(configError);
   });
 
   it('retries a crucible infra error marked retryable instead of rethrowing it', async () => {

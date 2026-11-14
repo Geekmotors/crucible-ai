@@ -1,0 +1,1705 @@
+{
+  "area": "provider",
+  "operation": "request",
+  "description": "Builds the HTTP request of one judge call from the config, the environment and the two message texts.",
+  "cases": [
+    {
+      "id": "provider-request-openrouter",
+      "description": "openrouter posts to OpenRouter's chat completions URL with the key from CRUCIBLE_JUDGE_KEY.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai",
+      "description": "openai posts to OpenAI's chat completions URL with the key from CRUCIBLE_JUDGE_KEY.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible",
+      "description": "openai-compatible posts to <baseUrl>/chat/completions.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openrouter-api-key-env",
+      "description": "With apiKeyEnv the key comes from that variable, not CRUCIBLE_JUDGE_KEY.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "GATEWAY_API_KEY": "sk-spec-sentinel-key",
+          "CRUCIBLE_JUDGE_KEY": "sk-other"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-api-key-env",
+      "description": "openai reads the variable apiKeyEnv names.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "GATEWAY_API_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-api-key-env",
+      "description": "openai-compatible reads the variable apiKeyEnv names.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "GATEWAY_API_KEY": "sk-spec-sentinel-key",
+          "CRUCIBLE_JUDGE_KEY": "sk-other"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openrouter-native-key-variable-ignored",
+      "description": "openrouter never reads OPENROUTER_API_KEY: without CRUCIBLE_JUDGE_KEY the call fails as config.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "OPENROUTER_API_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-native-key-variable-ignored",
+      "description": "openai never reads OPENAI_API_KEY: without CRUCIBLE_JUDGE_KEY the call fails as config.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model"
+        },
+        "env": {
+          "OPENAI_API_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openrouter-key-missing",
+      "description": "openrouter needs a key: no variable set is a config error.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {},
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openrouter-key-blank",
+      "description": "openrouter needs a key: a blank value is a config error.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": " \t\n"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openrouter-key-empty",
+      "description": "openrouter needs a key: an empty value is a config error.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": ""
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-key-missing",
+      "description": "openai needs a key: no variable set is a config error.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model"
+        },
+        "env": {},
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-key-blank",
+      "description": "openai needs a key: a blank value is a config error.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": " \t\n"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-key-empty",
+      "description": "openai needs a key: an empty value is a config error.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": ""
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-api-key-env-unset",
+      "description": "A variable named by apiKeyEnv that is unset is a config error, even with CRUCIBLE_JUDGE_KEY set.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-api-key-env-unset",
+      "description": "For openai too, a variable named by apiKeyEnv that is unset is a config error, even with CRUCIBLE_JUDGE_KEY set.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-named-key-required",
+      "description": "openai-compatible with apiKeyEnv needs that variable set.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-named-key-blank",
+      "description": "openai-compatible with apiKeyEnv fails on a blank value.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1",
+          "apiKeyEnv": "GATEWAY_API_KEY"
+        },
+        "env": {
+          "GATEWAY_API_KEY": "   "
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-keyless",
+      "description": "openai-compatible without apiKeyEnv and without CRUCIBLE_JUDGE_KEY sends no Authorization header.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/v1"
+        },
+        "env": {},
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/v1/chat/completions",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-blank-default-key",
+      "description": "A blank CRUCIBLE_JUDGE_KEY counts as unset for openai-compatible without apiKeyEnv.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "  "
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/v1/chat/completions",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-other-variable-ignored",
+      "description": "openai-compatible without apiKeyEnv reads only CRUCIBLE_JUDGE_KEY.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/v1"
+        },
+        "env": {
+          "OPENAI_API_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/v1/chat/completions",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-openai-compatible-default-key-sent",
+      "description": "openai-compatible without apiKeyEnv sends CRUCIBLE_JUDGE_KEY when it is set.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-trimmed",
+      "description": "The key is trimmed of surrounding white space.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": " \tsk-spec-sentinel-key\r\n"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-trimmed-unicode",
+      "description": "The key is trimmed with ECMAScript trim, so U+00A0, U+FEFF and U+3000 around it are removed too.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "\u00a0\ufeffsk-spec-sentinel-key\u3000"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-inner-space",
+      "description": "A key holding a character outside printable ASCII (U+0021-U+007E) is a config error that never reveals the key.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec sentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spec sentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-line-break",
+      "description": "A key holding a character outside printable ASCII (U+0021-U+007E) is a config error that never reveals the key.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec\nsentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spec\nsentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-control-character",
+      "description": "A key holding a character outside printable ASCII (U+0021-U+007E) is a config error that never reveals the key.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec\u0007sentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spec\u0007sentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-non-ascii",
+      "description": "A key holding a character outside printable ASCII (U+0021-U+007E) is a config error that never reveals the key.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spéc-sentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spéc-sentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-delete-character",
+      "description": "A key holding a character outside printable ASCII (U+0021-U+007E) is a config error that never reveals the key.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec\u007fsentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spec\u007fsentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-invalid-on-keyless-provider",
+      "description": "A set key is checked even where none is required: an invalid CRUCIBLE_JUDGE_KEY on a keyless openai-compatible config is a config error, never a request without it.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec sentinel"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-spec sentinel"]
+        }
+      }
+    },
+    {
+      "id": "provider-request-key-printable-punctuation",
+      "description": "Every printable ASCII character is allowed in a key, quotes and backslashes included.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-\"\\'!~"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-\"\\'!~",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-trailing-slash",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1/"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-trailing-slashes",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1///"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-root-url",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-root-url-slash",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://localhost:11434/"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://localhost:11434/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-upper-case-scheme-and-host",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "HTTPS://Gateway.Example.COM/V1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/V1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-default-port-dropped",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com:443/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-http-default-port-dropped",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://gateway.example.com:80/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-other-port-kept",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com:8443/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com:8443/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-dot-segments-resolved",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/a/../v1/./"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-deep-path",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/openai/deployments/judge"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/openai/deployments/judge/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-ipv6-loopback",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "http://[::1]:11434/v1"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "http://[::1]:11434/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-base-url-path-ends-in-completions",
+      "description": "baseUrl is parsed as a URL, serialised, stripped of trailing slashes, then /chat/completions is appended.",
+      "input": {
+        "config": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "baseUrl": "https://gateway.example.com/v1/chat/completions"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://gateway.example.com/v1/chat/completions/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-model-verbatim",
+      "description": "The model is sent exactly as configured.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": " openai/gpt-5 "
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": " openai/gpt-5 ",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-meta-pass-through",
+      "description": "meta members go into the body as given, nested values included.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {
+            "reasoning": {
+              "effort": "low"
+            },
+            "provider": {
+              "order": ["deepinfra"],
+              "allow_fallbacks": false
+            },
+            "temperature": 0
+          }
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "reasoning": {
+              "effort": "low"
+            },
+            "provider": {
+              "order": ["deepinfra"],
+              "allow_fallbacks": false
+            },
+            "temperature": 0,
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-meta-empty",
+      "description": "An empty meta adds nothing.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {}
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-meta-cannot-override-model-or-messages",
+      "description": "meta members named model or messages are replaced by Crucible's own.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {
+            "model": "other-model",
+            "messages": [],
+            "seed": 7
+          }
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "seed": 7,
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-meta-usage-passed-through",
+      "description": "A usage member in meta is sent as given (Crucible adds none of its own).",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {
+            "usage": {
+              "include": true
+            }
+          }
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "usage": {
+              "include": true
+            },
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-meta-null-values",
+      "description": "meta members holding null are sent as null.",
+      "input": {
+        "config": {
+          "provider": "openai",
+          "model": "judge-model",
+          "meta": {
+            "stop": null
+          }
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "stop": null,
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are the judge. Reply with JSON."
+              },
+              {
+                "role": "user",
+                "content": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-system-and-prompt-verbatim",
+      "description": "The system and user messages carry the texts exactly, line breaks and unicode included.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "---\nname: coherent\n---\r\nJudge “fairly”. 😀\n",
+        "prompt": "STATE\n<<<\nfact\n>>>\n\nRESPONSE\n<<<\nline\r\nline\u2028end\n>>>"
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": "---\nname: coherent\n---\r\nJudge “fairly”. 😀\n"
+              },
+              {
+                "role": "user",
+                "content": "STATE\n<<<\nfact\n>>>\n\nRESPONSE\n<<<\nline\r\nline\u2028end\n>>>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-empty-texts",
+      "description": "Empty system and user texts are still sent as messages.",
+      "input": {
+        "config": {
+          "provider": "openrouter",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "",
+        "prompt": ""
+      },
+      "expect": {
+        "value": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer sk-spec-sentinel-key",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "judge-model",
+            "messages": [
+              {
+                "role": "system",
+                "content": ""
+              },
+              {
+                "role": "user",
+                "content": ""
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "provider-request-invalid-config",
+      "description": "A config the load rejects fails before any request, as config.",
+      "input": {
+        "config": {
+          "provider": "nope",
+          "model": "judge-model"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel-key"
+        },
+        "system": "You are the judge. Reply with JSON.",
+        "prompt": "RESPONSE\n<<<\nThe answer is 4.\n>>>\n\nCLAIM\n<<<\nThe answer is four.\n>>>"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    }
+  ]
+}

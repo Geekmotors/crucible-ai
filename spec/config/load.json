@@ -1,0 +1,2154 @@
+{
+  "area": "config",
+  "operation": "load",
+  "description": "Loads the config file (crucible.config.json or crucible.config.jsonc) and CRUCIBLE_VERBOSE into the resolved config.",
+  "cases": [
+    {
+      "id": "config-load-minimal-json",
+      "description": "A crucible.config.json with provider and model resolves every other field to its default.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-minimal-jsonc",
+      "description": "A crucible.config.jsonc is read the same way.",
+      "input": {
+        "files": {
+          "crucible.config.jsonc": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-jsonc-syntax-in-json-file",
+      "description": "crucible.config.json is read as JSONC too: comments and trailing commas are allowed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\n  // the judge\n  \"provider\": \"openrouter\", /* inline */\n  \"model\": \"judge-model\",\n}\n"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-jsonc-syntax-in-jsonc-file",
+      "description": "crucible.config.jsonc holds comments and trailing commas.",
+      "input": {
+        "files": {
+          "crucible.config.jsonc": "{\n  // the judge\n  \"provider\": \"openrouter\",\n  \"model\": \"judge-model\", // pinned\n}\n"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-byte-order-mark",
+      "description": "A file starting with a UTF-8 byte-order mark (U+FEFF) is read.",
+      "input": {
+        "files": {
+          "crucible.config.json": "\ufeff{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-no-file",
+      "description": "With neither file the load fails.",
+      "input": {
+        "files": {}
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-both-files",
+      "description": "With both files the load fails, even when they agree.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}",
+          "crucible.config.jsonc": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-both-files-one-unreadable",
+      "description": "An unreadable file fails the load even when the other file is fine.",
+      "input": {
+        "files": {
+          "crucible.config.json": {
+            "$special": "unreadable"
+          },
+          "crucible.config.jsonc": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-unreadable-json",
+      "description": "An unreadable crucible.config.json fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": {
+            "$special": "unreadable"
+          }
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-unreadable-jsonc",
+      "description": "An unreadable crucible.config.jsonc fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.jsonc": {
+            "$special": "unreadable"
+          }
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-malformed",
+      "description": "A file that is not valid JSONC fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{ not json !!!"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-unterminated-comment",
+      "description": "An unterminated block comment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{ \"provider\": \"openrouter\", \"model\": \"judge-model\" /* never closed }"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-empty-file",
+      "description": "An empty file fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": ""
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-malformed-never-echoes-content",
+      "description": "A malformed file holding a key fails without revealing the key.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{ \"provider\": \"openrouter\", sk-or-v1-leaked-secret-value }"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-leaked-secret-value"]
+        }
+      }
+    },
+    {
+      "id": "config-load-root-array",
+      "description": "A root that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "[\"array\"]"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-root-null",
+      "description": "A root that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "null"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-root-string",
+      "description": "A root that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "\"openrouter\""
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-root-number",
+      "description": "A root that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "42"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-root-empty-object",
+      "description": "An empty object fails: provider and model are required.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-schema-ignored",
+      "description": "A \"$schema\" field is accepted and ignored.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"$schema\": \"./node_modules/crucible-ai/schemas/crucible.config.schema.json\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-schema-any-value-ignored",
+      "description": "\"$schema\" is ignored whatever its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"$schema\": 42}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-unknown-field",
+      "description": "An unknown field fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"defaults\": {}}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-unknown-field-casing",
+      "description": "Field names are case-sensitive: \"Model\" is unknown.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"Model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-unknown-field-null",
+      "description": "An unknown field fails even when its value is null.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"extra\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-apikey-mixed",
+      "description": "A field named \"apiKey\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKey\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-api-key-upper",
+      "description": "A field named \"API_KEY\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"API_KEY\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-key-mixed",
+      "description": "A field named \"Key\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"Key\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-key",
+      "description": "A field named \"key\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"key\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-token",
+      "description": "A field named \"token\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"token\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-token-upper",
+      "description": "A field named \"TOKEN\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"TOKEN\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-secret",
+      "description": "A field named \"secret\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"secret\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-secret-mixed",
+      "description": "A field named \"Secret\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"Secret\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-authorization",
+      "description": "A field named \"authorization\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"authorization\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-authorization-mixed",
+      "description": "A field named \"Authorization\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"Authorization\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-apikey",
+      "description": "A field named \"apikey\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apikey\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-field-api-key",
+      "description": "A field named \"api_key\" (a key-like name, any casing) fails without revealing its value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"api_key\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-key-like-name-with-dash-is-unknown",
+      "description": "\"api-key\" is not on the key-like list but is still an unknown field, so the load fails without revealing the value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"api-key\": \"sk-or-v1-pasted-key\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-or-v1-pasted-key"]
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-missing",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-empty",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-blank",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": \"   \"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-number",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": 42}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-null",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-unknown",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": \"nope\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-wrong-casing",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": \"OpenRouter\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-padded",
+      "description": "A provider that is missing, not a non-blank string, or not a known name (exact match) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"model\": \"judge-model\", \"provider\": \" openrouter\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-openai",
+      "description": "Provider \"openai\" loads.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openai",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-provider-openai-compatible",
+      "description": "Provider \"openai-compatible\" loads with a baseUrl.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-model-missing",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-empty",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-blank",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"   \"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-unicode-blank",
+      "description": "A model of only Unicode white space (U+00A0, U+3000) is blank under ECMAScript trim and fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"\\u00a0\\u3000\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-number",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": 42}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-null",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-array",
+      "description": "A model that is missing or not a non-blank string fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": [\"judge-model\"]}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-model-kept-verbatim",
+      "description": "The model is kept exactly as written, surrounding spaces included.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \" openai/gpt-5 \"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": " openai/gpt-5 ",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-pass-through",
+      "description": "meta is kept as given, nested values included.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": {\"reasoning\": {\"effort\": \"low\"}, \"provider\": {\"order\": [\"a\", \"b\"]}, \"n\": [1, 2, 3]}}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {
+            "reasoning": {
+              "effort": "low"
+            },
+            "provider": {
+              "order": ["a", "b"]
+            },
+            "n": [1, 2, 3]
+          },
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-empty",
+      "description": "An empty meta object is kept.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": {}}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "meta": {},
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-string",
+      "description": "A meta that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": \"nope\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-array",
+      "description": "A meta that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": []}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-null",
+      "description": "A meta that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-meta-number",
+      "description": "A meta that is not a JSON object fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"meta\": 1}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-default",
+      "description": "verbosity \"default\" is accepted.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"default\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-full",
+      "description": "verbosity \"full\" is accepted.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"full\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "full",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-debug",
+      "description": "verbosity \"debug\" is accepted.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"debug\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "debug",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-unknown",
+      "description": "A verbosity that is not one of default, full, debug (exact) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"quiet\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-casing",
+      "description": "A verbosity that is not one of default, full, debug (exact) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"Debug\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-null",
+      "description": "A verbosity that is not one of default, full, debug (exact) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-verbosity-number",
+      "description": "A verbosity that is not one of default, full, debug (exact) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": 1}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-override-wins",
+      "description": "A non-empty CRUCIBLE_VERBOSE overrides the configured verbosity.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"default\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "debug"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "debug",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-override-without-configured",
+      "description": "CRUCIBLE_VERBOSE applies when the file sets no verbosity.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "full"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "full",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-override-empty-ignored",
+      "description": "An empty CRUCIBLE_VERBOSE is ignored.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"full\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": ""
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "full",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-override-invalid-is-usage",
+      "description": "An invalid CRUCIBLE_VERBOSE is a usage error: the invocation set it, not the file.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "loud"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "config-load-override-not-trimmed",
+      "description": "CRUCIBLE_VERBOSE is not trimmed: \" debug\" is invalid.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": " debug"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "config-load-override-invalid-beside-valid-configured",
+      "description": "An invalid CRUCIBLE_VERBOSE fails even when the configured verbosity is valid.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"full\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "loud"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "config-load-configured-invalid-beside-valid-override",
+      "description": "An invalid configured verbosity fails as config even when a valid override is set.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"verbosity\": \"loud\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "debug"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-other-variables-ignored",
+      "description": "Other environment variables do not affect the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": {
+          "CRUCIBLE_JUDGE_KEY": "sk-spec-sentinel",
+          "VERBOSE": "debug"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-test-defaults",
+      "description": "Valid testDefaults are kept as given.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": {\"runs\": 5, \"threshold\": 0.8, \"strict\": true}}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {
+            "runs": 5,
+            "threshold": 0.8,
+            "strict": true
+          },
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-test-defaults-invalid",
+      "description": "Invalid testDefaults fail the load (every rule: run-options/validate with source config).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": {\"runs\": 0}}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-test-defaults-null",
+      "description": "A testDefaults of null is not an object and fails the load (null never means absent for an optional field).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars",
+      "description": "A configured excerptChars is used.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 120}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 120
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-one",
+      "description": "excerptChars 1 is the smallest allowed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 1}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 1
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-integral-fraction",
+      "description": "A number with a zero fraction (2.0) is an integer.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\":\"openrouter\",\"model\":\"judge-model\",\"excerptChars\":2.0}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 2
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-zero",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 0}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-negative",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": -5}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-fractional",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 1.5}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-string",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": \"120\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-null",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-excerpt-chars-boolean",
+      "description": "An excerptChars that is not an integer of at least 1 fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": true}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openrouter-base-url-unsupported",
+      "description": "\"openrouter\" does not take baseUrl, even a valid one.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-base-url-unsupported",
+      "description": "\"openai\" does not take baseUrl, even a valid one.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-base-url-required",
+      "description": "\"openai-compatible\" needs baseUrl.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-empty",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-not-a-url",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"not a url\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-missing-scheme",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"localhost:11434/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-ftp",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"ftp://models.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-credentials",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load without revealing the password.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://user:hunter2@gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["hunter2"]
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-username-only",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://user@gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-query",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1?api-version=preview\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-empty-query",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1?\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-fragment",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1#chat\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-number",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": 11434}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-null",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-scheme-only",
+      "description": "An openai-compatible baseUrl that is not an http(s) URL without credentials, query or fragment fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"http://\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-invalid-on-openrouter",
+      "description": "An invalid baseUrl fails for every provider.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"baseUrl\": \"not a url\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-base-url-plain-http",
+      "description": "http is allowed (the key warning is separate).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"http://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-openrouter-api-key-env",
+      "description": "\"openrouter\" takes apiKeyEnv.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY_API_KEY\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-openrouter-api-key-env-pasted-key",
+      "description": "A key pasted into apiKeyEnv fails the load without revealing it (openrouter).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-openrouter-api-key-env-pasted-key-beside-key-field",
+      "description": "A key pasted into apiKeyEnv and a key-like field both stay hidden (openrouter).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\", \"token\": \"sk-proj-abc123\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env",
+      "description": "\"openai\" takes apiKeyEnv.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY_API_KEY\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openai",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-pasted-key",
+      "description": "A key pasted into apiKeyEnv fails the load without revealing it (openai).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-pasted-key-beside-key-field",
+      "description": "A key pasted into apiKeyEnv and a key-like field both stay hidden (openai).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\", \"token\": \"sk-proj-abc123\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env",
+      "description": "\"openai-compatible\" takes apiKeyEnv.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY_API_KEY\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openai-compatible",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-pasted-key",
+      "description": "A key pasted into apiKeyEnv fails the load without revealing it (openai-compatible).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-pasted-key-beside-key-field",
+      "description": "A key pasted into apiKeyEnv and a key-like field both stay hidden (openai-compatible).",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"apiKeyEnv\": \"sk-proj-abc123\", \"token\": \"sk-proj-abc123\", \"baseUrl\": \"https://gateway.example.com/v1\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config",
+          "mustNotContain": ["sk-proj-abc123"]
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-empty",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-leading-digit",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"1_API_KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-dashed",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY-API-KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-spaced",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY API KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-number",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": 42}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-null",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-non-ascii",
+      "description": "An apiKeyEnv that is not a variable name (letters, digits, underscores, not starting with a digit) fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"CLÉ\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-trailing-line-break",
+      "description": "The apiKeyEnv pattern must match the whole string: a trailing line break fails the load.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY_API_KEY\\n\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-empty",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-leading-digit",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"1_API_KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-dashed",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY-API-KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-spaced",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"GATEWAY API KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-number",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": 42}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-null",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-api-key-env-non-ascii",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai\", \"model\": \"judge-model\", \"apiKeyEnv\": \"CLÉ\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-empty",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": \"\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-leading-digit",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": \"1_API_KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-dashed",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": \"GATEWAY-API-KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-spaced",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": \"GATEWAY API KEY\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-number",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": 42}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-null",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": null}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-openai-compatible-api-key-env-non-ascii",
+      "description": "An apiKeyEnv that is not a variable name fails the load for openai-compatible too.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openai-compatible\", \"model\": \"judge-model\", \"baseUrl\": \"https://gateway.example.com/v1\", \"apiKeyEnv\": \"CLÉ\"}"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-api-key-env-underscore-start",
+      "description": "An apiKeyEnv may start with an underscore and use lower case.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"apiKeyEnv\": \"_judge_key2\"}"
+        }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-precedence-config-before-override",
+      "description": "A config rule checked before verbosity fails as config even with an invalid CRUCIBLE_VERBOSE.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"\"}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "loud"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "config-load-precedence-override-before-test-defaults",
+      "description": "An invalid CRUCIBLE_VERBOSE is reported before invalid testDefaults, as usage.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": {\"runs\": 0}}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "loud"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "config-load-precedence-override-before-excerpt-chars",
+      "description": "An invalid CRUCIBLE_VERBOSE is reported before an invalid excerptChars, as usage.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 0}"
+        },
+        "env": {
+          "CRUCIBLE_VERBOSE": "loud"
+        }
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    }
+  ]
+}

@@ -225,19 +225,19 @@
     {
       "id": "payload-coherent-unicode-separators",
       "description": "U+2028 and U+2029 are not line breaks for fencing either.",
-      "input": { "response": "a >>> b", "claim": "c" },
-      "expect": { "text": "RESPONSE\n<<<\na >>> b\n>>>\n\nCLAIM\n<<<\nc\n>>>" }
+      "input": { "response": "a\u2028>>>\u2029b", "claim": "c" },
+      "expect": { "text": "RESPONSE\n<<<\na\u2028>>>\u2029b\n>>>\n\nCLAIM\n<<<\nc\n>>>" }
     },
     {
       "id": "payload-coherent-unicode-text",
       "description": "Non-ASCII text passes through unchanged: accents, CJK, RTL, combining marks, astral emoji, zero-width joiner.",
       "input": {
         "facts": ["Zoë lives in Zürich.", "東京は日本の首都です。"],
-        "response": "مرحبا — é — 👩‍💻 — 𝔘𝔫𝔦𝔠𝔬𝔡𝔢",
+        "response": "مرحبا — é — 👩\u200d💻 — 𝔘𝔫𝔦𝔠𝔬𝔡𝔢",
         "claim": "Ελληνικά ✓"
       },
       "expect": {
-        "text": "STATE\n<<<\nZoë lives in Zürich.\n東京は日本の首都です。\n>>>\n\nRESPONSE\n<<<\nمرحبا — é — 👩‍💻 — 𝔘𝔫𝔦𝔠𝔬𝔡𝔢\n>>>\n\nCLAIM\n<<<\nΕλληνικά ✓\n>>>"
+        "text": "STATE\n<<<\nZoë lives in Zürich.\n東京は日本の首都です。\n>>>\n\nRESPONSE\n<<<\nمرحبا — é — 👩\u200d💻 — 𝔘𝔫𝔦𝔠𝔬𝔡𝔢\n>>>\n\nCLAIM\n<<<\nΕλληνικά ✓\n>>>"
       }
     },
     {

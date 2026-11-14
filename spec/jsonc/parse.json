@@ -1,0 +1,756 @@
+{
+  "area": "jsonc",
+  "operation": "parse",
+  "description": "Parses JSONC (JSON with comments and trailing commas), the format of both config files.",
+  "cases": [
+    {
+      "id": "jsonc-parse-plain-json",
+      "description": "Plain JSON parses unchanged.",
+      "input": {
+        "text": "{ \"name\": \"crucible\", \"runs\": 10 }"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible",
+          "runs": 10
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comments",
+      "description": "Line comments before, after and between members are ignored.",
+      "input": {
+        "text": "// leading\n{\n  \"name\": \"crucible\", // trailing\n  // own line\n  \"runs\": 10\n}\n"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible",
+          "runs": 10
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-at-end-of-text",
+      "description": "A line comment may end the text without a line break.",
+      "input": {
+        "text": "{ \"a\": 1 } // done"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-without-space",
+      "description": "A line comment may follow a value directly.",
+      "input": {
+        "text": "[1// one\n,2]"
+      },
+      "expect": {
+        "value": [1, 2]
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-ends-at-cr",
+      "description": "A lone CR ends a line comment.",
+      "input": {
+        "text": "{\r  \"name\": \"crucible\", // trailing\r  \"runs\": 10\r}"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible",
+          "runs": 10
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-ends-at-crlf",
+      "description": "CRLF ends a line comment.",
+      "input": {
+        "text": "{\r\n  \"a\": 1, // one\r\n  \"b\": 2\r\n}\r\n"
+      },
+      "expect": {
+        "value": {
+          "a": 1,
+          "b": 2
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-not-ended-by-unicode-separator",
+      "description": "U+2028 does not end a line comment, so the rest of that line stays commented out.",
+      "input": {
+        "text": "{ \"a\": 1 // note\u2028\"b\": 2\n}"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comments",
+      "description": "Block comments, inline and spanning lines, are ignored.",
+      "input": {
+        "text": "/* leading */ {\n  /* spans\n     lines */\n  \"name\": /* inline */ \"crucible\"\n}"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comment-empty",
+      "description": "An empty block comment is a comment.",
+      "input": {
+        "text": "[/**/1]"
+      },
+      "expect": {
+        "value": [1]
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comment-holding-line-comment-marker",
+      "description": "A // inside a block comment is part of the comment.",
+      "input": {
+        "text": "{ /* see // here */ \"a\": 1 }"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-comment-holding-block-marker",
+      "description": "A /* inside a line comment does not open a block comment.",
+      "input": {
+        "text": "{ \"a\": 1 // /* not opened\n}"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comment-separates-tokens",
+      "description": "A block comment separates tokens like white space, so 1/**/0 is two numbers, an error.",
+      "input": {
+        "text": "{ \"runs\": 1/* split */0 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comment-splits-literal",
+      "description": "A block comment inside a literal name splits it, an error.",
+      "input": {
+        "text": "[tr/**/ue]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-nested-block-comment",
+      "description": "Block comments do not nest: the first */ ends the comment and the rest is an error.",
+      "input": {
+        "text": "[1 /* outer /* inner */ still */]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-comment-opener-reused",
+      "description": "The / of /* cannot also start the closing */, so /*/ does not close.",
+      "input": {
+        "text": "[1 /*/ 2]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unterminated-block-comment",
+      "description": "A block comment with no */ is an error.",
+      "input": {
+        "text": "{\n  \"name\": \"crucible\"\n  /* never closed\n}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-lone-slash",
+      "description": "A slash that starts no comment is an error.",
+      "input": {
+        "text": "{ \"a\": 1 / 2 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-trailing-comma-in-object",
+      "description": "A trailing comma in an object is allowed.",
+      "input": {
+        "text": "{ \"name\": \"crucible\", \"runs\": 10, }"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible",
+          "runs": 10
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-trailing-comma-in-array",
+      "description": "A trailing comma in an array is allowed.",
+      "input": {
+        "text": "{ \"list\": [1, 2, 3,], }"
+      },
+      "expect": {
+        "value": {
+          "list": [1, 2, 3]
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-trailing-comma-nested",
+      "description": "Trailing commas are allowed at every level.",
+      "input": {
+        "text": "{\"a\":[{\"b\":[1,],},],}"
+      },
+      "expect": {
+        "value": {
+          "a": [
+            {
+              "b": [1]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-trailing-comma-before-comments",
+      "description": "Comments and white space may sit between a trailing comma and the closer.",
+      "input": {
+        "text": "{\n  \"name\": \"crucible\", // last\n  /* done */\n}"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-trailing-comma-after-string",
+      "description": "A trailing comma after a string value is allowed.",
+      "input": {
+        "text": "[\"a\",]"
+      },
+      "expect": {
+        "value": ["a"]
+      }
+    },
+    {
+      "id": "jsonc-parse-comma-in-empty-array",
+      "description": "A comma with no value before it is an error.",
+      "input": {
+        "text": "[,]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-comma-in-empty-object",
+      "description": "A comma right after { is an error.",
+      "input": {
+        "text": "{ , }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-double-trailing-comma",
+      "description": "Two commas before a closer are an error.",
+      "input": {
+        "text": "[1,,]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-comma-after-root-value",
+      "description": "A comma after the root value is an error.",
+      "input": {
+        "text": "{},"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-comma-after-colon",
+      "description": "A comma right after a colon is an error.",
+      "input": {
+        "text": "{ \"a\": , }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-missing-comma",
+      "description": "Strict JSON rules apply outside comments and trailing commas: a missing comma is an error.",
+      "input": {
+        "text": "{\n  \"name\": \"crucible\"\n  \"runs\": 10\n}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-line-marker-in-string",
+      "description": "// inside a string is text, as in a URL.",
+      "input": {
+        "text": "{ \"url\": \"https://example.test/v1\" }"
+      },
+      "expect": {
+        "value": {
+          "url": "https://example.test/v1"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-block-markers-in-string",
+      "description": "/* and */ inside strings are text.",
+      "input": {
+        "text": "{ \"glob\": \"src/**/*.ts\", \"close\": \"*/\" }"
+      },
+      "expect": {
+        "value": {
+          "glob": "src/**/*.ts",
+          "close": "*/"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-comma-and-closer-in-string",
+      "description": "A comma before a closer inside a string is text, not a trailing comma.",
+      "input": {
+        "text": "{ \"text\": \"a,}b,]\" }"
+      },
+      "expect": {
+        "value": {
+          "text": "a,}b,]"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-escaped-quote-in-string",
+      "description": "An escaped quote does not end a string, so a later // stays text.",
+      "input": {
+        "text": "{ \"quote\": \"say \\\"hi\\\" // not a comment\" }"
+      },
+      "expect": {
+        "value": {
+          "quote": "say \"hi\" // not a comment"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-escaped-backslash-before-quote",
+      "description": "A quote after an escaped backslash ends the string; the comment after it is a comment.",
+      "input": {
+        "text": "{ \"path\": \"C:\\\\\", \"next\": 1 // comment\n}"
+      },
+      "expect": {
+        "value": {
+          "path": "C:\\",
+          "next": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-escapes-decoded",
+      "description": "JSON escapes in strings decode as in JSON.",
+      "input": {
+        "text": "[\"\\u00e9\\n\\t\\/\"]"
+      },
+      "expect": {
+        "value": ["é\n\t/"]
+      }
+    },
+    {
+      "id": "jsonc-parse-invalid-escape",
+      "description": "An escape JSON does not define is an error.",
+      "input": {
+        "text": "[\"\\x41\"]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-raw-line-break-in-string",
+      "description": "A raw line break inside a string is an error, as in JSON.",
+      "input": {
+        "text": "{ \"a\": \"one\ntwo\" }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unterminated-string",
+      "description": "A string with no closing quote is an error.",
+      "input": {
+        "text": "{\n  \"name\": \"crucible\n}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unterminated-string-escaping-last-quote",
+      "description": "A string whose last quote is escaped is unterminated, an error.",
+      "input": {
+        "text": "[\"abc\\\"]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-byte-order-mark",
+      "description": "One leading U+FEFF is ignored.",
+      "input": {
+        "text": "\ufeff{ \"name\": \"crucible\" }"
+      },
+      "expect": {
+        "value": {
+          "name": "crucible"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-byte-order-mark-twice",
+      "description": "Only one leading U+FEFF is ignored; a second is an error.",
+      "input": {
+        "text": "\ufeff\ufeff{}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-byte-order-mark-after-white-space",
+      "description": "A U+FEFF that is not the first character is an error.",
+      "input": {
+        "text": " \ufeff{}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-byte-order-mark-in-string",
+      "description": "A U+FEFF inside a string is kept.",
+      "input": {
+        "text": "[\"\ufeffx\"]"
+      },
+      "expect": {
+        "value": ["\ufeffx"]
+      }
+    },
+    {
+      "id": "jsonc-parse-byte-order-mark-in-comment",
+      "description": "Anything inside a comment is ignored, a U+FEFF included.",
+      "input": {
+        "text": "{ \"a\": 1 // note \ufeff\n}"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unicode-space-in-comment",
+      "description": "Anything inside a comment is ignored, a U+00A0 included.",
+      "input": {
+        "text": "{ /* \u00a0 */ \"a\": 1 }"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-crlf-line-endings",
+      "description": "CRLF line endings are white space.",
+      "input": {
+        "text": "{\r\n  \"a\": 1,\r\n  \"b\": [true, false],\r\n}\r\n"
+      },
+      "expect": {
+        "value": {
+          "a": 1,
+          "b": [true, false]
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-cr-line-endings",
+      "description": "Lone CR line endings are white space.",
+      "input": {
+        "text": "{\r  \"a\": 1\r}"
+      },
+      "expect": {
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-non-json-white-space",
+      "description": "White space JSON does not allow (here U+00A0) is an error, even between tokens.",
+      "input": {
+        "text": "{\u00a0\"a\": 1 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-form-feed",
+      "description": "A form feed is not JSON white space, an error.",
+      "input": {
+        "text": "{\f\"a\": 1 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-vertical-tab",
+      "description": "A vertical tab is not JSON white space, an error.",
+      "input": {
+        "text": "[1,\u000b2]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-empty-text",
+      "description": "Empty text is an error.",
+      "input": {
+        "text": ""
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-only-white-space",
+      "description": "Text holding only white space is an error.",
+      "input": {
+        "text": " \n\t "
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-only-comment",
+      "description": "Text holding only a comment is an error.",
+      "input": {
+        "text": "// nothing here\n"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-two-root-values",
+      "description": "Two root values are an error.",
+      "input": {
+        "text": "{} {}"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-root-number",
+      "description": "A root scalar is a value.",
+      "input": {
+        "text": " 42 // answer"
+      },
+      "expect": {
+        "value": 42
+      }
+    },
+    {
+      "id": "jsonc-parse-root-string",
+      "description": "A root string is a value.",
+      "input": {
+        "text": "\"text\""
+      },
+      "expect": {
+        "value": "text"
+      }
+    },
+    {
+      "id": "jsonc-parse-root-null",
+      "description": "A root null is a value.",
+      "input": {
+        "text": "/* nothing */ null"
+      },
+      "expect": {
+        "value": null
+      }
+    },
+    {
+      "id": "jsonc-parse-root-array",
+      "description": "A root array is a value.",
+      "input": {
+        "text": "[1, \"two\", null, true,]"
+      },
+      "expect": {
+        "value": [1, "two", null, true]
+      }
+    },
+    {
+      "id": "jsonc-parse-numbers",
+      "description": "Numbers parse as JSON numbers, exponents and fractions included.",
+      "input": {
+        "text": "[-0.5, 1e3, 2E-2, 10]"
+      },
+      "expect": {
+        "value": [-0.5, 1000, 0.02, 10]
+      }
+    },
+    {
+      "id": "jsonc-parse-leading-zero",
+      "description": "A number with a leading zero is an error, as in JSON.",
+      "input": {
+        "text": "[01]"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-single-quotes",
+      "description": "Single-quoted strings are an error.",
+      "input": {
+        "text": "{ 'a': 1 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unquoted-key",
+      "description": "Unquoted keys are an error.",
+      "input": {
+        "text": "{ a: 1 }"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-duplicate-keys-last-wins",
+      "description": "With duplicate keys the last one wins.",
+      "input": {
+        "text": "{ \"a\": 1, \"b\": 2, \"a\": 3 }"
+      },
+      "expect": {
+        "value": {
+          "a": 3,
+          "b": 2
+        }
+      }
+    },
+    {
+      "id": "jsonc-parse-unclosed-object",
+      "description": "An object with no closing brace is an error.",
+      "input": {
+        "text": "{ \"a\": 1"
+      },
+      "expect": {
+        "error": {
+          "kind": "config"
+        }
+      }
+    }
+  ]
+}

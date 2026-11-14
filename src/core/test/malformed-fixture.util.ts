@@ -76,6 +76,66 @@ class MalformedFixture {
           },
         }),
       ],
+      [
+        MalformedFixtureName.EmptyConcealment,
+        MalformedFixture.inFile(SpecFixtures.configLoad, {
+          expect: { error: { kind: 'config', mustNotContain: [] } },
+        }),
+      ],
+      [
+        MalformedFixtureName.UnknownFileToken,
+        MalformedFixture.inFile(SpecFixtures.configLoad, {
+          input: { files: { 'crucible.config.json': { $special: 'missing' } } },
+        }),
+      ],
+      [
+        MalformedFixtureName.UnknownConfigFile,
+        MalformedFixture.inFile(SpecFixtures.configLoad, {
+          input: { files: { 'crucible.json': '{}' } },
+        }),
+      ],
+      [
+        MalformedFixtureName.ExtractReplyWithoutType,
+        MalformedFixture.inFile(SpecFixtures.judgeReply, {
+          input: { ask: 'extract', replies: ['{}'] },
+        }),
+      ],
+      [
+        MalformedFixtureName.ValueForResponse,
+        MalformedFixture.inFile(SpecFixtures.providerResponse, { expect: { value: 'reply' } }),
+      ],
+      [
+        MalformedFixtureName.ResponseWithoutBody,
+        MalformedFixture.inFile(SpecFixtures.providerResponse, {
+          input: { responses: [{ status: 200 }] },
+        }),
+      ],
+      [
+        MalformedFixtureName.UsageErrorForJsonc,
+        MalformedFixture.inFile(SpecFixtures.jsoncParse, { expect: { error: { kind: 'usage' } } }),
+      ],
+      [
+        MalformedFixtureName.ErrorForPlainHttpWarning,
+        MalformedFixture.inFile(SpecFixtures.providerPlainHttpWarning, {
+          expect: { error: { kind: 'config' } },
+        }),
+      ],
+      [
+        MalformedFixtureName.TextForPlainHttpWarning,
+        MalformedFixture.inFile(SpecFixtures.providerPlainHttpWarning, {
+          expect: { value: 'yes' },
+        }),
+      ],
+      [
+        MalformedFixtureName.FatalJudgeReply,
+        MalformedFixture.inFile(SpecFixtures.judgeReply, {
+          expect: { error: { kind: 'infra', retryable: false } },
+        }),
+      ],
+      [
+        MalformedFixtureName.ConfigErrorForJudgeReply,
+        MalformedFixture.inFile(SpecFixtures.judgeReply, { expect: { error: { kind: 'config' } } }),
+      ],
     ];
   }
 

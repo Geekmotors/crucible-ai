@@ -6,6 +6,7 @@ class ScriptedAdapter implements ProviderAdapter {
   name = 'scripted';
   envVar = 'SCRIPTED_API_KEY';
   calls = 0;
+  overran = false;
 
   constructor(
     private attempts: Attempt[],
@@ -18,6 +19,7 @@ class ScriptedAdapter implements ProviderAdapter {
     }
     const attempt = this.attempts[this.calls];
     if (attempt === undefined) {
+      this.overran = true;
       return Promise.reject(new Error('scripted adapter called past its script'));
     }
     this.calls += 1;

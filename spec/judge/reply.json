@@ -1,0 +1,998 @@
+{
+  "area": "judge",
+  "operation": "reply",
+  "description": "Reads the judge's reply text of a coherent or extract call into its result, asking once more after an unusable reply.",
+  "cases": [
+    {
+      "id": "judge-reply-coherent-true",
+      "description": "A strict JSON reply with verdict true.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true,\"reasoning\":\"consistent\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "consistent"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-false",
+      "description": "A strict JSON reply with verdict false.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":false,\"reasoning\":\"contradiction\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": false,
+          "reasoning": "contradiction"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-key-order",
+      "description": "Key order does not matter.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"reasoning\":\"r\",\"verdict\":true}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-white-space",
+      "description": "White space around the JSON is ignored.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["\n\n   {\"verdict\":true,\"reasoning\":\"padded\"}  \n"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "padded"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-pretty-printed",
+      "description": "Pretty-printed JSON is fine.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\n  \"verdict\": false,\n  \"reasoning\": \"multi\\nline\"\n}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": false,
+          "reasoning": "multi\nline"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-byte-order-mark",
+      "description": "A leading U+FEFF counts as white space.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["\ufeff{\"verdict\":true,\"reasoning\":\"bom\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "bom"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-empty-reasoning",
+      "description": "Empty reasoning is a string, so the reply is usable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true,\"reasoning\":\"\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": ""
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-extra-keys",
+      "description": "Extra keys are ignored.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true,\"reasoning\":\"r\",\"confidence\":0.9}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-duplicate-keys",
+      "description": "With duplicate keys the last wins.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true,\"verdict\":false,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": false,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-json",
+      "description": "A reply wrapped in a ```json code fence is unwrapped.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["```json\n{\"verdict\":true,\"reasoning\":\"fenced\"}\n```"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "fenced"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-no-language",
+      "description": "A plain ``` fence is unwrapped.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["```\n{\"verdict\":true,\"reasoning\":\"fenced\"}\n```"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "fenced"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-upper-case-language",
+      "description": "The language tag is matched case-insensitively.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["```JSON\n{\"verdict\":true,\"reasoning\":\"fenced\"}\n```"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "fenced"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-on-one-line",
+      "description": "Fences on the same line as the JSON are unwrapped.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["```json{\"verdict\":true,\"reasoning\":\"tight\"}```"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "tight"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-opening-only",
+      "description": "An opening fence without a closing one is still removed.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["```json\n{\"verdict\":true,\"reasoning\":\"open\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "open"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-closing-only",
+      "description": "A closing fence without an opening one is still removed.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true,\"reasoning\":\"close\"}\n```"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "close"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-padded",
+      "description": "White space outside and inside the fences is ignored.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["  \n```json  \n  {\"verdict\":true,\"reasoning\":\"padded\"}  \n```  \n"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "padded"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-language-with-digit",
+      "description": "A language tag holding a non-letter (json5) is not removed whole, so the reply is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "```json5\n{\"verdict\":true,\"reasoning\":\"x\"}\n```",
+          "```json5\n{\"verdict\":true,\"reasoning\":\"x\"}\n```"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-space-before-language",
+      "description": "A space between ``` and the tag leaves the tag in place, so the reply is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "``` json\n{\"verdict\":true,\"reasoning\":\"x\"}\n```",
+          "``` json\n{\"verdict\":true,\"reasoning\":\"x\"}\n```"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-tilde",
+      "description": "~~~ fences are not removed, so the reply is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "~~~\n{\"verdict\":true,\"reasoning\":\"ok\"}\n~~~",
+          "~~~\n{\"verdict\":true,\"reasoning\":\"ok\"}\n~~~"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-fence-text-after-closing",
+      "description": "Text after the closing fence makes the reply unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "```json\n{\"verdict\":true,\"reasoning\":\"ok\"}\n```\nHope this helps!",
+          "```json\n{\"verdict\":true,\"reasoning\":\"ok\"}\n```\nHope this helps!"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-prose-around-json",
+      "description": "Prose around the JSON makes the reply unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "Here is my answer: {\"verdict\":true,\"reasoning\":\"ok\"}",
+          "Here is my answer: {\"verdict\":true,\"reasoning\":\"ok\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-not-json",
+      "description": "A reply that is not JSON is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["the response is coherent", "the response is coherent"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-empty-reply",
+      "description": "An empty reply is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["", "   "]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-two-objects",
+      "description": "Two JSON values are unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":true,\"reasoning\":\"ok\"} {\"verdict\":true,\"reasoning\":\"ok\"}",
+          "{\"verdict\":true,\"reasoning\":\"ok\"} {\"verdict\":true,\"reasoning\":\"ok\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-verdict-string",
+      "description": "A verdict that is not a boolean is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":\"true\",\"reasoning\":\"r\"}",
+          "{\"verdict\":\"true\",\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-verdict-number",
+      "description": "A numeric verdict is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":1,\"reasoning\":\"r\"}", "{\"verdict\":1,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-verdict-null",
+      "description": "A null verdict is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":null,\"reasoning\":\"r\"}",
+          "{\"verdict\":null,\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-verdict-missing",
+      "description": "A missing verdict is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"reasoning\":\"r\"}", "{\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-reasoning-missing",
+      "description": "Missing reasoning is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["{\"verdict\":true}", "{\"verdict\":true}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-reasoning-not-string",
+      "description": "Reasoning that is not a string is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":true,\"reasoning\":[\"r\"]}",
+          "{\"verdict\":true,\"reasoning\":[\"r\"]}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-root-array",
+      "description": "A JSON array is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["[true,\"r\"]", "[true,\"r\"]"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-root-null",
+      "description": "JSON null is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["null", "null"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-trailing-comma",
+      "description": "Replies are strict JSON: a trailing comma is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":true,\"reasoning\":\"r\",}",
+          "{\"verdict\":true,\"reasoning\":\"r\",}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-comment",
+      "description": "Replies are strict JSON: a comment is unusable.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":true, // yes\n\"reasoning\":\"r\"}",
+          "{\"verdict\":true, // yes\n\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-re-ask-then-usable",
+      "description": "After an unusable reply the judge is asked once more; a usable second reply is the result.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["not json at all", "{\"verdict\":true,\"reasoning\":\"second try\"}"]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "second try"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-re-ask-wrong-shape-then-usable",
+      "description": "A reply of the wrong shape also triggers the one re-ask.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":\"yes\",\"reasoning\":42}",
+          "{\"verdict\":false,\"reasoning\":\"second\"}"
+        ]
+      },
+      "expect": {
+        "value": {
+          "verdict": false,
+          "reasoning": "second"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-first-usable-wins",
+      "description": "A usable first reply is the result; the judge is not asked again.",
+      "input": {
+        "ask": "coherent",
+        "replies": [
+          "{\"verdict\":true,\"reasoning\":\"first\"}",
+          "{\"verdict\":false,\"reasoning\":\"never asked\"}"
+        ]
+      },
+      "expect": {
+        "value": {
+          "verdict": true,
+          "reasoning": "first"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-coherent-two-unusable",
+      "description": "Two unusable replies are a retryable infra error.",
+      "input": {
+        "ask": "coherent",
+        "replies": ["still not json", "nope"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number",
+      "description": "A number value for a number request.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":2,\"reasoning\":\"the answer is two\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": 2,
+          "reasoning": "the answer is two"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-fraction",
+      "description": "Fractions and negative numbers are numbers.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":-12.5,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": -12.5,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-exponent",
+      "description": "Exponent notation is a number.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":1.5e3,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": 1500,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-integral-fraction",
+      "description": "2.0 is the number 2.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":2.0,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": 2,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-overflow",
+      "description": "A number that overflows to infinity is unusable.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": [
+          "{\"value\":1e999,\"reasoning\":\"overflow\"}",
+          "{\"value\":1e999,\"reasoning\":\"overflow\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-large-integer",
+      "description": "Numbers are IEEE 754 doubles: an integer beyond 2^53 becomes the nearest double, not an exact big integer.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\": 12345678901234567891, \"reasoning\": \"big\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": 12345678901234567000,
+          "reasoning": "big"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-as-string",
+      "description": "A number given as a string is the wrong type.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": [
+          "{\"value\":\"2\",\"reasoning\":\"r\"}",
+          "{\"value\":\"2\",\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-number-as-boolean",
+      "description": "A boolean is not a number.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":true,\"reasoning\":\"r\"}", "{\"value\":true,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-string",
+      "description": "A string value for a string request.",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": ["{\"value\":\"Paris\",\"reasoning\":\"lives in Paris\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": "Paris",
+          "reasoning": "lives in Paris"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-string-empty",
+      "description": "An empty string is a string.",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": ["{\"value\":\"\",\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": "",
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-string-escapes",
+      "description": "String escapes decode as JSON.",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": ["{\"value\":\"caf\\u00e9 \\\"quoted\\\"\\n\",\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": "café \"quoted\"\n",
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-string-as-number",
+      "description": "A number is not a string.",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": ["{\"value\":2,\"reasoning\":\"r\"}", "{\"value\":2,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-boolean",
+      "description": "A boolean value for a boolean request.",
+      "input": {
+        "ask": "extract",
+        "type": "boolean",
+        "replies": ["{\"value\":true,\"reasoning\":\"says the room is booked\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": true,
+          "reasoning": "says the room is booked"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-boolean-false",
+      "description": "false is a boolean.",
+      "input": {
+        "ask": "extract",
+        "type": "boolean",
+        "replies": ["{\"value\":false,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": false,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-boolean-as-string",
+      "description": "\"true\" is not a boolean.",
+      "input": {
+        "ask": "extract",
+        "type": "boolean",
+        "replies": [
+          "{\"value\":\"true\",\"reasoning\":\"r\"}",
+          "{\"value\":\"true\",\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-boolean-as-number",
+      "description": "0 is not a boolean.",
+      "input": {
+        "ask": "extract",
+        "type": "boolean",
+        "replies": ["{\"value\":0,\"reasoning\":\"r\"}", "{\"value\":0,\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-null-string",
+      "description": "null is a usable value for every type (string).",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": ["{\"value\":null,\"reasoning\":\"no single committed value\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": null,
+          "reasoning": "no single committed value"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-null-number",
+      "description": "null is a usable value for every type (number).",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":null,\"reasoning\":\"no single committed value\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": null,
+          "reasoning": "no single committed value"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-null-boolean",
+      "description": "null is a usable value for every type (boolean).",
+      "input": {
+        "ask": "extract",
+        "type": "boolean",
+        "replies": ["{\"value\":null,\"reasoning\":\"no single committed value\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": null,
+          "reasoning": "no single committed value"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-value-missing",
+      "description": "A missing value is unusable (null must be given).",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"reasoning\":\"forgot the value\"}", "{\"reasoning\":\"forgot the value\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-reasoning-missing",
+      "description": "Missing reasoning is unusable.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":2}", "{\"value\":2}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-value-object",
+      "description": "An object value is unusable.",
+      "input": {
+        "ask": "extract",
+        "type": "string",
+        "replies": [
+          "{\"value\":{\"city\":\"Paris\"},\"reasoning\":\"r\"}",
+          "{\"value\":{\"city\":\"Paris\"},\"reasoning\":\"r\"}"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-value-array",
+      "description": "An array value is unusable.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":[2],\"reasoning\":\"r\"}", "{\"value\":[2],\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-extra-keys",
+      "description": "Extra keys are ignored.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["{\"value\":2,\"reasoning\":\"r\",\"unit\":\"apples\"}"]
+      },
+      "expect": {
+        "value": {
+          "value": 2,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-fenced",
+      "description": "Code fences are removed as for coherent.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["```json\n{\"value\":2,\"reasoning\":\"r\"}\n```"]
+      },
+      "expect": {
+        "value": {
+          "value": 2,
+          "reasoning": "r"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-re-ask-then-usable",
+      "description": "A value of the wrong type triggers one re-ask; a usable second reply is the result.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": [
+          "{\"value\":\"2\",\"reasoning\":\"r\"}",
+          "{\"value\":2,\"reasoning\":\"second\"}"
+        ]
+      },
+      "expect": {
+        "value": {
+          "value": 2,
+          "reasoning": "second"
+        }
+      }
+    },
+    {
+      "id": "judge-reply-extract-two-unusable",
+      "description": "Two unusable replies are a retryable infra error.",
+      "input": {
+        "ask": "extract",
+        "type": "number",
+        "replies": ["two", "{\"value\":\"2\",\"reasoning\":\"r\"}"]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    }
+  ]
+}

@@ -280,5 +280,9 @@ make conformance   # needs Docker and the judge provider's key; makes real judge
 
 `make conformance CONFORMANCE_SUITES=extract` (or `coherent`) runs one suite. Its fixtures
 (`e2e/ext/fixtures/coherent-conformance.json`,
-`e2e/ext/fixtures/extract-conformance.json`) and its dry `payloads` mode, which prints every assembled user message without calling a
-provider, are the reference for anyone writing another shell.
+`e2e/ext/fixtures/extract-conformance.json`), its dry `payloads` mode, which prints every assembled user message without calling a
+provider, and its dry `request <suite> <case index>` mode, which prints the
+HTTP request (URL, headers, JSON body) it would send for one case, are the
+reference for anyone writing another shell. `make spec-goldens-check` proves
+the TypeScript port builds the same payloads and request envelopes (see
+[`spec/README.md`](../spec/README.md)).

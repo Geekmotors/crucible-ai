@@ -14,50 +14,7 @@ import { TestModel } from './test/test-model.enum.js';
 const REPLY = ChatAdapterHarness.rawJudgeReply;
 const UNSERIALIZABLE_META = { big: BigInt(1) as unknown as string };
 
-describe('OpenAiCompatibleProvider key source', () => {
-  it('judges through <baseUrl>/chat/completions with the key from the named variable', async () => {
-    const adapter = new CompatibleProviderHarness(
-      FakeFetchBoundary.serving(EndpointUrl.Gateway, ApiKey.Valid, REPLY),
-      new FakeEnvironment({ [KeyEnv.Gateway]: ApiKey.Valid, [KeyEnv.Default]: ApiKey.Other }),
-    ).create({ baseUrl: BaseUrl.Gateway, apiKeyEnv: KeyEnv.Gateway });
-    await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(REPLY);
-  });
-
-  it('sends the key from CRUCIBLE_JUDGE_KEY when no variable is named', async () => {
-    const adapter = new CompatibleProviderHarness(
-      FakeFetchBoundary.serving(EndpointUrl.Gateway, ApiKey.Valid, REPLY),
-      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
-    ).create({ baseUrl: BaseUrl.Gateway });
-    await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(REPLY);
-  });
-
-  it.each([
-    {},
-    { [KeyEnv.Default]: ApiKey.Empty },
-    { [KeyEnv.Default]: ApiKey.Blank },
-    { [KeyEnv.LegacyOpenAi]: ApiKey.Valid },
-  ])(
-    'sends no credentials when no variable is named and CRUCIBLE_JUDGE_KEY is unset or blank (%p)',
-    async (variables) => {
-      const adapter = new CompatibleProviderHarness(
-        FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, REPLY),
-        new FakeEnvironment(variables),
-      ).create({ baseUrl: BaseUrl.Local });
-      await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(REPLY);
-    },
-  );
-
-  it.each([{}, { [KeyEnv.Gateway]: ApiKey.Empty }, { [KeyEnv.Default]: ApiKey.Valid }])(
-    'fails as config when the named key variable is unset or empty (%p)',
-    async (variables) => {
-      const adapter = new CompatibleProviderHarness(
-        FakeFetchBoundary.serving(EndpointUrl.Gateway, ApiKey.Valid, REPLY),
-        new FakeEnvironment(variables),
-      ).create({ baseUrl: BaseUrl.Gateway, apiKeyEnv: KeyEnv.Gateway });
-      expect(await ChatAdapterHarness.failureKind(adapter)).toBe('config');
-    },
-  );
-
+describe('OpenAiCompatibleProvider', () => {
   it('cannot be created without a base URL', () => {
     const harness = new CompatibleProviderHarness(
       FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, REPLY),
@@ -101,18 +58,6 @@ describe('OpenAiCompatibleProvider plain-http warning', () => {
     expect(harness.warnings.lines).toHaveLength(1);
   });
 
-  it.each([BaseUrl.LoopbackLookalikeAddress, BaseUrl.LoopbackLookalikeName])(
-    'warns for %s, a remote host that only looks local',
-    async (baseUrl) => {
-      const harness = new CompatibleProviderHarness(
-        FakeFetchBoundary.respondingWith(200, FakeFetchBoundary.successEnvelope(REPLY)),
-        new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
-      );
-      await ChatAdapterHarness.complete(harness.create({ baseUrl }));
-      expect(harness.warnings.lines).toHaveLength(1);
-    },
-  );
-
   it('does not warn when the request is never sent', async () => {
     const harness = new CompatibleProviderHarness(
       FakeFetchBoundary.serving(EndpointUrl.PlainHttpGateway, ApiKey.Valid, REPLY),
@@ -128,40 +73,6 @@ describe('OpenAiCompatibleProvider plain-http warning', () => {
         new AbortController().signal,
       ),
     );
-    expect(harness.warnings.lines).toHaveLength(0);
-  });
-
-  it('still makes the call over plain http', async () => {
-    const adapter = new CompatibleProviderHarness(
-      FakeFetchBoundary.serving(EndpointUrl.PlainHttpGateway, ApiKey.Valid, REPLY),
-      new FakeEnvironment({ [KeyEnv.Gateway]: ApiKey.Valid }),
-    ).create({ baseUrl: BaseUrl.PlainHttpGateway, apiKeyEnv: KeyEnv.Gateway });
-    await expect(ChatAdapterHarness.complete(adapter)).resolves.toBe(REPLY);
-  });
-
-  it.each([
-    BaseUrl.Local,
-    BaseUrl.LoopbackIpv4,
-    BaseUrl.LoopbackIpv4Range,
-    BaseUrl.LoopbackIpv6,
-    BaseUrl.LoopbackIpv6Expanded,
-    BaseUrl.LoopbackIpv4Shorthand,
-    BaseUrl.LoopbackUppercase,
-    BaseUrl.Gateway,
-  ])('does not warn when the key goes to %s', async (baseUrl) => {
-    const harness = new CompatibleProviderHarness(
-      FakeFetchBoundary.respondingWith(200, FakeFetchBoundary.successEnvelope(REPLY)),
-      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
-    );
-    await ChatAdapterHarness.complete(harness.create({ baseUrl }));
-    expect(harness.warnings.lines).toHaveLength(0);
-  });
-
-  it('does not warn when no key is sent over plain http', async () => {
-    const harness = new CompatibleProviderHarness(
-      FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.PlainHttpGateway, REPLY),
-    );
-    await ChatAdapterHarness.complete(harness.create({ baseUrl: BaseUrl.PlainHttpGateway }));
     expect(harness.warnings.lines).toHaveLength(0);
   });
 });
