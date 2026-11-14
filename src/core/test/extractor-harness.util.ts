@@ -3,7 +3,7 @@ import { Extractor } from '../extractor.js';
 import type { ExtractedValue, ExtractOptions } from '../extract-type.js';
 import type { Deadline } from '../judge-exchange.js';
 import { RunScope } from '../state.js';
-import type { RunContext } from '../state.js';
+import type { RunLedger } from '../state.js';
 import { TraceReporter } from '../trace-reporter.js';
 import { Capture } from './capture.util.js';
 import { ExtractTarget } from './extract-target.enum.js';
@@ -70,7 +70,7 @@ class ExtractorHarness {
     );
   }
 
-  static async recordedContext(replies: string[], options?: ExtractOptions): Promise<RunContext> {
+  static async recordedContext(replies: string[], options?: ExtractOptions): Promise<RunLedger> {
     const scope = new RunScope();
     const extractor = ExtractorHarness.extractor(ExtractorHarness.scripted(replies), scope);
     return scope.enterRun(async () => {
@@ -93,7 +93,7 @@ class ExtractorHarness {
     );
   }
 
-  static async leaningContext(options?: ExtractOptions, strictRun?: boolean): Promise<RunContext> {
+  static async leaningContext(options?: ExtractOptions, strictRun?: boolean): Promise<RunLedger> {
     const scope = new RunScope();
     const extractor = ExtractorHarness.extractor(new ModeAwareJudge(), scope);
     return scope.enterRun(

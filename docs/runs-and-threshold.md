@@ -541,6 +541,32 @@ argument, the `testTimeout` option or an enclosing `crucible.describe`'s
 test timeout `testDefaults` will supply without loading the config, so the
 backstop must not undercut it.
 
+#### Gate timeouts
+
+[`crucible.gate()`](api.md#cruciblegate) resolves and enforces the same
+`testTimeout` as `crucible.it()` — the gate's own options, an enclosing
+`crucible.describe`, `testDefaults`, then
+`30000 + 1000 × (runs − 1)` — and reports an `errored` verdict when it
+passes. What it cannot do is set the runner's timeout: the runner's `it`
+owns that, and Jest's default is 5 s. Pass the runner a timeout at least as
+large as the gate's `testTimeout`, with a margin:
+
+```ts
+it(
+  'answers within the policy',
+  crucible.gate({ runs: 10, testTimeout: 60000 }, async (t) => {
+    const reply = await sut('Can I export my report?');
+    expect(await t.coherent(reply, 'The reply follows the export policy')).toBe(true);
+  }),
+  65000,
+);
+```
+
+If the runner's timeout is shorter than the gate's, the runner fails the
+test first with its own timeout message and no Crucible report, and runs
+still in flight are not aborted. If it is longer, the gate's deadline wins
+and you get the usual errored verdict and report.
+
 ### Re-entrancy contract
 
 Runs execute concurrently and share nothing, which is only safe if your body

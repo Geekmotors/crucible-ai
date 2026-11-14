@@ -11,7 +11,7 @@ import type {
   VerdictSummary,
 } from './run-result.js';
 import type { RunGate } from './run-options.js';
-import type { ErrorRecord, ExtractionRecord, RunContext, VerdictRecord } from './state.js';
+import type { ErrorRecord, ExtractionRecord, RunLedger, VerdictRecord } from './state.js';
 
 type FirstFailure =
   | {
@@ -190,7 +190,7 @@ class Reporter {
     ].join('\n');
   }
 
-  private judgeCalls(context: RunContext): JudgeCall[] {
+  private judgeCalls(context: RunLedger): JudgeCall[] {
     return [
       ...context.verdicts.map((record) => ({ kind: 'verdict' as const, record })),
       ...context.extractions.map((record) => ({ kind: 'extraction' as const, record })),
@@ -285,7 +285,7 @@ class Reporter {
     ].join('\n');
   }
 
-  private extractionFields(context: RunContext): string[] {
+  private extractionFields(context: RunLedger): string[] {
     const extractions = [...context.extractions].sort((left, right) => left.seq - right.seq);
     return extractions.map((record, index) =>
       this.extractionLines(
@@ -350,7 +350,7 @@ class Reporter {
     return lines.join('\n');
   }
 
-  private firstFailure(context: RunContext): FirstFailure {
+  private firstFailure(context: RunLedger): FirstFailure {
     const judged = [...context.verdicts].sort((left, right) => left.seq - right.seq);
     const index = judged.findIndex((record) => !record.verdict);
     const error = this.lowestSeqError(context);
@@ -364,7 +364,7 @@ class Reporter {
     return { kind: 'none' };
   }
 
-  private lowestSeqError(context: RunContext): ErrorRecord | undefined {
+  private lowestSeqError(context: RunLedger): ErrorRecord | undefined {
     return context.errors.reduce<ErrorRecord | undefined>(
       (lowest, record) => (lowest === undefined || record.seq < lowest.seq ? record : lowest),
       undefined,

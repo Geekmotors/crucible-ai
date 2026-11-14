@@ -99,8 +99,8 @@ development_status:
   epic-6-retrospective: optional
 
   # Epic 7: The gate, a generic runner wrapper and Vitest
-  epic-7: backlog
-  7-1-gate-and-run-context: backlog
+  epic-7: in-progress
+  7-1-gate-and-run-context: done
   7-2-generic-runner-wrapper: backlog
   7-3-vitest-adapter: backlog
   epic-7-retrospective: optional

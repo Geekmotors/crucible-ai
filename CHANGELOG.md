@@ -113,6 +113,26 @@ contain breaking changes, and they are marked **Breaking** below.
   with that call only, after the run's facts. They are not added to the run,
   so later calls do not see them. `facts` must be a string or an array of
   strings, else a `usage` error. The `CoherentOptions` type is exported.
+- `crucible.gate(body)` and `crucible.gate(options, body)` return a test
+  function for your runner's own `it` or `test`, every variant included
+  (`it.only`, `it.skip`, `it.each`):
+  `it(name, crucible.gate({ runs: 5 }, async (t, ...row) => { ... }), 60000)`.
+  The gate runs the body `runs` times concurrently, gates on `threshold`
+  and throws the same verdict errors and report as `crucible.it()`; runner
+  arguments (such as `it.each` row values) follow `t`. Options resolve as for
+  `crucible.it()` (built-in, `testDefaults`, enclosing `crucible.describe`,
+  the gate's own) and are validated when `crucible.gate()` is called. The
+  gate enforces its own test deadline but cannot set the runner's timeout:
+  pass the runner one at least as large.
+- A run context `t` for every run: `crucible.it()` and `crucible.gate()`
+  bodies receive it as their first argument (`async (t) => ...`), with
+  `t.facts()`, `t.coherent()` and `t.extract()` behaving like the
+  `crucible.*` functions, bound to that run. `t` and the global functions
+  share one run state; `t` keeps working from callbacks that lost the async
+  context and is a `usage` error after its run ends. Bodies without
+  parameters keep working. New exported types: `RunContext`, `GateBody`,
+  `GatedTest`; `TestBody` is now `(t: RunContext) => unknown`, so code that
+  calls a `TestBody` itself must pass it a run context.
 
 ### Deprecated
 

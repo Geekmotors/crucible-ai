@@ -1,19 +1,19 @@
 import { CrucibleError } from '../core/errors.js';
-import { GroupSettings } from '../core/group-settings.js';
+import type { Gate, GatedTest } from '../core/gate.js';
 import type { GroupBody } from '../core/group-settings.js';
-import { Runner } from '../core/runner.js';
+import type { RunAssertions } from '../core/run-assertions.js';
 import { RunOptionsResolver } from '../core/run-options-resolver.util.js';
 import type { RunOptions } from '../core/run-options.js';
 
-type TestBody = () => unknown;
-type Registrar = (name: string, fn: () => Promise<void>, timeout?: number) => void;
+type TestBody = (t: RunAssertions) => unknown;
+type Registrar = (name: string, fn: GatedTest, timeout?: number) => void;
 type GroupRegistrar = (name: string, fn: () => void) => void;
 type Declaration = { readonly opts: RunOptions; readonly body: TestBody };
 
 class JestBinding {
   private readonly resolver: RunOptionsResolver = new RunOptionsResolver();
 
-  private static lazyJestRegistrar(name: string, fn: () => Promise<void>, timeout?: number): void {
+  private static lazyJestRegistrar(name: string, fn: GatedTest, timeout?: number): void {
     const registrar = (globalThis as { it?: Registrar }).it;
     if (typeof registrar !== 'function') {
       throw new CrucibleError(
@@ -38,10 +38,9 @@ class JestBinding {
   }
 
   constructor(
-    private readonly runner: Runner,
+    private readonly gate: Gate,
     private readonly registrar: Registrar = JestBinding.lazyJestRegistrar,
     private readonly groupRegistrar: GroupRegistrar = JestBinding.lazyJestGroupRegistrar,
-    private readonly groups: GroupSettings = new GroupSettings(),
   ) {}
 
   group(
@@ -52,11 +51,11 @@ class JestBinding {
   ): void {
     if (typeof optsOrBody === 'function') {
       JestBinding.requireCallbackLast(body);
-      this.groupRegistrar(name, this.groups.declare({}, optsOrBody));
+      this.groupRegistrar(name, this.gate.group({}, optsOrBody));
       return;
     }
     JestBinding.requireCallbackLast(surplus[0]);
-    this.groupRegistrar(name, this.groups.declare(optsOrBody, body));
+    this.groupRegistrar(name, this.gate.group(optsOrBody, body));
   }
 
   private static requireCallbackLast(surplus: unknown): void {
@@ -74,10 +73,9 @@ class JestBinding {
     bodyOrTimeout?: TestBody | number,
     timeout?: number,
   ): void {
-    const declaration = this.normalize(optsOrBody, bodyOrTimeout, timeout);
-    const opts = this.groups.inherit(declaration.opts);
-    const { body } = declaration;
-    this.registrar(name, () => this.runner.execute(body, opts), this.runner.ceilingFor(opts));
+    const { opts, body } = this.normalize(optsOrBody, bodyOrTimeout, timeout);
+    const declared = this.gate.declare(opts, body);
+    this.registrar(name, declared.test, declared.timeout);
   }
 
   private normalize(

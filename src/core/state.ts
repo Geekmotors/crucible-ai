@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
 import type { ExtractedValue, ExtractMode, ExtractType } from './extract-type.js';
 import { FactList } from './fact-list.util.js';
+import { RunHandle } from './run-handle.js';
 import { TimeBudget } from './time-budget.util.js';
 
 type JudgedRecord = {
@@ -30,7 +31,7 @@ type ErrorRecord = {
   readonly seq: number;
 };
 
-type RunContext = {
+type RunLedger = {
   readonly state: string[];
   readonly verdicts: VerdictRecord[];
   readonly extractions: ExtractionRecord[];
@@ -38,7 +39,7 @@ type RunContext = {
 };
 
 type RunStore = {
-  readonly context: RunContext;
+  readonly context: RunLedger;
   readonly signal: AbortSignal;
   readonly run?: number;
   readonly inferenceTimeout: number;
@@ -70,11 +71,15 @@ class RunScope {
     );
   }
 
+  handle(): RunHandle {
+    return new RunHandle(this.store(), this.storage);
+  }
+
   runNumber(): number | undefined {
     return this.storage.getStore()?.run;
   }
 
-  context(): RunContext {
+  context(): RunLedger {
     return this.store().context;
   }
 
@@ -129,7 +134,7 @@ class RunScope {
     if (store === undefined) {
       throw new CrucibleError(
         'usage',
-        'This crucible call only works inside a running crucible.it test body.',
+        'This crucible call only works inside a running crucible.it or crucible.gate test body.',
       );
     }
     return store;
@@ -139,4 +144,4 @@ class RunScope {
 const runScope = new RunScope();
 
 export { RunScope, runScope };
-export type { ErrorRecord, ExtractionRecord, JudgedRecord, RunContext, VerdictRecord };
+export type { ErrorRecord, ExtractionRecord, JudgedRecord, RunLedger, RunStore, VerdictRecord };

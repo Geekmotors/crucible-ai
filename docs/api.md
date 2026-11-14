@@ -10,18 +10,25 @@ import type {
   ExtractedValue,
   ExtractOptions,
   ExtractType,
+  GateBody,
+  GatedTest,
+  RunContext,
   RunOptions,
   TestBody,
   VerdictOutcome,
 } from 'crucible-ai';
 ```
 
-`crucible` is a frozen object with five functions: [`it`](#crucibleit),
-[`describe`](#crucibledescribe), [`coherent`](#cruciblecoherent), [`extract`](#crucibleextract)
+`crucible` is a frozen object with six functions: [`it`](#crucibleit),
+[`describe`](#crucibledescribe), [`gate`](#cruciblegate),
+[`coherent`](#cruciblecoherent), [`extract`](#crucibleextract)
 and [`facts`](#cruciblefacts), plus two deprecated aliases of `facts`,
-[`load` and `append`](#crucibleload-and-crucibleappend-deprecated). There are no `crucible.it.only`,
-`.skip` or `.each` variants; to skip inference tests, wrap them in Jest's
-`describe.skip`.
+[`load` and `append`](#crucibleload-and-crucibleappend-deprecated). Each run
+of a test body also gets a [run context `t`](#the-run-context-t) with
+`facts`, `coherent` and `extract` bound to that run — the recommended style.
+There are no `crucible.it.only`, `.skip` or `.each` variants; to focus, skip
+or parameterise inference tests, use your runner's own `it` variants with
+[`crucible.gate()`](#cruciblegate), or wrap them in Jest's `describe.skip`.
 
 ## `crucible.it()`
 
@@ -33,7 +40,9 @@ crucible.it(name, { runs, threshold }, body, timeout);
 ```
 
 Registers one Jest test that executes `body` `runs` times concurrently and
-passes when at least `threshold` of the runs pass. `runs` (integer ≥ 1) and
+passes when at least `threshold` of the runs pass. Each run calls `body` with
+its own [run context `t`](#the-run-context-t) (`async (t) => { ... }`); a
+body that takes no argument works too. `runs` (integer ≥ 1) and
 `threshold` (number in (0, 1]) default to the config's `testDefaults`, then to
 `10` and `0.9`: with no options, the body runs 10 times and 9 runs must pass.
 Each run calls your system under test and the judge, so an unconfigured test
@@ -138,6 +147,108 @@ or inside a group: wrap a group in `describe.skip` to skip it, in
 `describe.only` to focus it, or in `describe.each` to repeat it per case;
 inheritance holds in every case.
 
+## `crucible.gate()`
+
+```ts
+it(name, crucible.gate(body), timeout);
+it(name, crucible.gate({ runs, threshold, inferenceTimeout, testTimeout, strict }, body), timeout);
+it.each(table)(name, crucible.gate(options, async (t, ...row) => { ... }), timeout);
+```
+
+Wraps `body` into a test function for your runner's own `it` or `test`, any
+variant included (`it.only`, `it.skip`, `it.each`, `test.each`, ...). When
+the runner calls it, the gate does everything `crucible.it()` does: it runs
+the body `runs` times concurrently, passes when at least `threshold` of the
+runs pass, and throws the same [`CrucibleVerdictError`](#crucibleverdicterror)
+with the same failure report. Each run calls `body` with its own
+[run context `t`](#the-run-context-t), followed by whatever the runner passes
+(the row values of `it.each`, for example):
+
+```ts
+import { crucible } from 'crucible-ai';
+
+it(
+  'declines the PDF export on the free plan',
+  crucible.gate({ runs: 5, threshold: 0.8 }, async (t) => {
+    const assistant = createAssistant({ plan: 'free' });
+    const reply = await assistant.ask('Export my report as PDF.');
+    t.facts(assistant.getLogs());
+    expect(await t.coherent(reply, 'The reply declines the export')).toBe(true);
+  }),
+  60_000,
+);
+
+it.each([
+  ['free', false],
+  ['pro', true],
+])(
+  'answers whether the %s plan can export',
+  crucible.gate({ runs: 5, threshold: 0.8 }, async (t, plan: string, allowed: boolean) => {
+    const reply = await createAssistant({ plan }).ask('Can I export as PDF?');
+    expect(await t.extract(reply, 'whether exporting is allowed', { as: 'boolean' })).toBe(
+      allowed,
+    );
+  }),
+  60_000,
+);
+```
+
+- **Options** resolve exactly as for `crucible.it()`, each field on its own,
+  last wins: built-in default, the config's `testDefaults` (read when the
+  test runs), the enclosing [`crucible.describe`](#crucibledescribe) groups
+  (captured when `crucible.gate()` is called, which happens while the file is
+  collected), then the gate's own options. Invalid options, a missing body,
+  two bodies or an argument after the body throw a `usage` error when
+  `crucible.gate()` is called.
+- **Timeouts.** The gate enforces its own `testTimeout` (default
+  `30000 + 1000 × (runs − 1)`) and reports an `errored` verdict when it
+  passes, as `crucible.it()` does. It cannot set the runner's timeout: pass
+  the runner one at least as large (Jest's third argument; Jest's default is
+  5 s, far below the gate's 39 s for 10 runs). If the runner's timeout is
+  shorter, the runner fails the test first, without Crucible's report. See
+  [Timeout](runs-and-threshold.md#timeout).
+- **Arity.** The returned function declares no parameters, so Jest never
+  treats it as a `done`-callback test; it forwards every argument the runner
+  passes to `body`, after `t`.
+- **Typing.** Annotate row parameters to type them
+  (`async (t, plan: string, allowed: boolean) => ...`); the returned function
+  then takes exactly those arguments, which is what `it.each` expects.
+  Unannotated rest parameters (`async (t, ...row) => ...`) take the row
+  types of the `it.each` table the gate is passed to, else `unknown[]`.
+  A gate whose body takes row parameters passed to a plain `it` is a compile
+  error.
+
+## The run context `t`
+
+```ts
+type RunContext = {
+  facts(fact: string | readonly string[]): void;
+  coherent(actual: string, expectation: string, options?: CoherentOptions): Promise<boolean>;
+  extract(text: string, description: string, options?: ExtractOptions): Promise<ExtractedValue>;
+};
+```
+
+Every run of a `crucible.it()` or `crucible.gate()` body receives its own
+`t` as the first argument. `t.facts()`, `t.coherent()` and `t.extract()`
+take the same arguments, validate them the same way and return the same
+results as [`crucible.facts()`](#cruciblefacts),
+[`crucible.coherent()`](#cruciblecoherent) and
+[`crucible.extract()`](#crucibleextract) (including the `as` typing of
+`extract`), bound to that run:
+
+- **Visible scope.** `t` makes it obvious which run a fact or judgement
+  belongs to. It is the recommended style; the global functions keep
+  working.
+- **One run state.** Inside a run, `t` and the global functions share the
+  same facts and records: facts added through either are seen by both.
+- **Works after a lost async context.** `t` holds its run, so it works from
+  callbacks that lost Node's async context (some event emitters, custom
+  schedulers, native callbacks), where the global functions throw a `usage`
+  error.
+- **Ends with its run.** Once its run has passed, failed, errored or been
+  discarded (the test deadline or a fatal error), any `t` call is a `usage`
+  error: `t.facts()` throws, `t.coherent()` and `t.extract()` reject.
+
 ## `crucible.coherent()`
 
 ```ts
@@ -205,7 +316,7 @@ expect(await crucible.coherent(reply, 'The reply declines to share the meeting p
 - **Errors.** A non-string `actual` or `expectation`, a third argument that
   is not a plain object, an option other than `facts`, or `facts` that are not a
   string or an array of strings throws a `usage` error;
-  calling it outside a running `crucible.it()` body throws a `usage` error. A
+  calling it outside a running `crucible.it()` or `crucible.gate()` body throws a `usage` error. A
   missing provider key (`CRUCIBLE_JUDGE_KEY`, or the variable `apiKeyEnv`
   names; optional for `openai-compatible` without `apiKeyEnv`) throws a
   `config` error. Provider failures
@@ -283,7 +394,7 @@ may be absent, the result widens to every type it could be.)
   `strict` that is not a boolean, `facts` that are not a string or an array
   of strings, or an option other than `as`, `strict` and `facts` throws a
   `usage` error; so does calling it outside a running
-  `crucible.it()` body.
+  `crucible.it()` or `crucible.gate()` body.
   A judge reply whose value is not `null` or of the requested type (a number
   must be finite) is asked once more, then becomes a retryable `infra` error —
   the run is *errored*, not *failed*. Provider failures behave as for
@@ -310,9 +421,9 @@ section ([what the judge receives](instruction-schema.md#what-the-judge-receives
 - **Scoped to the current run, not global.** `crucible` is a module import,
   but its facts are not shared: each run of each test starts with none and
   keeps its own, even when runs execute concurrently, and other tests never
-  see them. Calling `crucible.facts()` outside a running `crucible.it()`
-  body — at module scope, in `beforeEach`, in a plain Jest `it` — throws a
-  `usage` error.
+  see them. Calling `crucible.facts()` outside a running `crucible.it()` or
+  `crucible.gate()` body — at module scope, in `beforeEach`, in a plain Jest
+  `it` without the gate — throws a `usage` error.
 - **Append-only.** Every call adds; nothing is ever replaced or removed
   within a run. Add facts while arranging, and again as new ones arise after
   an act.
@@ -367,7 +478,7 @@ change.
 
 ### `CrucibleVerdictError`
 
-Thrown by a `crucible.it()` test that did not pass. Its `message` is the
+Thrown by a `crucible.it()` or `crucible.gate()` test that did not pass. Its `message` is the
 [failure report](runs-and-threshold.md#reading-the-failure-report).
 
 | Property | Type | Meaning |
@@ -380,7 +491,10 @@ Thrown by a `crucible.it()` test that did not pass. Its `message` is the
 | Type | Meaning |
 | --- | --- |
 | `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number; strict?: boolean }` |
-| `TestBody` | `() => unknown` — the body passed to `crucible.it()`, usually `async` |
+| `TestBody` | `(t: RunContext) => unknown` — the body passed to `crucible.it()`, usually `async`; a body without parameters fits too |
+| `RunContext` | `{ facts, coherent, extract }` — the [run context `t`](#the-run-context-t) each run receives |
+| `GateBody<A>` | `(t: RunContext, ...args: A) => unknown` — the body passed to `crucible.gate()` |
+| `GatedTest<A>` | `(...args: A) => Promise<void>` — what `crucible.gate()` returns, for the runner's `it` |
 | `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
 | `CoherentOptions` | `{ facts?: string \| readonly string[] }` — the third argument of `crucible.coherent()` |
 | `ExtractOptions` | `{ as?: ExtractType; strict?: boolean; facts?: string \| readonly string[] }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |

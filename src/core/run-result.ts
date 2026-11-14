@@ -1,12 +1,12 @@
 import type { RunGate } from './run-options.js';
-import type { RunContext } from './state.js';
+import type { RunLedger } from './state.js';
 
 type RunStatus = 'passed' | 'failed' | 'errored' | 'discarded';
 
 type RunResult = {
   readonly status: RunStatus;
   readonly cause?: unknown;
-  readonly context: RunContext;
+  readonly context: RunLedger;
 };
 
 type VerdictZone = 'pass' | 'fail' | 'errored';
