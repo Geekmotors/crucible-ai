@@ -152,6 +152,27 @@ contain breaking changes, and they are marked **Breaking** below.
   Jest variant Crucible does not wrap or a variant in the wrong place
   (`crucible.it.each.only`); any other property, such as `then`, is
   `undefined`. New exported types: `CrucibleIt`, `CrucibleDescribe`.
+- Vitest support: `import { crucible } from 'crucible-ai/vitest'` gives the
+  same API on Vitest 5, without Vitest's `globals` option. `crucible.it`
+  adds Vitest's `for`, `skipIf` and `runIf` (and `only.for`, `skip.for`);
+  `crucible.describe` adds `todo`, `for`, `skipIf` and `runIf`. Bodies
+  receive `t` only (Vitest's test context is dropped); `crucible.it.for`
+  bodies receive `(t, row)`. `fails`, `concurrent`, and
+  `describe.concurrent`, `.shuffle` and `.sequential` are a `usage` error.
+  Group settings reach tests inside nested groups and plain Vitest
+  `describe` blocks, although Vitest collects group callbacks later; group
+  callbacks must stay synchronous, as on Jest. Crucible tests and groups
+  opt out of Vitest's inherited `concurrent` and `shuffle`, so a plain
+  `describe.concurrent` or `sequence.concurrent` around them never overlaps
+  their deadlines; a Vitest whose suite chain Crucible cannot read fails
+  each `crucible.describe` with a `usage` error instead of dropping its
+  settings. `skipIf` and `runIf` return a plain registrar (no `.each` or
+  `.for` after them). On a plain Vitest `test`, a
+  `crucible.gate()` body receives `(t, context)`. The root entry is
+  unchanged and stays the Jest one.
+- `jest` is now an optional peer dependency, next to the new optional
+  `vitest` peer (`^5.1.0`): install the runner you use. Nothing changes for
+  Jest users.
 
 ### Deprecated
 

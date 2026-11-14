@@ -23,6 +23,7 @@ protect you from.
 
 - [Every test has a deadline; Jest's global `testTimeout` does not change it](#every-test-has-a-deadline-jests-global-testtimeout-does-not-change-it)
 - [Fake timers stop Crucible's clock](#fake-timers-stop-crucibles-clock)
+- [Vitest watch mode re-runs, and re-spends, on every save](#vitest-watch-mode-re-runs-and-re-spends-on-every-save)
 
 **Secrets, data and spend**
 
@@ -35,6 +36,8 @@ protect you from.
 **Environment**
 
 - [Jest must inject its globals](#jest-must-inject-its-globals)
+- [On Vitest, import from `crucible-ai/vitest`](#on-vitest-import-from-crucible-aivitest)
+- [On Vitest, bodies do not get the test context](#on-vitest-bodies-do-not-get-the-test-context)
 - [The config is read from the working directory](#the-config-is-read-from-the-working-directory)
 - [Behind a TLS-intercepting proxy, judge calls error](#behind-a-tls-intercepting-proxy-judge-calls-error)
 
@@ -263,6 +266,14 @@ Keep fake timers out of files that declare `crucible.it()` tests (call
 `jest.useRealTimers()` at the top of such a file if fake timers are enabled
 globally), or switch to fake timers only inside a plain Jest test.
 
+## Vitest watch mode re-runs, and re-spends, on every save
+
+`vitest` without `run` starts in watch mode and re-runs the affected test
+files whenever you save. Every re-run of a Crucible test makes its judge
+calls again (10 per assertion with the built-in defaults). Use
+`vitest run` for Crucible suites, or keep them out of the watched set (a
+separate Vitest project or `--exclude`) while you work on other code.
+
 ## Never put an API key in `meta`
 
 The config file rejects top-level fields named like secrets (`apiKey`,
@@ -326,10 +337,36 @@ calls, but calls your system under test makes in discarded runs keep running
 setting is not supported in v1; keep the default (`true`) for test files that
 use Crucible. Importing `expect` from `@jest/globals` is fine.
 
+## On Vitest, import from `crucible-ai/vitest`
+
+The root `crucible-ai` entry registers tests through Jest's global `it`.
+Under Vitest (whose globals are off by default) that is a `usage` error, and
+with `globals: true` it would register through Vitest's global without the
+Vitest-specific handling. Import `crucible` from `crucible-ai/vitest` in
+every Vitest test file, and never mix the two entries: each has its own
+group settings, so a `crucible.describe` from one does not reach a
+`crucible.it` from the other. The same holds when a project loads both the
+ESM and the CommonJS build of one entry.
+
+`crucible-ai/vitest` ships a CommonJS build and `.d.cts` types so
+TypeScript projects in CommonJS mode type-check, but like Vitest itself it
+only loads through `import`: Vitest's test files always do, while a plain
+`require('crucible-ai/vitest')` throws Vitest's own "cannot be imported in a
+CommonJS module" error.
+
+## On Vitest, bodies do not get the test context
+
+Vitest passes its test context (`expect`, `task`, `skip`, fixtures) as the
+first argument of a test function. `crucible.it` bodies receive the run
+context `t` instead, and nothing else (`crucible.it.for` bodies get
+`(t, row)`), so fixtures from `test.extend` do not reach them; import
+`expect` from `vitest`. On Vitest's own `test` with `crucible.gate()`, the
+body receives the context after `t`: `async (t, context) => { ... }`.
+
 ## The config is read from the working directory
 
 Crucible looks for `crucible.config.json` or `crucible.config.jsonc` (exactly
-one of them) in the directory the Jest process runs in — not next to the test
+one of them) in the directory the Jest or Vitest process runs in — not next to the test
 file, not in a parent directory. If tests fail
 with a `config` error saying the file cannot be found, check where Jest was
 started (monorepo workspace scripts often start it in a package directory).

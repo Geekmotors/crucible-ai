@@ -15,8 +15,8 @@ can trust in CI. It assumes a Node project that already runs Jest tests.
 
 ## 1. Install
 
-Requirements: Node.js 22 or newer, Jest 30 (a peer dependency — Crucible uses
-the Jest you already have), and access to a judge model: an
+Requirements: Node.js 22 or newer (22.12 or newer for Vitest 5), Jest 30 or Vitest 5 (optional peer
+dependencies — Crucible uses the runner you already have), and access to a judge model: an
 [OpenRouter](https://openrouter.ai) account with credit (the default), an
 OpenAI API key, or any OpenAI-compatible endpoint — Azure OpenAI, a LiteLLM
 gateway, a local server such as Ollama. Hosted judge calls are paid model
@@ -31,6 +31,20 @@ definitions, so it works with whichever module setup your Jest already uses
 (for TypeScript tests, typically `ts-jest`). Crucible registers tests through
 Jest's global `it`, so keep Jest's default `injectGlobals: true` (see
 [gotchas](gotchas.md#jest-must-inject-its-globals)).
+
+**On Vitest**, import from `crucible-ai/vitest` instead of `crucible-ai`
+everywhere in this guide, and take `expect` from `vitest`:
+
+```ts
+import { expect } from 'vitest';
+import { crucible } from 'crucible-ai/vitest';
+```
+
+The API is the same; it registers tests through Vitest's own `test` and
+`describe`, so Vitest's `globals` option is not needed. Run `npx vitest run`
+where this guide says `npx jest`. The few differences (Vitest's `for`,
+`skipIf` and `runIf`, the test context, blocked modifiers, watch mode) are in
+[the API reference](api.md#vitest).
 
 ## 2. Choose the right assertion first
 

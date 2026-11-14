@@ -67,3 +67,7 @@ jobs:
         env:
           CRUCIBLE_JUDGE_KEY: ${{ secrets.CRUCIBLE_JUDGE_KEY }}
         run: make e2e-core
+      - name: make e2e-vitest
+        env:
+          CRUCIBLE_JUDGE_KEY: ${{ secrets.CRUCIBLE_JUDGE_KEY }}
+        run: make e2e-vitest

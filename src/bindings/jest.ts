@@ -1,3 +1,4 @@
+import { BlockedReason } from '../core/blocked-reason.enum.js';
 import { CrucibleError } from '../core/errors.js';
 import type { GatedTest } from '../core/gate.js';
 import type { GroupCallback } from '../core/group-settings.js';
@@ -23,12 +24,8 @@ class JestBinding {
     variants: { only: JestBinding.FOCUS, skip: JestBinding.FOCUS, each: JestBinding.TABLE },
   };
   private static readonly BLOCKED: Readonly<Record<string, string>> = {
-    failing:
-      'a pass-rate gate passes when enough runs pass, so an inverted outcome is ambiguous; ' +
-      'assert the expected failure inside the body instead.',
-    concurrent:
-      'the runs of a Crucible test already execute concurrently under one test deadline; ' +
-      'running tests concurrently as well would share that budget unpredictably.',
+    failing: BlockedReason.InvertedOutcome,
+    concurrent: BlockedReason.ConcurrentTests,
   };
 
   constructor(private readonly globals: object = globalThis) {}

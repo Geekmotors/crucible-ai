@@ -31,6 +31,9 @@ of a test body also gets a [run context `t`](#the-run-context-t) with
 `crucible.it` and `crucible.describe` also have the runner's
 [variants](#variants-only-skip-todo-each): `only`, `skip`, `todo` and `each`.
 
+On Vitest, import the same names from `crucible-ai/vitest` instead; see
+[Vitest](#vitest) for what differs.
+
 ## `crucible.it()`
 
 ```ts
@@ -218,6 +221,67 @@ awaiting `crucible.it` is harmless.
   already run concurrently under one test deadline; running tests
   concurrently as well would share that time budget and your provider's
   rate limits unpredictably.
+
+## Vitest
+
+`crucible-ai/vitest` exports the same `crucible` object, errors and types as
+the root, built on Vitest's `test` and `describe` (imported from `vitest`, so
+Vitest's `globals` option is not needed). The root `crucible-ai` entry stays
+the Jest one; never mix the two entries in one test file.
+
+```ts
+import { expect } from 'vitest';
+import { crucible } from 'crucible-ai/vitest';
+import type { RunContext } from 'crucible-ai/vitest';
+```
+
+Everything on this page applies, with these differences:
+
+- **Variants.** `crucible.it` has `only`, `skip`, `todo`, `each`, `for`,
+  `skipIf(condition)` and `runIf(condition)`, plus `only.each`, `only.for`,
+  `skip.each` and `skip.for`. `crucible.describe` has the same list, `todo`
+  included. `skipIf` and `runIf` return a registrar taking the usual forms:
+  `crucible.it.skipIf(isCi)(name, { runs: 5 }, async (t) => { ... })`.
+- **`for`.** `crucible.it.for(table)(name, [options,] async (t, row) => { ... },
+  [timeout])` registers one test per row and passes the row whole, never
+  spread: `crucible.it.for([[2, 'two']])('%s', async (t, [n, word]) => ...)`.
+  `crucible.describe.for` passes the row whole to the callback. `each`
+  spreads array rows after `t`, as on Jest.
+- **No test context.** Vitest passes its test context to a test function;
+  `crucible.it` bodies (every variant) receive only `t`, and `for` bodies
+  `(t, row)`. Fixtures from `test.extend` are not available to
+  `crucible.it`. On Vitest's own `test`, a `crucible.gate()` body receives
+  the context after `t`: `test(name, crucible.gate(async (t, context) => { ... }), 60000)`.
+- **Timeouts.** The computed test timeout goes to Vitest as the `timeout`
+  test option, for every variant. Vitest's default
+  test timeout is 5 s, so a plain `test` with `crucible.gate()` needs one
+  passed explicitly, as on Jest.
+- **Groups.** Vitest runs a `describe` callback later, during collection,
+  not when `describe` is called. Group settings still reach every test
+  inside, nested `crucible.describe` and plain Vitest `describe` blocks
+  included. Callbacks must still be synchronous: an `async` callback is a
+  `usage` error on Vitest too, so one test file behaves the same on both
+  runners.
+- **Not supported.** `crucible.it.fails` and `crucible.it.concurrent` (for
+  the reasons given for Jest's `failing` and `concurrent` above), and
+  `crucible.describe.concurrent`, `.shuffle` and `.sequential`: Crucible
+  assumes a group's tests run one after another in declaration order, each
+  under its own deadline with its runs already concurrent; running them
+  concurrently or reordering them would share deadlines and provider rate
+  limits unpredictably. Reading any of them is a `usage` error. Crucible
+  also registers its tests with `concurrent: false` and its groups with
+  `concurrent: false, shuffle: false`, so a surrounding plain
+  `describe.concurrent` or `describe.shuffle`, or `sequence.concurrent` in
+  your Vitest config, never runs Crucible tests concurrently with each other
+  or reorders a group. A plain suite that Vitest runs concurrently can still
+  run alongside another suite; keep Crucible tests out of those.
+- **Unsupported Vitest version.** Group settings follow Vitest's suite
+  chain (`TestRunner.getCurrentSuite()`). If a Vitest version stops exposing
+  it, a `crucible.describe` callback fails with a `usage` error when Vitest
+  collects it, rather than silently running its tests at the defaults.
+- **Watch mode.** `vitest` without `run` watches files and re-runs affected
+  tests on every save. Each re-run makes judge calls; use `vitest run` (or
+  focus with `only`) while you iterate on unrelated code.
 
 ## `crucible.gate()`
 
@@ -567,8 +631,8 @@ Thrown by a `crucible.it()` or `crucible.gate()` test that did not pass. Its `me
 | `RunContext` | `{ facts, coherent, extract }` — the [run context `t`](#the-run-context-t) each run receives |
 | `GateBody<A>` | `(t: RunContext, ...args: A) => unknown` — the body passed to `crucible.gate()` |
 | `GatedTest<A>` | `(...args: A) => Promise<void>` — what `crucible.gate()` returns, for the runner's `it` |
-| `CrucibleIt` | the type of `crucible.it`: its four forms and its `only`, `skip`, `todo`, `each` variants |
-| `CrucibleDescribe` | the type of `crucible.describe`: its two forms and its `only`, `skip`, `each` variants |
+| `CrucibleIt` | the type of `crucible.it`: its four forms and its `only`, `skip`, `todo`, `each` variants (from `crucible-ai/vitest`: also `for`, `skipIf`, `runIf`) |
+| `CrucibleDescribe` | the type of `crucible.describe`: its two forms and its `only`, `skip`, `each` variants (from `crucible-ai/vitest`: also `todo`, `for`, `skipIf`, `runIf`) |
 | `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
 | `CoherentOptions` | `{ facts?: string \| readonly string[] }` — the third argument of `crucible.coherent()` |
 | `ExtractOptions` | `{ as?: ExtractType; strict?: boolean; facts?: string \| readonly string[] }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |

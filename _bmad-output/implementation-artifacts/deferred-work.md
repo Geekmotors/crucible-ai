@@ -379,3 +379,20 @@
 
 - Add `src/core/runner-wrapper.test.ts` with a runner-neutral fake spec (tests beside code); keep `src/bindings/jest.test.ts` as the Jest-spec suite.
 - Move the `failing`/`concurrent` block reasons from the Jest adapter to a core constant so the Vitest spec maps onto the same reasons.
+
+## Deferred from: dev of 7-3-vitest-adapter.md (2026-11-14)
+
+- `crucible.it.skipIf(cond)` / `runIf(cond)` (and the describe ones) return a plain registrar; Vitest's own return value is a full chain (`.only`, `.each`, `.for`). Chaining after a condition is not wrapped (usage error). Evidence: `src/bindings/vitest.ts`.
+- Group inheritance on Vitest relies on `TestRunner.getCurrentSuite()` and the `collector.suite` / `suite.suite` parent links (typed in Vitest's public d.ts, but runner-level API). If a Vitest release changes them, each `crucible.describe` now fails with a `usage` error when collected (code review fix); a change that keeps the links but breaks identity would still be caught only by the e2e group scenario. Evidence: `src/bindings/vitest.ts`, `src/api/crucible-vitest.ts`.
+- Vitest exposes the per-test timeout on the test context, so a one-time warning when the runner's timeout is shorter than the gate's deadline (7.1 decision) is now possible for `crucible.gate` on Vitest. Not done.
+- `test.extend` fixtures are not reachable from `crucible.it` bodies (context dropped by design). A `crucible.it` bound to an extended `test` would need a spec built over that `test`.
+- The CommonJS build of `crucible-ai/vitest` always throws Vitest's own CommonJS error (Vitest's `require` condition is a throwing stub); kept for `.d.cts` types in CommonJS-mode TypeScript projects. Documented in gotchas.
+
+## Deferred from: code review of 7-3-vitest-adapter.md (2026-11-14)
+
+- `crucible.it`/`crucible.describe` from `crucible-ai/vitest` called outside a Vitest run surface Vitest's raw `TypeError` rather than a `CrucibleError('usage')`. Evidence: `src/core/runner-wrapper.ts` registerTest/registerGroup.
+- Crucible tests/groups opt out of inherited `concurrent`/`shuffle`, but a plain suite Vitest runs concurrently (e.g. `sequence.concurrent: true`) can still run alongside another suite holding Crucible tests. Documented in docs/api.md. Evidence: `src/bindings/vitest.ts`.
+- `errorFrom` helper duplicated in four harnesses; candidate for one shared `.util.ts`.
+- Binding tests hand-build expected row names and use inline error literals and run counters (same as `jest.test.ts`).
+- `package-lock.json` carries transitive tsdown/rolldown bumps (`@oxc-project/types`, `@emnapi/*`, sourcemap-codec) unrelated to the story; confirm intended before merge.
+- `VitestBindingHarness` wires `Gate`/`GroupSettings` by hand instead of through `CompositionRoot`.
