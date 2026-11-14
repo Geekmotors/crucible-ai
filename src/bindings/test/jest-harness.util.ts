@@ -2,7 +2,12 @@ import { expect } from '@jest/globals';
 import { CrucibleError } from '../../core/errors.js';
 import type { Runner } from '../../core/runner.js';
 import type { RunOptions } from '../../core/run-options.js';
+import { Gate } from '../../core/gate.js';
+import type { RunAssertions } from '../../core/run-assertions.js';
+import { ScopedAssertions } from '../../core/scoped-assertions.js';
 import { RunScope } from '../../core/state.js';
+import { JudgeHarness } from '../../core/test/judge-harness.util.js';
+import { StateFact } from '../../core/test/state-fact.enum.js';
 import { Capture } from '../../core/test/capture.util.js';
 import { ManualTimer } from '../../core/test/manual-timer.fake.js';
 import { RunnerHarness } from '../../core/test/runner-harness.util.js';
@@ -30,6 +35,7 @@ class JestBindingHarness {
       RunnerHarness.runner(scope, timer, defaults),
       registrar,
       describes,
+      JestBindingHarness.assertions(scope),
     );
   }
 
@@ -46,8 +52,17 @@ class JestBindingHarness {
     runner: Runner,
     registrar: RegistrarFake,
     describes: DescribeRegistrarFake = new DescribeRegistrarFake(),
+    assertions: RunAssertions = JestBindingHarness.assertions(new RunScope()),
   ): JestBinding {
-    return new JestBinding(runner, registrar.register, describes.register);
+    return new JestBinding(new Gate(runner, assertions), registrar.register, describes.register);
+  }
+
+  static assertions(scope: RunScope): RunAssertions {
+    return new ScopedAssertions(
+      scope,
+      () => JudgeHarness.factJudge(scope, [StateFact.Casino]),
+      () => ExtractorHarness.factExtractor(scope, [StateFact.Casino]),
+    );
   }
 
   static async extractedInGroup(

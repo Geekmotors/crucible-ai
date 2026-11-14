@@ -1,7 +1,7 @@
-import type { TestBody } from '../bindings/jest.js';
 import type { ExtractedValueFor } from '../core/extract-type.js';
 import type { CoherentOptions } from './coherent-options.js';
 import type { ExtractOptions } from './extract-options.js';
+import type { RunContext, TestBody } from './run-context.js';
 import type { RunOptions } from './run-options.js';
 
 type CrucibleSurface = {
@@ -17,7 +17,9 @@ type CrucibleSurface = {
    * `testDefaults`.
    *
    * @param name - The Jest test name.
-   * @param body - Arrange, act and assert; runs once per run.
+   * @param body - Arrange, act and assert; runs once per run and receives
+   *   that run's context `t` (`async (t) => ...`); a body that takes no
+   *   argument works too.
    */
   it(name: string, body: TestBody): void;
   /**
@@ -58,6 +60,50 @@ type CrucibleSurface = {
    *   `undefined` keeps `options.testTimeout` or the default.
    */
   it(name: string, options: RunOptions, body: TestBody, timeout: number | undefined): void;
+  /**
+   * Wraps `body` into a test function for your runner's own `it` or `test`,
+   * any variant included (`it.only`, `it.each`, ...):
+   * `it(name, crucible.gate(async (t) => { ... }), 60000)`. When the runner
+   * calls it, the body runs `runs` times concurrently and the test passes
+   * when at least `threshold` of the runs pass, with the same verdict
+   * errors and report as `crucible.it`. Each run gets its own context `t`;
+   * any arguments the runner passes (such as `it.each` row values) follow
+   * `t`. Settings come from the enclosing `crucible.describe` (captured
+   * when `crucible.gate` is called), else `testDefaults`, else 10 runs at
+   * 0.9. The gate enforces its own `testTimeout` but cannot set the
+   * runner's: pass the runner a timeout at least as large (Jest's default
+   * is 5 seconds).
+   *
+   * Annotate row parameters to type them:
+   * `it.each([[2, 'two']])('%s', crucible.gate(async (t, n: number, word: string) => { ... }))`.
+   *
+   * @param body - Arrange, act and assert; runs once per run with that
+   *   run's context `t` and the runner's own arguments.
+   * @returns A test function that declares no parameters, so runners never
+   *   treat it as a `done`-callback test.
+   */
+  gate<A extends unknown[] = unknown[]>(
+    body: (t: RunContext, ...args: A) => unknown,
+  ): (...args: A) => Promise<void>;
+  /**
+   * Wraps `body` into a test function for your runner's own `it` or
+   * `test`, with run options: `it(name, crucible.gate({ runs: 5 }, async
+   * (t) => { ... }), 60000)`. Each omitted option comes from the enclosing
+   * `crucible.describe`, then `testDefaults`, then the built-in default.
+   * Invalid options, a missing body or an argument after the body are a
+   * `usage` error when `crucible.gate` is called. Pass the runner a timeout
+   * at least as large as the resolved `testTimeout`.
+   *
+   * @param options - Run count, pass threshold, time budgets and
+   *   extraction strictness.
+   * @param body - Arrange, act and assert; runs once per run with that
+   *   run's context `t` and the runner's own arguments.
+   * @returns A test function that declares no parameters.
+   */
+  gate<A extends unknown[] = unknown[]>(
+    options: RunOptions,
+    body: (t: RunContext, ...args: A) => unknown,
+  ): (...args: A) => Promise<void>;
   /**
    * Registers a Jest `describe` block named `name` and runs `fn` to collect
    * its tests. Behaves like `describe(name, fn)`: `fn` must be synchronous
@@ -122,7 +168,8 @@ type CrucibleSurface = {
    * as true for every later `coherent()` and `extract()` call in this run.
    * Append-only; each run starts with none, and concurrent runs never see
    * each other's. Each assertion uses the facts added before it was called.
-   * Only works inside a running `crucible.it()` body.
+   * Only works inside a running `crucible.it()` or `crucible.gate()` body;
+   * from callbacks that lost the async context, use the run context `t`.
    *
    * @param fact - One fact or several.
    */

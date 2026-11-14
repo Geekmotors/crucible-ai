@@ -1,7 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
 import type { RunOptions } from '../core/run-options.js';
+import type { RunAssertions } from '../core/run-assertions.js';
 import { RunScope } from '../core/state.js';
+import { GateHarness } from '../core/test/gate-harness.util.js';
+import { StateFact } from '../core/test/state-fact.enum.js';
 import { Capture } from '../core/test/capture.util.js';
 import { ExtractValue } from '../core/test/extract-value.enum.js';
 import { ProjectDefaults } from '../core/test/project-defaults.util.js';
@@ -21,6 +24,19 @@ import { JestBindingHarness } from './test/jest-harness.util.js';
 import { RegistrarFake } from './test/registrar.fake.js';
 
 describe('JestBinding', () => {
+  it('passes each run its own run context t', async () => {
+    const registrar = new RegistrarFake();
+    JestBindingHarness.binding(registrar).register(
+      'with t',
+      GateHarness.smoke,
+      async (t: RunAssertions) => {
+        t.facts(StateFact.Casino);
+        await GateHarness.requireSeen(t);
+      },
+    );
+    await expect(registrar.registrations[0]!.fn()).resolves.toBeUndefined();
+  });
+
   it('registers exactly one test per declaration', () => {
     const registrar = new RegistrarFake();
     JestBindingHarness.binding(registrar).register('checks coherence', async () => {});

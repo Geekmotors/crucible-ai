@@ -190,7 +190,10 @@ found through Node's async context. Concurrent runs and other tests never
 share them. Code that loses that async context — for example a timer or
 event listener set up in `beforeAll` that fires later, outside any run — gets
 a `usage` error, not shared facts. Call `crucible.facts()` from
-code the running body awaits.
+code the running body awaits, or use the run context `t` the body receives:
+`t.facts()`, `t.coherent()` and `t.extract()` hold their run, so they work
+from such callbacks until that run ends (afterwards they are a `usage`
+error). See [the run context `t`](api.md#the-run-context-t).
 
 ## `facts` never replaces
 
@@ -230,6 +233,17 @@ independent judgments together and await them at once
 ([pattern](api.md#cruciblecoherent)). Each judge reply attempt also has its
 own limit (`inferenceTimeout`, 30 s by default). Details:
 [Timeout](runs-and-threshold.md#timeout).
+
+## With `crucible.gate()`, the runner's timeout must cover the gate's
+
+`crucible.gate()` enforces its own test deadline (39 s for the default 10
+runs) but cannot change the runner's timeout, and Jest's default is 5 s. A
+gated test without a runner timeout is cut off by Jest after 5 s, with
+Jest's timeout message instead of Crucible's report. Pass the runner a
+timeout at least as large as the gate's `testTimeout` — Jest's third
+argument: `it(name, crucible.gate(options, body), 60000)` — or raise Jest's
+`testTimeout` for those files. `crucible.it()` sets Jest's timeout for you.
+See [Gate timeouts](runs-and-threshold.md#gate-timeouts).
 
 ## Fake timers stop Crucible's clock
 

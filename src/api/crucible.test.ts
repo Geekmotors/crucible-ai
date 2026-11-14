@@ -3,6 +3,7 @@ import { CrucibleError } from '../core/errors.js';
 import { Capture } from '../core/test/capture.util.js';
 import { crucible } from './crucible.js';
 import { FactAdder } from './test/fact-adder.enum.js';
+import { InvalidRunCount } from './test/invalid-run-count.enum.js';
 import { RunFact } from './test/run-fact.enum.js';
 import { RunFactsHarness } from './test/run-facts-harness.util.js';
 
@@ -37,6 +38,16 @@ describe('crucible.facts and its deprecated aliases', () => {
 
   it('crucible.facts outside a running test is a usage error', () => {
     const error = Capture.thrown(() => crucible.facts(RunFact.Plan));
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
+  });
+});
+
+describe('crucible.gate', () => {
+  it('rejects invalid options with a usage error when it is called', () => {
+    const error = Capture.thrown(() =>
+      crucible.gate({ runs: InvalidRunCount.Zero }, async () => {}),
+    );
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('usage');
   });

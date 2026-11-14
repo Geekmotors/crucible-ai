@@ -362,3 +362,8 @@
 
 - **Multi-line facts read as several facts** (report and wire both join with `\n`). Accepted for now; consider numbering facts in the report or the STATE section if users hit it (wire change needs conformance).
 - **Empty / whitespace-only facts are accepted** (pre-existing for `load`/`append`). Consider rejecting as `usage` at 1.0 alongside alias removal.
+
+## From Story 7.1 review decisions (2026-11-14)
+
+- **Gate on Jest's default 5 s timeout.** The gate's default deadline is 39 s; on a plain `it` without a timeout argument Jest cuts the test off with no Crucible report. Docs-only for now (README, api.md, gotchas, runs-and-threshold). Revisit in 7.2/7.3: e.g. a one-time warning when the runner's per-test timeout is known to be shorter than the gate's deadline (Vitest exposes it on the test context; Jest does not).
+- **`TestBody` now `(t: RunContext) => unknown`.** Listed under Added with a note; not marked Breaking (only code that invokes a TestBody itself is affected).

@@ -4,9 +4,10 @@ import { Reporter } from './reporter.util.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
 import type { ResolvedRunOptions, RunOptions } from './run-options.js';
 import type { RunResult } from './run-result.js';
+import type { RunHandle } from './run-handle.js';
 import { RunScope, runScope } from './state.js';
 import { TimeBudget } from './time-budget.util.js';
-import type { RunContext } from './state.js';
+import type { RunLedger } from './state.js';
 import { TraceReporter } from './trace-reporter.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 
@@ -15,9 +16,12 @@ type Rethrow = { readonly rethrow: unknown };
 type SettledRun = Rethrow | RunResult;
 
 type InFlightRun = {
-  readonly context: RunContext;
+  readonly context: RunLedger;
+  readonly handle: RunHandle;
   readonly settled: Promise<SettledRun>;
 };
+
+type RunBody = (run: RunHandle) => unknown;
 
 type Batch =
   | { readonly halt: 'none'; readonly results: RunResult[] }
@@ -58,7 +62,7 @@ class Runner {
     return Math.min(TimeBudget.TIMER_MAX_MS, declared.testTimeout + Runner.CEILING_MARGIN_MS);
   }
 
-  async execute(body: () => unknown, opts: RunOptions = {}): Promise<void> {
+  async execute(body: RunBody, opts: RunOptions = {}): Promise<void> {
     const options = this.resolver.resolve(opts, this.testDefaults());
     const deadlineMs = options.testTimeout;
     this.trace.testStarted(options, deadlineMs);
@@ -103,19 +107,19 @@ class Runner {
     );
   }
 
-  private async runBatch(body: () => unknown, options: ResolvedRunOptions): Promise<Batch> {
-    let disarm = (): void => {};
+  private async runBatch(body: RunBody, options: ResolvedRunOptions): Promise<Batch> {
+    let release = (): void => {};
     try {
       return await new Promise<Batch>((resolve) => {
-        disarm = this.collect(body, options, resolve);
+        release = this.collect(body, options, resolve);
       });
     } finally {
-      disarm();
+      release();
     }
   }
 
   private collect(
-    body: () => unknown,
+    body: RunBody,
     options: ResolvedRunOptions,
     resolve: (batch: Batch) => void,
   ): () => void {
@@ -125,7 +129,7 @@ class Runner {
     );
     const settled: (RunResult | undefined)[] = runs.map(() => undefined);
     let pending = options.runs;
-    const disarm = this.timer(options.testTimeout, () => {
+    const disarmTimer = this.timer(options.testTimeout, () => {
       if (controller.signal.aborted) {
         return;
       }
@@ -159,7 +163,10 @@ class Runner {
         }
       });
     });
-    return disarm;
+    return () => {
+      disarmTimer();
+      runs.forEach((run) => run.handle.close());
+    };
   }
 
   private discardUnsettled(
@@ -172,13 +179,16 @@ class Runner {
   }
 
   private start(
-    body: () => unknown,
+    body: RunBody,
     signal: AbortSignal,
     run: number,
     options: ResolvedRunOptions,
   ): InFlightRun {
     return this.scope.enterRun(
-      () => ({ context: this.scope.context(), settled: this.settle(body) }),
+      () => {
+        const handle = this.scope.handle();
+        return { context: this.scope.context(), handle, settled: this.settle(body, handle) };
+      },
       signal,
       run,
       options.inferenceTimeout,
@@ -186,12 +196,14 @@ class Runner {
     );
   }
 
-  private async settle(body: () => unknown): Promise<SettledRun> {
+  private async settle(body: RunBody, handle: RunHandle): Promise<SettledRun> {
     try {
-      await body();
+      await body(handle);
       return { status: 'passed', context: this.scope.context() };
     } catch (cause) {
       return this.classify(cause);
+    } finally {
+      handle.close();
     }
   }
 
@@ -227,4 +239,4 @@ class Runner {
 }
 
 export { Runner };
-export type { DeadlineTimer, TestDefaultsSupplier };
+export type { DeadlineTimer, RunBody, TestDefaultsSupplier };

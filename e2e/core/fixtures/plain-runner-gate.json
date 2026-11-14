@@ -1,0 +1,21 @@
+{
+  "description": "Plain Jest it / it.each with crucible.gate: the gate owns runs, threshold and the run context t; Jest owns the test and its timeout. One run at threshold 1 keeps the live cost to one judge call per test.",
+  "runs": 1,
+  "threshold": 1,
+  "timeout": 60000,
+  "single": {
+    "name": "judges a reply through the gate on Jest's own it",
+    "facts": ["The library closes at 18:00 on weekdays."],
+    "response": "Sorry, it's 19:30 on a Tuesday, so the library is already closed.",
+    "claim": "The reply is consistent with the library's weekday opening hours.",
+    "expected": true
+  },
+  "rows": {
+    "name": "extracts the count from %s through the gate on it.each",
+    "table": [
+      ["I bought three apples and nothing else.", 3],
+      ["Just the two apples, thanks.", 2]
+    ],
+    "target": "how many apples were bought"
+  }
+}

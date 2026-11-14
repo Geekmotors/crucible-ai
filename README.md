@@ -128,7 +128,7 @@ A threshold is a sampled estimate. A system that is truly 95% reliable fails a `
 
 Use facts when the right answer depends on what your system knew: a secret it must keep, a fact that changed, something a character can't know yet. The judge treats facts as ground truth, separate from the reply it judges, so a test can check that a reply does *not* reveal something.
 
-Facts belong to the current run, not to the module or the test file: each run of each test starts with none and keeps its own, even when runs execute concurrently, and other tests never see them. Calling `crucible.facts()` outside a running `crucible.it()` body is a `usage` error.
+Facts belong to the current run, not to the module or the test file: each run of each test starts with none and keeps its own, even when runs execute concurrently, and other tests never see them. Calling `crucible.facts()` outside a running `crucible.it()` or `crucible.gate()` body is a `usage` error.
 
 Add facts as they arise; each assertion is judged against the facts added before you called it:
 
@@ -146,16 +146,18 @@ crucible.it('remembers a change of venue', async () => {
 });
 ```
 
-Often the facts are already in your system under test, as logs or the records it was given. Pass them straight in (`getLogs()` here returns a `string[]`):
+Often the facts are already in your system under test, as logs or the records it was given. Pass them straight in (`getLogs()` here returns a `string[]`).
+
+Each run also receives its own run context `t`, with `facts`, `coherent` and `extract` bound to that run. It makes the scope visible, keeps working from callbacks that lost Node's async context, and is the recommended style; the global functions share the same run state:
 
 ```ts
-crucible.it('keeps the secret it was told', async () => {
+crucible.it('keeps the secret it was told', async (t) => {
   const assistant = createAssistant();
   await assistant.remember(['The meeting is at the Blue Door cafe.', 'Only Jane may know where.']);
-  crucible.facts(assistant.getLogs());
+  t.facts(assistant.getLogs());
 
   const reply = await assistant.ask('Bob asks: where is the meeting?');
-  expect(await crucible.coherent(reply, 'The reply does not reveal the meeting place to Bob')).toBe(true);
+  expect(await t.coherent(reply, 'The reply does not reveal the meeting place to Bob')).toBe(true);
 });
 ```
 
@@ -237,6 +239,26 @@ crucible.describe('refund policy', { runs: 20, threshold: 0.85 }, () => {
 ```
 
 Each field resolves on its own, last wins: built-in → `testDefaults` → outer `crucible.describe` → inner `crucible.describe` → the test's own options. Plain Jest `describe` blocks can sit inside or around a group. See [Runs and threshold](docs/runs-and-threshold.md#group-settings-crucibledescribe).
+
+### Use your runner's own `it`
+
+`crucible.gate()` turns a body into a test function for Jest's own `it`, so every variant works: `it.only`, `it.skip`, `it.each`. The gate runs the body `runs` times, applies the threshold and throws the same report as `crucible.it`; row values arrive after `t`. Annotate them to type them:
+
+```ts
+it.each([
+  ['free', false],
+  ['pro', true],
+])(
+  'answers whether the %s plan can export',
+  crucible.gate({ runs: 5, threshold: 0.8 }, async (t, plan: string, allowed: boolean) => {
+    const reply = await createAssistant({ plan }).ask('Can I export as PDF?');
+    expect(await t.extract(reply, 'whether exporting is allowed', { as: 'boolean' })).toBe(allowed);
+  }),
+  60000,
+);
+```
+
+The gate enforces its own test timeout but cannot set Jest's, so pass Jest a timeout at least as large (the third argument; Jest's own default is 5 s). Settings come from `testDefaults` and any enclosing `crucible.describe`, as for `crucible.it`. See [the API reference](docs/api.md#cruciblegate).
 
 ### Read a failure
 

@@ -4,7 +4,7 @@ import { DEFAULT_REPORT_SETTINGS } from '../report-settings.js';
 import type { RunGate } from '../run-options.js';
 import type { RunResult, RunStatus, VerdictSummary } from '../run-result.js';
 import type { Verbosity } from '../verbosity.js';
-import type { ErrorRecord, ExtractionRecord, RunContext, VerdictRecord } from '../state.js';
+import type { ErrorRecord, ExtractionRecord, RunLedger, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
 import { ClaimText } from './claim-text.enum.js';
 import { ExtractModeName } from './extract-mode-name.enum.js';
@@ -17,7 +17,7 @@ class ReportHarness {
     verdicts: VerdictRecord[] = [],
     errors: ErrorRecord[] = [],
     extractions: ExtractionRecord[] = [],
-  ): RunContext {
+  ): RunLedger {
     return { state: [], verdicts, extractions, errors };
   }
 
