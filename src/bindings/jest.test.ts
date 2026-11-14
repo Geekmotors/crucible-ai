@@ -1,3 +1,4 @@
+import { inspect } from 'node:util';
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
 import type { RunOptions } from '../core/run-options.js';
@@ -16,12 +17,18 @@ import { CrucibleVerdictError } from '../core/verdict-error.js';
 import { CustomTimeout } from '../core/test/custom-timeout.enum.js';
 import { InvalidTimeout } from '../core/test/invalid-timeout.enum.js';
 import { ManualTimer } from '../core/test/manual-timer.fake.js';
-import { JestBinding } from './jest.js';
 import { DescribeRegistrarFake } from './test/describe-registrar.fake.js';
 import { GroupName } from './test/group-name.enum.js';
 import { InvalidOption } from './test/invalid-option.enum.js';
 import { JestBindingHarness } from './test/jest-harness.util.js';
+import type { BindingUnderTest, WrappedRunner } from './test/jest-harness.util.js';
 import { RegistrarFake } from './test/registrar.fake.js';
+import { RowValue } from '../core/test/row-value.enum.js';
+import { FakeRunner } from './test/fake-runner.fake.js';
+import { RunnerProperty } from './test/runner-property.enum.js';
+import { TestName } from './test/test-name.enum.js';
+import { TestStatus } from './test/test-status.enum.js';
+import { VariantPath } from './test/variant-path.enum.js';
 
 describe('JestBinding', () => {
   it('passes each run its own run context t', async () => {
@@ -160,7 +167,7 @@ describe('JestBinding', () => {
     const error = JestBindingHarness.errorFrom(() =>
       JestBindingHarness.binding(registrar).register(
         'typo',
-        { run: 5 } as unknown as Parameters<JestBinding['register']>[1],
+        { run: 5 } as unknown as RunOptions,
         async () => {},
       ),
     );
@@ -206,7 +213,7 @@ describe('JestBinding', () => {
 });
 
 describe('JestBinding — test timeout', () => {
-  it.each<[string, (binding: JestBinding) => void]>([
+  it.each<[string, (binding: BindingUnderTest) => void]>([
     [
       'a trailing number after the body',
       (b) => b.register('t', async () => {}, CustomTimeout.Long),
@@ -225,7 +232,7 @@ describe('JestBinding — test timeout', () => {
     );
   });
 
-  it.each<[string, (binding: JestBinding, body: () => Promise<void>) => void]>([
+  it.each<[string, (binding: BindingUnderTest, body: () => Promise<void>) => void]>([
     ['after the body', (b, body) => b.register('short', body, CustomTimeout.Short)],
     [
       'after options and body',
@@ -578,7 +585,7 @@ describe('JestBinding — group settings', () => {
     },
   );
 
-  it.each<[string, (binding: JestBinding) => void]>([
+  it.each<[string, (binding: BindingUnderTest) => void]>([
     ['a missing callback', (b) => b.group(GroupName.Invalid, undefined as unknown as () => void)],
     [
       'options without a callback',
@@ -590,7 +597,12 @@ describe('JestBinding — group settings', () => {
     ],
     [
       'an argument after the callback',
-      (b) => b.group(GroupName.Invalid, () => {}, (() => {}) as unknown as () => void),
+      (b) =>
+        b.group(
+          GroupName.Invalid,
+          () => {},
+          () => {},
+        ),
     ],
     [
       'an argument after options and callback',
@@ -614,5 +626,403 @@ describe('JestBinding — group settings', () => {
     const binding = JestBindingHarness.binding(new RegistrarFake());
     const error = JestBindingHarness.errorFrom(() => binding.group('async', async () => {}));
     expect(error.kind).toBe('usage');
+  });
+});
+
+describe('crucible.it variants', () => {
+  it('it.only focuses its test so the others do not run', async () => {
+    const runner = new FakeRunner();
+    const { it: test } = JestBindingHarness.variants(runner);
+    test(TestName.Plain, GateHarness.smoke, async () => {});
+    test.only(TestName.Focused, GateHarness.smoke, async () => {});
+    expect(await runner.run()).toEqual([
+      { name: TestName.Plain, status: TestStatus.Skipped },
+      { name: TestName.Focused, status: TestStatus.Passed },
+    ]);
+  });
+
+  it('it.skip never runs its body', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner).it.skip(TestName.Skipped, async () => {
+      executed += 1;
+    });
+    expect(await runner.run()).toEqual([{ name: TestName.Skipped, status: TestStatus.Skipped }]);
+    expect(executed).toBe(0);
+  });
+
+  it('it.todo plans a test without a body', async () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.todo(TestName.Planned);
+    expect(await runner.run()).toEqual([{ name: TestName.Planned, status: TestStatus.Todo }]);
+  });
+
+  it('a variant runs its body the declared number of runs', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner).it.only(
+      TestName.Focused,
+      { runs: RunCount.Smaller },
+      async () => {
+        executed += 1;
+      },
+    );
+    await runner.run();
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('a variant without options runs the configured run count', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner, new RunScope(), ProjectDefaults.strictGate).it.only(
+      TestName.Focused,
+      async () => {
+        executed += 1;
+      },
+    );
+    await runner.run();
+    expect(executed).toBe(RunCount.Gated);
+  });
+
+  it('a variant body receives its run context t', async () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.only(
+      TestName.Focused,
+      GateHarness.smoke,
+      async (t: RunAssertions) => {
+        t.facts(StateFact.Casino);
+        await GateHarness.requireSeen(t);
+      },
+    );
+    expect(await runner.run()).toEqual([{ name: TestName.Focused, status: TestStatus.Passed }]);
+  });
+
+  it('a trailing timeout on a variant gives the runner the test timeout plus the margin', () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.only(
+      TestName.Focused,
+      async () => {},
+      CustomTimeout.Long,
+    );
+    expect(runner.timeoutOf(TestName.Focused)).toBe(
+      CustomTimeout.Long + TimeoutBudget.CeilingMarginMs,
+    );
+  });
+
+  it('a failing run count on a variant fails the test', async () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.only(TestName.Focused, GateHarness.smoke, async () => {
+      throw new Error('the run misses');
+    });
+    expect(await runner.run()).toEqual([{ name: TestName.Focused, status: TestStatus.Failed }]);
+  });
+
+  it.each<[string, unknown[]]>([
+    ['options without a body', [TestName.Focused, GateHarness.smoke]],
+    ['invalid options', [TestName.Focused, { runs: RunCount.Single - 1 }, async () => {}]],
+    ['two bodies', [TestName.Focused, async () => {}, async () => {}]],
+    [
+      'an argument after the timeout',
+      [TestName.Focused, async () => {}, CustomTimeout.Short, CustomTimeout.Long],
+    ],
+  ])('it.only rejects %s as usage and registers nothing', (_label, args) => {
+    const runner = new FakeRunner();
+    const { it: test } = JestBindingHarness.variants(runner);
+    expect(JestBindingHarness.errorFrom(() => test.only(...args)).kind).toBe('usage');
+    expect(runner.names()).toHaveLength(0);
+  });
+
+  it('works through call, like the runner function it wraps', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner).it.call(
+      undefined,
+      TestName.Plain,
+      GateHarness.smoke,
+      () => {
+        executed += 1;
+      },
+    );
+    await runner.run();
+    expect(executed).toBe(RunCount.Single);
+  });
+});
+
+describe('crucible.it.each', () => {
+  it('registers one gated test per array row with the runner’s name formatting', async () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.each([[RowValue.Apples], [RowValue.Pears]])(
+      TestName.Row,
+      GateHarness.smoke,
+      async () => {},
+    );
+    expect(await runner.run()).toEqual([
+      { name: `counts ${RowValue.Apples}`, status: TestStatus.Passed },
+      { name: `counts ${RowValue.Pears}`, status: TestStatus.Passed },
+    ]);
+  });
+
+  it('passes array row values to the body after t', async () => {
+    const runner = new FakeRunner();
+    const received: unknown[][] = [];
+    JestBindingHarness.variants(runner).it.each([[RowValue.Apples, RunCount.Smaller]])(
+      TestName.Row,
+      GateHarness.smoke,
+      async (_t: RunAssertions, ...row: unknown[]) => {
+        received.push(row);
+      },
+    );
+    await runner.run();
+    expect(received).toEqual([[RowValue.Apples, RunCount.Smaller]]);
+  });
+
+  it('passes an object row to the body after t', async () => {
+    const runner = new FakeRunner();
+    const received: unknown[][] = [];
+    JestBindingHarness.variants(runner).it.each([{ fruit: RowValue.Pears }])(
+      TestName.ObjectRow,
+      GateHarness.smoke,
+      async (_t: RunAssertions, ...row: unknown[]) => {
+        received.push(row);
+      },
+    );
+    expect(runner.names()).toEqual([`counts ${RowValue.Pears}`]);
+    await runner.run();
+    expect(received).toEqual([[{ fruit: RowValue.Pears }]]);
+  });
+
+  it('runs each row the declared number of runs', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner).it.each([[RowValue.Apples], [RowValue.Pears]])(
+      TestName.Row,
+      { runs: RunCount.Smaller },
+      async () => {
+        executed += 1;
+      },
+    );
+    await runner.run();
+    expect(executed).toBe(RunCount.Smaller * 2);
+  });
+
+  it('gives each row the runner timeout for its trailing timeout', () => {
+    const runner = new FakeRunner();
+    JestBindingHarness.variants(runner).it.each([[RowValue.Apples]])(
+      TestName.Row,
+      async () => {},
+      CustomTimeout.Long,
+    );
+    expect(runner.timeoutOf(`counts ${RowValue.Apples}`)).toBe(
+      CustomTimeout.Long + TimeoutBudget.CeilingMarginMs,
+    );
+  });
+
+  it('it.only.each focuses its rows', async () => {
+    const runner = new FakeRunner();
+    const { it: test } = JestBindingHarness.variants(runner);
+    test(TestName.Plain, GateHarness.smoke, async () => {});
+    test.only.each([[RowValue.Apples]])(TestName.Row, GateHarness.smoke, async () => {});
+    expect(await runner.run()).toEqual([
+      { name: TestName.Plain, status: TestStatus.Skipped },
+      { name: `counts ${RowValue.Apples}`, status: TestStatus.Passed },
+    ]);
+  });
+
+  it('it.skip.each never runs its rows', async () => {
+    const runner = new FakeRunner();
+    let executed = 0;
+    JestBindingHarness.variants(runner).it.skip.each([[RowValue.Apples], [RowValue.Pears]])(
+      TestName.Row,
+      async () => {
+        executed += 1;
+      },
+    );
+    await runner.run();
+    expect(executed).toBe(0);
+  });
+
+  it('rejects invalid options on a row registrar as usage and registers nothing', () => {
+    const runner = new FakeRunner();
+    const rows = JestBindingHarness.variants(runner).it.each([[RowValue.Apples]]);
+    const error = JestBindingHarness.errorFrom(() =>
+      rows(TestName.Row, { runs: RunCount.Single - 1 }, async () => {}),
+    );
+    expect(error.kind).toBe('usage');
+    expect(runner.names()).toHaveLength(0);
+  });
+});
+
+describe('crucible.describe variants', () => {
+  it('describe.each repeats the group per row and forwards the row values', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    const seen: unknown[] = [];
+    group.each([[RowValue.Apples], [RowValue.Pears]])(TestName.Group, (fruit: unknown) => {
+      test(TestName.Inside, GateHarness.smoke, async () => {
+        seen.push(fruit);
+      });
+    });
+    expect(await runner.run()).toEqual([
+      { name: `group ${RowValue.Apples} > inside`, status: TestStatus.Passed },
+      { name: `group ${RowValue.Pears} > inside`, status: TestStatus.Passed },
+    ]);
+    expect(seen).toEqual([RowValue.Apples, RowValue.Pears]);
+  });
+
+  it('tests inside describe.each inherit the group options', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    let executed = 0;
+    group.each([{ fruit: RowValue.Apples }])(TestName.Group, { runs: RunCount.Smaller }, () => {
+      test(TestName.Inside, async () => {
+        executed += 1;
+      });
+    });
+    await runner.run();
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('describe.only focuses its tests and they inherit its options', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    let executed = 0;
+    test(TestName.Plain, GateHarness.smoke, async () => {});
+    group.only(TestName.Focused, { runs: RunCount.Smaller }, () => {
+      test(TestName.Inside, async () => {
+        executed += 1;
+      });
+    });
+    expect(await runner.run()).toEqual([
+      { name: TestName.Plain, status: TestStatus.Skipped },
+      { name: `${TestName.Focused} > ${TestName.Inside}`, status: TestStatus.Passed },
+    ]);
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('describe.skip never runs the tests inside it', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    let executed = 0;
+    group.skip(TestName.Skipped, () => {
+      test(TestName.Inside, async () => {
+        executed += 1;
+      });
+    });
+    await runner.run();
+    expect(executed).toBe(0);
+  });
+
+  it('describe.only.each focuses its rows and their tests inherit the group options', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    let executed = 0;
+    test(TestName.Plain, GateHarness.smoke, async () => {});
+    group.only.each([[RowValue.Apples]])(TestName.Group, { runs: RunCount.Smaller }, () => {
+      test(TestName.Inside, async () => {
+        executed += 1;
+      });
+    });
+    expect(await runner.run()).toEqual([
+      { name: TestName.Plain, status: TestStatus.Skipped },
+      { name: `group ${RowValue.Apples} > inside`, status: TestStatus.Passed },
+    ]);
+    expect(executed).toBe(RunCount.Smaller);
+  });
+
+  it('describe.skip.each never runs its rows', async () => {
+    const runner = new FakeRunner();
+    const { it: test, describe: group } = JestBindingHarness.variants(runner);
+    let executed = 0;
+    group.skip.each([[RowValue.Apples]])(TestName.Group, () => {
+      test(TestName.Inside, async () => {
+        executed += 1;
+      });
+    });
+    await runner.run();
+    expect(executed).toBe(0);
+  });
+
+  it('rejects an argument after a describe.each callback as usage', () => {
+    const runner = new FakeRunner();
+    const rows = JestBindingHarness.variants(runner).describe.each([[RowValue.Apples]]);
+    const error = JestBindingHarness.errorFrom(() =>
+      rows(TestName.Group, () => {}, CustomTimeout.Short),
+    );
+    expect(error.kind).toBe('usage');
+    expect(runner.names()).toHaveLength(0);
+  });
+});
+
+describe('blocked and unknown variants', () => {
+  it.each<[string, (variants: WrappedRunner) => unknown]>([
+    ['it.failing', (v) => v.it[RunnerProperty.Failing]],
+    ['it.concurrent', (v) => v.it[RunnerProperty.Concurrent]],
+    ['it.only.failing', (v) => v.it.only[RunnerProperty.Failing]],
+    ['a runner variant Crucible does not wrap', (v) => v.it[RunnerProperty.Unsupported]],
+    ['it.each.only', (v) => v.it.each.only],
+    ['it.todo.each', (v) => v.it.todo.each],
+    ['describe.todo', (v) => v.describe.todo],
+  ])('%s is a usage error on access', (_label, access) => {
+    const variants = JestBindingHarness.variants(new FakeRunner());
+    expect(JestBindingHarness.errorFrom(() => access(variants)).kind).toBe('usage');
+  });
+
+  it.each<[string, (variants: WrappedRunner) => unknown]>([
+    ['then on crucible.it', (v) => v.it[RunnerProperty.Then]],
+    ['then on crucible.describe.only', (v) => v.describe.only[RunnerProperty.Then]],
+    ['toJSON', (v) => v.it[RunnerProperty.ToJson]],
+    ['asymmetricMatch', (v) => v.it.each[RunnerProperty.AsymmetricMatch]],
+    ['prototype', (v) => v.it[RunnerProperty.Prototype]],
+    ['a property the runner does not have either', (v) => v.describe[RunnerProperty.Unknown]],
+    ['Symbol.toStringTag', (v) => v.it[Symbol.toStringTag as unknown as string]],
+  ])('%s is undefined, as on the runner', (_label, access) => {
+    expect(access(JestBindingHarness.variants(new FakeRunner()))).toBeUndefined();
+  });
+
+  it('reports its supported variants, and only those, to the in operator', () => {
+    const { it: test } = JestBindingHarness.variants(new FakeRunner());
+    expect([RunnerProperty.Only in test, RunnerProperty.Failing in test]).toEqual([true, false]);
+  });
+
+  it('awaiting a variant resolves to the variant itself', async () => {
+    const { it: test } = JestBindingHarness.variants(new FakeRunner());
+    expect(await Promise.resolve(test.only)).toBe(test.only);
+  });
+
+  it('serialises and inspects without a usage error, showing its path', () => {
+    const { it: test } = JestBindingHarness.variants(new FakeRunner());
+    expect(JSON.stringify({ test })).toBe('{}');
+    expect(inspect(test.only)).toContain(VariantPath.ItOnly);
+  });
+
+  it('property probes do not need the runner to be present', () => {
+    const variants = JestBindingHarness.wrapOver({});
+    expect(variants.it[RunnerProperty.Then]).toBeUndefined();
+  });
+
+  it('cannot be reassigned', () => {
+    const { it: test } = JestBindingHarness.variants(new FakeRunner());
+    expect(Capture.thrown(() => Object.assign(test, { only: test }))).toBeInstanceOf(TypeError);
+  });
+});
+
+describe('runner lookup', () => {
+  it('a missing runner function is a usage error when the variant is called', () => {
+    const variants = JestBindingHarness.wrapOver({ it: () => {}, describe: () => {} });
+    const error = Capture.thrown(() => variants.it.only(TestName.Focused, async () => {}));
+    expect(error).toBeInstanceOf(CrucibleError);
+    expect((error as CrucibleError).kind).toBe('usage');
+  });
+
+  it('a missing global it is a usage error when a test is declared', () => {
+    const variants = JestBindingHarness.wrapOver({});
+    const error = Capture.thrown(() => variants.it(TestName.Plain, async () => {}));
+    expect((error as CrucibleError).kind).toBe('usage');
+  });
+
+  it('a missing global describe is a usage error when a group is declared', () => {
+    const variants = JestBindingHarness.wrapOver({});
+    const error = Capture.thrown(() => variants.describe(TestName.Group, () => {}));
+    expect((error as CrucibleError).kind).toBe('usage');
   });
 });

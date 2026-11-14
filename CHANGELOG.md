@@ -61,6 +61,12 @@ contain breaking changes, and they are marked **Breaking** below.
 - `crucible.extract()` options must be a plain object: a class instance
   such as a `Map` or `Date`, or an object inheriting an option, is a `usage`
   error.
+- **Breaking:** `crucible.it()`, `crucible.describe()` and their variants
+  reject any defined argument after the last one as a `usage` error. Before,
+  a fifth `crucible.it()` argument was ignored, as was a fourth
+  `crucible.describe()` argument after an `undefined` third.
+- `usage` errors from a `crucible.describe` variant name the variant, such
+  as `crucible.describe.only.each options`.
 - The failure report shows, under each judged call, the facts it was judged
   against as a `Facts:` field (bounded by `excerptChars`), for anyone
   parsing reports.
@@ -133,6 +139,19 @@ contain breaking changes, and they are marked **Breaking** below.
   parameters keep working. New exported types: `RunContext`, `GateBody`,
   `GatedTest`; `TestBody` is now `(t: RunContext) => unknown`, so code that
   calls a `TestBody` itself must pass it a run context.
+- Runner variants on `crucible.it` and `crucible.describe`:
+  `crucible.it.only`, `.skip`, `.todo`, `.each`, `.only.each` and
+  `.skip.each`; `crucible.describe.only`, `.skip`, `.each`, `.only.each` and
+  `.skip.each`. Each variant takes the same forms, options and trailing
+  timeout as `crucible.it()` / `crucible.describe()` and forwards to Jest's
+  own variant: `crucible.it.each(table)(name, options, async (t, ...row) =>
+  { ... })` registers one gated test per row with Jest's name formatting, and
+  `crucible.describe.each(table)(name, options, (...row) => { ... })` one
+  group per row whose tests inherit the options. `it.failing` and
+  `it.concurrent` are not supported and are a `usage` error, as is any other
+  Jest variant Crucible does not wrap or a variant in the wrong place
+  (`crucible.it.each.only`); any other property, such as `then`, is
+  `undefined`. New exported types: `CrucibleIt`, `CrucibleDescribe`.
 
 ### Deprecated
 

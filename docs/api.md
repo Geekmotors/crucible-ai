@@ -6,7 +6,9 @@ Everything is exported from the package root:
 import { crucible, CrucibleError, CrucibleVerdictError } from 'crucible-ai';
 import type {
   CoherentOptions,
+  CrucibleDescribe,
   CrucibleErrorKind,
+  CrucibleIt,
   ExtractedValue,
   ExtractOptions,
   ExtractType,
@@ -26,9 +28,8 @@ and [`facts`](#cruciblefacts), plus two deprecated aliases of `facts`,
 [`load` and `append`](#crucibleload-and-crucibleappend-deprecated). Each run
 of a test body also gets a [run context `t`](#the-run-context-t) with
 `facts`, `coherent` and `extract` bound to that run — the recommended style.
-There are no `crucible.it.only`, `.skip` or `.each` variants; to focus, skip
-or parameterise inference tests, use your runner's own `it` variants with
-[`crucible.gate()`](#cruciblegate), or wrap them in Jest's `describe.skip`.
+`crucible.it` and `crucible.describe` also have the runner's
+[variants](#variants-only-skip-todo-each): `only`, `skip`, `todo` and `each`.
 
 ## `crucible.it()`
 
@@ -141,11 +142,82 @@ never leak into sibling groups or later tests, even when `fn` throws. The two
 forms are TypeScript overloads; `crucible.describe(name, options)` without
 `fn` is a compile error.
 
-There are no `.only`, `.skip` or `.each` variants of `crucible.describe`.
-Jest's own `describe.only`, `describe.skip` and `describe.each` work around
-or inside a group: wrap a group in `describe.skip` to skip it, in
-`describe.only` to focus it, or in `describe.each` to repeat it per case;
-inheritance holds in every case.
+`crucible.describe` has the same [variants](#variants-only-skip-todo-each)
+as `crucible.it` (except `todo`), and Jest's own `describe`,
+`describe.only`, `describe.skip` and `describe.each` work around or inside a
+group; inheritance holds in every case.
+
+## Variants: `only`, `skip`, `todo`, `each`
+
+```ts
+crucible.it.only(name, [options,] body, [timeout]);
+crucible.it.skip(name, [options,] body, [timeout]);
+crucible.it.todo(name);
+crucible.it.each(table)(name, [options,] async (t, ...row) => { ... }, [timeout]);
+crucible.it.only.each(table)(...);
+crucible.it.skip.each(table)(...);
+
+crucible.describe.only(name, [options,] fn);
+crucible.describe.skip(name, [options,] fn);
+crucible.describe.each(table)(name, [options,] (...row) => { ... });
+crucible.describe.only.each(table)(...);
+crucible.describe.skip.each(table)(...);
+```
+
+Each variant forwards to Jest's own variant of the same name after taking
+out the Crucible options: a test variant's body runs through the gate
+(`runs`, `threshold`, the run context `t`, the deadline and the report, as
+for `crucible.it()`) and Jest gets the computed test timeout; a group
+variant's callback collects its tests with the group's options, which they
+inherit as for `crucible.describe()`. So focus and skip work exactly as in
+Jest: a skipped test never runs its body and costs no judge calls, and
+`only` focuses the test or group within the file. Every variant takes the
+same argument forms as `crucible.it()` or `crucible.describe()` and throws
+the same `usage` errors. `todo` takes a name only and goes to Jest
+unchanged.
+
+`each` takes the table (an array of rows, or Jest's tagged template) and
+returns a registrar. Jest formats each name (`%s`, `%i`, `$name`, ...) and
+passes the row's values: after `t` in a test body, as the arguments of a
+group callback. Array rows are spread, a single value or an object arrives
+as one argument:
+
+```ts
+crucible.it.each([
+  ['free', false],
+  ['pro', true],
+])('answers whether the %s plan can export', { runs: 5, threshold: 0.8 }, async (t, plan, allowed) => {
+  const reply = await createAssistant({ plan }).ask('Can I export as PDF?');
+  expect(await t.extract(reply, 'whether exporting is allowed', { as: 'boolean' })).toBe(allowed);
+});
+
+crucible.describe.each([{ locale: 'en' }, { locale: 'fr' }])('in $locale', { runs: 5 }, ({ locale }) => {
+  crucible.it('greets the user', async (t) => {
+    /* 5 runs per locale */
+  });
+});
+```
+
+Row types follow the table: `[string, boolean][]` types `plan` and
+`allowed`. Each row is its own test with its own runs, threshold and
+report.
+
+Two Jest variants of `crucible.it` are not supported; reading them throws a
+`usage` error, and they are absent from the types. So does any other
+variant of the runner function that Crucible does not wrap, or a variant
+above used in the wrong place (`crucible.it.each.only`,
+`crucible.describe.todo`). Any other property behaves as on a plain
+function: `call`, `apply` and `bind` work, and a property neither Crucible
+nor Jest has, such as `then`, is `undefined`, so printing, serialising or
+awaiting `crucible.it` is harmless.
+
+- **`failing`** inverts a test's outcome. A pass-rate gate passes when
+  enough runs pass, so "expected to fail" is ambiguous: every run failing,
+  or too few passing? Assert the expected failure inside the body instead.
+- **`concurrent`** runs tests at the same time. The runs of a Crucible test
+  already run concurrently under one test deadline; running tests
+  concurrently as well would share that time budget and your provider's
+  rate limits unpredictably.
 
 ## `crucible.gate()`
 
@@ -495,6 +567,8 @@ Thrown by a `crucible.it()` or `crucible.gate()` test that did not pass. Its `me
 | `RunContext` | `{ facts, coherent, extract }` — the [run context `t`](#the-run-context-t) each run receives |
 | `GateBody<A>` | `(t: RunContext, ...args: A) => unknown` — the body passed to `crucible.gate()` |
 | `GatedTest<A>` | `(...args: A) => Promise<void>` — what `crucible.gate()` returns, for the runner's `it` |
+| `CrucibleIt` | the type of `crucible.it`: its four forms and its `only`, `skip`, `todo`, `each` variants |
+| `CrucibleDescribe` | the type of `crucible.describe`: its two forms and its `only`, `skip`, `each` variants |
 | `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
 | `CoherentOptions` | `{ facts?: string \| readonly string[] }` — the third argument of `crucible.coherent()` |
 | `ExtractOptions` | `{ as?: ExtractType; strict?: boolean; facts?: string \| readonly string[] }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |

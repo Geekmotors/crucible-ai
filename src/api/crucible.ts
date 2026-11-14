@@ -1,5 +1,4 @@
 import { JestBinding } from '../bindings/jest.js';
-import type { TestBody as BindingTestBody } from '../bindings/jest.js';
 import { config } from '../core/config.js';
 import { CrucibleError } from '../core/errors.js';
 import { Extractor } from '../core/extractor.js';
@@ -12,6 +11,7 @@ import { RetryingCompleter } from '../core/retry.js';
 import { Reporter } from '../core/reporter.util.js';
 import type { ReportSettings } from '../core/report-settings.js';
 import { Runner } from '../core/runner.js';
+import { RunnerWrapper } from '../core/runner-wrapper.js';
 import { TraceReporter } from '../core/trace-reporter.js';
 import type { TraceSettings } from '../core/trace-reporter.js';
 import type { RunOptions as ResolvableRunOptions } from '../core/run-options.js';
@@ -20,6 +20,8 @@ import { ScopedAssertions } from '../core/scoped-assertions.js';
 import { runScope } from '../core/state.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
 import type { CoherentOptions } from './coherent-options.js';
+import type { CrucibleDescribe } from './crucible-describe.js';
+import type { CrucibleIt } from './crucible-it.js';
 import type { CrucibleSurface } from './crucible-surface.js';
 import type { ExtractOptions } from './extract-options.js';
 import type { GateBody, GatedTest, RunContext, TestBody } from './run-context.js';
@@ -28,7 +30,7 @@ import type { RunOptions } from './run-options.js';
 class CompositionRoot {
   private judge?: Judge;
   private extractor?: Extractor;
-  private binding?: JestBinding;
+  private wrapper?: RunnerWrapper;
   private testGate?: Gate;
   private scopedAssertions?: ScopedAssertions;
   private schemaSource?: SchemaSource;
@@ -91,9 +93,9 @@ class CompositionRoot {
     return this.testGate;
   }
 
-  jestBinding(): JestBinding {
-    this.binding ??= new JestBinding(this.gate());
-    return this.binding;
+  runnerWrapper(): RunnerWrapper {
+    this.wrapper ??= new RunnerWrapper(this.gate(), new JestBinding().spec());
+    return this.wrapper;
   }
 
   private static traceSettings(): TraceSettings {
@@ -126,32 +128,11 @@ class CompositionRoot {
 const compositionRoot = new CompositionRoot();
 
 const crucible: Readonly<CrucibleSurface> = Object.freeze({
-  it(
-    name: string,
-    optsOrBody: RunOptions | TestBody,
-    bodyOrTimeout?: TestBody | number,
-    timeout?: number,
-  ): void {
-    compositionRoot
-      .jestBinding()
-      .register(
-        name,
-        optsOrBody as RunOptions | BindingTestBody,
-        bodyOrTimeout as BindingTestBody | number | undefined,
-        timeout,
-      );
-  },
+  it: compositionRoot.runnerWrapper().test() as CrucibleIt,
   gate(optsOrBody: RunOptions | GateBody, body?: GateBody, ...surplus: unknown[]): GatedTest {
     return compositionRoot.gate().wrap(optsOrBody, body, ...surplus);
   },
-  describe(
-    name: string,
-    optsOrFn: RunOptions | (() => void),
-    fn?: () => void,
-    ...surplus: unknown[]
-  ): void {
-    compositionRoot.jestBinding().group(name, optsOrFn, fn, ...surplus);
-  },
+  describe: compositionRoot.runnerWrapper().group() as CrucibleDescribe,
   coherent(actual: string, expectation: string, options?: CoherentOptions): Promise<boolean> {
     return compositionRoot.assertions().coherent(actual, expectation, options);
   },
@@ -177,6 +158,8 @@ export { crucible, CrucibleError, CrucibleVerdictError };
 export type { VerdictOutcome } from '../core/verdict-error.js';
 export type {
   CoherentOptions,
+  CrucibleDescribe,
+  CrucibleIt,
   ExtractedValue,
   ExtractOptions,
   ExtractType,

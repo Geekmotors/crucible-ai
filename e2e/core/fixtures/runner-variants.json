@@ -1,0 +1,34 @@
+{
+  "description": "crucible.it.each and crucible.describe.each on Jest: the runner formats names and passes row values, the gate owns runs and threshold. One run at threshold 1 per row keeps the live cost to four judge calls; the skipped and todo tests make none.",
+  "runs": 1,
+  "threshold": 1,
+  "timeout": 60000,
+  "rows": {
+    "name": "extracts the count from %s with crucible.it.each",
+    "table": [
+      ["I bought three apples and nothing else.", 3],
+      ["Just the two apples, thanks.", 2]
+    ],
+    "target": "how many apples were bought"
+  },
+  "groups": {
+    "name": "%s with crucible.describe.each",
+    "test": "judges the reply against the facts",
+    "table": [
+      [
+        "the weekday hours",
+        "The library closes at 18:00 on weekdays.",
+        "Sorry, it's 19:30 on a Tuesday, so the library is already closed.",
+        "The reply is consistent with the library's weekday opening hours."
+      ],
+      [
+        "the weekend hours",
+        "The library is closed all day on Sundays.",
+        "It's Sunday, so the library won't open today.",
+        "The reply is consistent with the library's Sunday hours."
+      ]
+    ]
+  },
+  "skipped": "is skipped with crucible.it.skip and never calls the judge",
+  "planned": "is planned with crucible.it.todo"
+}

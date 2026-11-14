@@ -1,6 +1,8 @@
 export { crucible, CrucibleError, CrucibleVerdictError } from './api/crucible.js';
 export type {
   CoherentOptions,
+  CrucibleDescribe,
+  CrucibleIt,
   CrucibleErrorKind,
   ExtractedValue,
   ExtractOptions,
