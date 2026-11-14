@@ -147,7 +147,7 @@ output:
 ```
 
 **Payload.** Every `extract()` call is one chat request with the whole of
-`extract.md` as the system message and up to four fenced sections, in this
+`extract.md` as the system message and up to five fenced sections, in this
 order, assembled exactly as for `coherent()` (same fences, same
 neutralising, same separators):
 
@@ -171,6 +171,11 @@ TYPE
 <<<
 number
 >>>
+
+MODE
+<<<
+lenient
+>>>
 ```
 
 - `STATE` — the run's state, omitted when empty, exactly as for `coherent()`.
@@ -178,6 +183,9 @@ number
 - `TARGET` — the `description` argument, verbatim.
 - `TYPE` — `string`, `number` or `boolean` (the `as` option; `string` when
   omitted).
+- `MODE` — `lenient` or `strict`: `strict` when the resolved `strict` setting
+  is `true` (the call's `{ strict }`, else the test's, its groups', then
+  `testDefaults`), otherwise `lenient`. Always present.
 
 **Extraction rules**, in summary:
 
@@ -188,8 +196,15 @@ number
    no becomes `true` or `false`; a string is the value as stated.
 3. A negation ("It's not two") is `null` — except that a committed "no" to a
    `boolean` target is `false`.
-4. Any hedge is `null`: a single hedged value ("Probably two") and
-   alternatives ("Probably two, maybe three") alike.
+4. Hedging depends on `MODE`. **Lenient** (the default) takes the value the
+   response leans to: "I think so" and "yeah" are `true`, "nah", "I don't
+   think so" and "probably not" are `false`, "probably two" and "around two"
+   are `2`, "likely Paris" is `"Paris"`; it stays `null` for no answer, a
+   genuine split ("two or three"), a bare negation ("it's not two") and "I
+   don't know". **Strict** treats any hedge as `null`: a single hedged value
+   ("Probably two", "around two", "I think so", "I don't think so") and
+   alternatives ("Probably two, maybe three") alike. In both modes only the
+   final answer counts.
 5. No answer is `null`. The judge never guesses or invents a value.
 6. **STATE is context, not a source.** State may resolve what the response
    refers to (above: the response commits to "the blue room", and the state

@@ -1,9 +1,9 @@
 import { ReportLine } from './report-line.enum.js';
 
 class ReportPattern {
-  static extractionWithReasoning(summary: string): RegExp {
+  static strictExtractionWithReasoning(summary: string): RegExp {
     return new RegExp(
-      `${ReportPattern.escaped(`${ReportLine.FirstExtraction} ${summary}`)}\\s*\\n\\s*${ReportLine.JudgeReasoning} \\S`,
+      `${ReportPattern.escaped(`${ReportLine.FirstStrictExtraction} ${summary}`)}\\s*\\n\\s*${ReportLine.JudgeReasoning} \\S`,
     );
   }
 

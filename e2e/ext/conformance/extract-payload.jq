@@ -3,7 +3,8 @@ def extract_payload:
     state_section,
     (.response | section("RESPONSE")),
     (.target | section("TARGET")),
-    (.type | section("TYPE"))
+    (.type | section("TYPE")),
+    (.mode | section("MODE"))
   ]
   | join("\n\n");
 

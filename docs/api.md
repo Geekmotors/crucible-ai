@@ -27,7 +27,7 @@ import type {
 ```ts
 crucible.it(name, body);
 crucible.it(name, body, timeout);
-crucible.it(name, { runs, threshold, inferenceTimeout, testTimeout }, body);
+crucible.it(name, { runs, threshold, inferenceTimeout, testTimeout, strict }, body);
 crucible.it(name, { runs, threshold }, body, timeout);
 ```
 
@@ -50,6 +50,11 @@ Two time budgets, in milliseconds (integers from 1 to 2147483647):
 - `inferenceTimeout` — each `crucible.coherent()` or `crucible.extract()`
   judge reply attempt.
   Defaults to `testDefaults.inferenceTimeout`, then `30000`.
+
+`strict` (boolean, default `testDefaults.strict`, then `false`) sets how
+[`crucible.extract()`](#crucibleextract) treats a hedged reply in this test:
+`false` takes the value it leans to, `true` makes any hedge `null`. A call's
+own `{ strict }` wins.
 
 `testTimeout` caps everything: an `inferenceTimeout` above it is in effect
 bounded by it. Invalid options or timeouts throw a `CrucibleError` of kind
@@ -74,7 +79,7 @@ re-entrancy contract — is in
 
 ```ts
 crucible.describe(name, fn);
-crucible.describe(name, { runs, threshold, inferenceTimeout, testTimeout }, fn);
+crucible.describe(name, { runs, threshold, inferenceTimeout, testTimeout, strict }, fn);
 ```
 
 Registers a Jest `describe` block named `name` and runs `fn` to collect its
@@ -200,6 +205,7 @@ crucible.extract(text: string, description: string): Promise<string | null>
 crucible.extract(text: string, description: string, { as: 'string' }): Promise<string | null>
 crucible.extract(text: string, description: string, { as: 'number' }): Promise<number | null>
 crucible.extract(text: string, description: string, { as: 'boolean' }): Promise<boolean | null>
+crucible.extract(text: string, description: string, { as: 'number', strict: true }): Promise<number | null> // any hedge is null
 ```
 
 Asks the judge for the single value `text` commits to for `description`,
@@ -225,10 +231,21 @@ may be absent, the result widens to every type it could be.)
 - **Normalised to the type.** Number words become numbers ("two" → `2`); a
   committed yes or no becomes `true` or `false` for `'boolean'`; a string is
   the value as stated.
-- **`null` means "no single committed value".** Negation ("It's not two"),
-  any hedging ("Probably two", "Probably two, maybe three") and no answer at
-  all resolve to `null`. The judge never guesses. A `boolean` "no" is a value
-  (`false`), not a negation.
+- **Lenient by default.** The judge takes the value the text leans to:
+  "I think so" and "yeah" are `true`, "nah" is `false`, "probably two" is
+  `2`, "likely Paris" is `"Paris"`. `null` means "no value to lean to": no
+  answer, a genuine split ("two or three", "maybe Paris, maybe Lyon"), a
+  bare negation ("It's not two") or "I don't know". A `boolean` "no" is a
+  value (`false`), not a negation.
+- **Strict on request.** With `strict: true` any hedge resolves to `null`
+  ("Probably two", "I think so", "Probably two, maybe three"); only a firm
+  commitment is a value. `strict` (boolean, never coerced) resolves last
+  wins: built-in `false`, `testDefaults.strict`, the enclosing
+  `crucible.describe` groups, the `crucible.it()` options, then the call's
+  own `{ strict }`
+  ([precedence](runs-and-threshold.md#group-settings-crucibledescribe)).
+  It applies to every assertion that supports it; today that is
+  `extract()`. The judge never guesses in either mode.
 - **State is context, not a source.** The run's state is sent with the call,
   as for `coherent()`, and is read when you call it. It can resolve what the
   text refers to (state "Room 4 is the blue room", text "I booked the blue
@@ -236,14 +253,17 @@ may be absent, the result widens to every type it could be.)
   commit to, is `null`.
 - **It does not fail the test.** `extract()` resolves to a value; your Jest
   matcher decides. Always `await` it — a pending Promise is never `2`.
-- **Recorded for the report.** Each extraction (description, type, value,
-  judge reasoning, response) is recorded for the run. When a run fails, the
+- **Recorded for the report.** Each extraction (description, type, mode,
+  value, judge reasoning, response) is recorded for the run, and the report
+  names its mode (`Extraction 1 of 2 (lenient): …`). When a run fails, the
   report lists the run's extractions, so a failing `toBe(2)` shows that the
   judge returned `null` and why
   ([failure report](runs-and-threshold.md#reading-the-failure-report)).
 - **Errors.** A non-string `text` or `description`, options that are not an
-  object, or an `as` other than `'string'`, `'number'` or `'boolean'` throws
-  a `usage` error; so does calling it outside a running `crucible.it()` body.
+  object, an `as` other than `'string'`, `'number'` or `'boolean'`, or a
+  `strict` that is not a boolean, or an option other than `as` and `strict`
+  throws a `usage` error; so does calling it outside a running
+  `crucible.it()` body.
   A judge reply whose value is not `null` or of the requested type (a number
   must be finite) is asked once more, then becomes a retryable `infra` error —
   the run is *errored*, not *failed*. Provider failures behave as for
@@ -310,10 +330,10 @@ Thrown by a `crucible.it()` test that did not pass. Its `message` is the
 
 | Type | Meaning |
 | --- | --- |
-| `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number }` |
+| `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number; strict?: boolean }` |
 | `TestBody` | `() => unknown` — the body passed to `crucible.it()`, usually `async` |
 | `ExtractType` | `'string' \| 'number' \| 'boolean'` — the `as` option of `crucible.extract()` |
-| `ExtractOptions` | `{ as?: ExtractType }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |
+| `ExtractOptions` | `{ as?: ExtractType; strict?: boolean }` (generic: `ExtractOptions<T extends ExtractType>` narrows `as` to `T`) |
 | `ExtractedValue` | `string \| number \| boolean \| null` — any value `crucible.extract()` can resolve to |
 | `CrucibleErrorKind` | `'config' \| 'usage' \| 'infra'` |
 | `VerdictOutcome` | `'failed' \| 'errored'` |

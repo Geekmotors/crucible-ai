@@ -3,12 +3,7 @@ import type { TestBody } from '../bindings/jest.js';
 import { config } from '../core/config.js';
 import { CrucibleError } from '../core/errors.js';
 import { Extractor } from '../core/extractor.js';
-import type {
-  ExtractedValue,
-  ExtractedValueFor,
-  ExtractOptions,
-  ExtractType,
-} from '../core/extract-type.js';
+import type { ExtractedValue, ExtractedValueFor, ExtractType } from '../core/extract-type.js';
 import { Judge } from '../core/judge.js';
 import { JudgeExchange } from '../core/judge-exchange.js';
 import type { CompletionTarget } from '../core/judge-exchange.js';
@@ -23,6 +18,7 @@ import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';
 import { CrucibleVerdictError } from '../core/verdict-error.js';
 import type { CrucibleSurface } from './crucible-surface.js';
+import type { ExtractOptions } from './extract-options.js';
 import type { RunOptions } from './run-options.js';
 
 class CompositionRoot {

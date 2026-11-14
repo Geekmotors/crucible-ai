@@ -100,6 +100,33 @@ class ExtractResultTyping {
     return { value, exact };
   }
 
+  async asStrictNumber(): Promise<TypedResult> {
+    const value = await crucible.extract(
+      ExtractResultTyping.TEXT,
+      ExtractResultTyping.DESCRIPTION,
+      { as: 'number', strict: true },
+    );
+    const exact: Exactly<typeof value, number | null> = true;
+    return { value, exact };
+  }
+
+  async strictWithoutType(): Promise<TypedResult> {
+    const value = await crucible.extract(
+      ExtractResultTyping.TEXT,
+      ExtractResultTyping.DESCRIPTION,
+      { strict: false },
+    );
+    const exact: Exactly<typeof value, string | null> = true;
+    return { value, exact };
+  }
+
+  async withNonBooleanStrict(): Promise<unknown> {
+    return crucible.extract(ExtractResultTyping.TEXT, ExtractResultTyping.DESCRIPTION, {
+      // @ts-expect-error strict is a boolean, never coerced
+      strict: 'yes',
+    });
+  }
+
   async withUnknownType(): Promise<unknown> {
     return crucible.extract(ExtractResultTyping.TEXT, ExtractResultTyping.DESCRIPTION, {
       // @ts-expect-error an unknown type is rejected at compile time

@@ -52,7 +52,7 @@
       "default": 500
     },
     "testDefaults": {
-      "description": "Project-wide defaults for every crucible.it(). Options declared on a test win.",
+      "description": "Project-wide defaults for every crucible.it(). Options declared on a crucible.describe group or a test win.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -81,6 +81,11 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 2147483647
+        },
+        "strict": {
+          "description": "Extraction strictness for assertions that support it (today crucible.extract). false (lenient) takes the value a reply leans to (\"I think so\" → true, \"probably two\" → 2); true treats any hedge as no value (null). crucible.describe, crucible.it and the call's own options override it.",
+          "type": "boolean",
+          "default": false
         }
       }
     }

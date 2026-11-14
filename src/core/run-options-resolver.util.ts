@@ -6,6 +6,7 @@ import { TimeBudget } from './time-budget.util.js';
 class RunOptionsResolver {
   private static readonly DEFAULT_RUNS = 10;
   private static readonly DEFAULT_THRESHOLD = 0.9;
+  private static readonly DEFAULT_STRICT = false;
   private static readonly SUBJECT = 'crucible.it options';
 
   private readonly validator = new RunOptionsValidator();
@@ -26,6 +27,7 @@ class RunOptionsResolver {
       inferenceTimeout:
         opts.inferenceTimeout ?? defaults.inferenceTimeout ?? TimeBudget.INFERENCE_MS,
       testTimeout: opts.testTimeout ?? defaults.testTimeout ?? TimeBudget.testTimeoutFor(runs),
+      strict: opts.strict ?? defaults.strict ?? RunOptionsResolver.DEFAULT_STRICT,
     };
   }
 }

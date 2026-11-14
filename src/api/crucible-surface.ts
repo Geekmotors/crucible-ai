@@ -1,5 +1,6 @@
 import type { TestBody } from '../bindings/jest.js';
-import type { ExtractedValueFor, ExtractOptions } from '../core/extract-type.js';
+import type { ExtractedValueFor } from '../core/extract-type.js';
+import type { ExtractOptions } from './extract-options.js';
 import type { RunOptions } from './run-options.js';
 
 type CrucibleSurface = {
@@ -38,7 +39,8 @@ type CrucibleSurface = {
    * default (`runs` 10, `threshold` 0.9).
    *
    * @param name - The Jest test name.
-   * @param options - Run count, pass threshold and time budgets.
+   * @param options - Run count, pass threshold, time budgets and
+   *   extraction strictness.
    * @param body - Arrange, act and assert; runs once per run.
    */
   it(name: string, options: RunOptions, body: TestBody): void;
@@ -48,7 +50,8 @@ type CrucibleSurface = {
    * `testTimeout` from an enclosing `crucible.describe` is overridden.
    *
    * @param name - The Jest test name.
-   * @param options - Run count, pass threshold and inference timeout.
+   * @param options - Run count, pass threshold, inference timeout and
+   *   extraction strictness.
    * @param body - Arrange, act and assert; runs once per run.
    * @param timeout - Milliseconds for the whole test, every run included;
    *   `undefined` keeps `options.testTimeout` or the default.
@@ -74,7 +77,8 @@ type CrucibleSurface = {
    * that returns a value (an async `fn` included) are a `usage` error.
    *
    * @param name - The Jest describe name.
-   * @param options - Run count, pass threshold and time budgets shared by
+   * @param options - Run count, pass threshold, time budgets and
+   *   extraction strictness shared by
    *   every test in the group.
    * @param fn - Declares the tests and nested groups; must not be async.
    */
@@ -90,12 +94,15 @@ type CrucibleSurface = {
   coherent(actual: string, expectation: string): Promise<boolean>;
   /**
    * Asks the judge for one value stated in `text`, typed as `options.as`
-   * asks, or `null` when the text commits to none. One judge call per run.
+   * asks, or `null` when the text commits to none. Lenient by default: the
+   * value a reply leans to counts ("probably two" is `2`); with `strict`
+   * any hedge is `null`. One judge call per run.
    *
    * @param text - The prose to read, usually your system's output.
    * @param description - What to extract, in natural language.
-   * @param options - `as`: `'string'`, `'number'` or `'boolean'`.
-   *   Defaults to `'string'`.
+   * @param options - `as`: `'string'`, `'number'` or `'boolean'`
+   *   (default `'string'`); `strict`: `true` to treat any hedge as `null`
+   *   (default: the test's resolved `strict`, else `false`).
    */
   extract<O extends ExtractOptions | undefined = undefined>(
     text: string,

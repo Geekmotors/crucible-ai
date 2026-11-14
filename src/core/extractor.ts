@@ -1,10 +1,15 @@
 import { CrucibleError } from './errors.js';
-import type { ExtractedValue, ExtractOptions, ExtractType } from './extract-type.js';
+import type { ExtractedValue, ExtractMode, ExtractOptions, ExtractType } from './extract-type.js';
 import { JudgeExchange } from './judge-exchange.js';
 import type { SchemaTextSupplier } from './judge-exchange.js';
 import { PayloadAssembler } from './payload-assembler.util.js';
 import { RunScope, runScope } from './state.js';
 import { TraceReporter } from './trace-reporter.js';
+
+type ExtractRequest = {
+  readonly type: ExtractType;
+  readonly strict?: boolean;
+};
 
 type ParsedExtraction = {
   readonly value: ExtractedValue;
@@ -16,6 +21,7 @@ class Extractor {
   private static readonly CONTRACT = '{ "value": <requested type> | null, "reasoning": string }';
   private static readonly TYPES: readonly ExtractType[] = ['string', 'number', 'boolean'];
   private static readonly DEFAULT_TYPE: ExtractType = 'string';
+  private static readonly OPTION_KEYS: ReadonlySet<string> = new Set(['as', 'strict']);
 
   private readonly assembler = new PayloadAssembler();
 
@@ -31,7 +37,8 @@ class Extractor {
     description: string,
     options?: ExtractOptions,
   ): Promise<ExtractedValue> {
-    const type = this.requestedType(text, description, options);
+    const { type, strict } = this.requested(text, description, options);
+    const mode = this.modeFor(strict ?? this.scope.strict());
     const state = this.scope.context().state;
     const parsed = await this.exchange.ask({
       system: this.schemaText(),
@@ -39,6 +46,7 @@ class Extractor {
         { header: 'RESPONSE', content: text },
         { header: 'TARGET', content: description },
         { header: 'TYPE', content: type },
+        { header: 'MODE', content: mode },
       ]),
       contract: Extractor.CONTRACT,
       read: (reply) => this.extraction(reply, type),
@@ -47,6 +55,7 @@ class Extractor {
       assertion: Extractor.ASSERTION,
       description,
       type,
+      mode,
       value: parsed.value,
       reasoning: parsed.reasoning,
       response: text,
@@ -55,7 +64,11 @@ class Extractor {
     return parsed.value;
   }
 
-  private requestedType(text: unknown, description: unknown, options: unknown): ExtractType {
+  private modeFor(strict: boolean): ExtractMode {
+    return strict ? 'strict' : 'lenient';
+  }
+
+  private requested(text: unknown, description: unknown, options: unknown): ExtractRequest {
     if (typeof text !== 'string' || typeof description !== 'string') {
       throw new CrucibleError(
         'usage',
@@ -63,23 +76,29 @@ class Extractor {
       );
     }
     if (options === undefined) {
-      return Extractor.DEFAULT_TYPE;
+      return { type: Extractor.DEFAULT_TYPE };
     }
     if (typeof options !== 'object' || options === null || Array.isArray(options)) {
       throw this.badOptions();
     }
-    const requested: unknown = (options as { as?: unknown }).as;
+    if (Object.keys(options).some((key) => !Extractor.OPTION_KEYS.has(key))) {
+      throw this.badOptions();
+    }
+    const { as: requested, strict } = options as { as?: unknown; strict?: unknown };
     const type = requested === undefined ? Extractor.DEFAULT_TYPE : requested;
     if (!Extractor.TYPES.some((known) => known === type)) {
       throw this.badOptions();
     }
-    return type as ExtractType;
+    if (strict !== undefined && typeof strict !== 'boolean') {
+      throw this.badOptions();
+    }
+    return { type: type as ExtractType, strict };
   }
 
   private badOptions(): CrucibleError {
     return new CrucibleError(
       'usage',
-      `crucible.extract options take { as: ${Extractor.TYPES.map((type) => `'${type}'`).join(' | ')} }.`,
+      `crucible.extract options take { as?: ${Extractor.TYPES.map((type) => `'${type}'`).join(' | ')}, strict?: boolean }.`,
     );
   }
 

@@ -1,8 +1,9 @@
 {
-  "description": "Conformance matrix for schemas/extract.md. Each case supplies state/response/target/type and the expected value (null when the response commits to no single value). Language-agnostic: any shell assembling the documented payload must reproduce these values.",
+  "description": "Conformance matrix for schemas/extract.md. Each case supplies a mode (lenient or strict) and state/response/target/type, and the expected value (null when the response commits to no value under that mode). Language-agnostic: any shell assembling the documented payload must reproduce these values.",
   "cases": [
     {
       "id": "revision-final-answer",
+      "mode": "strict",
       "state": [],
       "response": "At first I thought there were 3 apples in the basket, but after counting again the answer is two.",
       "target": "the number of apples in the basket",
@@ -11,6 +12,7 @@
     },
     {
       "id": "number-word",
+      "mode": "lenient",
       "state": [],
       "response": "There are seven apples left in the bowl.",
       "target": "the number of apples in the bowl",
@@ -19,6 +21,7 @@
     },
     {
       "id": "negation",
+      "mode": "strict",
       "state": [],
       "response": "It's not two apples, I can tell you that much.",
       "target": "the number of apples",
@@ -27,6 +30,7 @@
     },
     {
       "id": "single-hedge",
+      "mode": "strict",
       "state": [],
       "response": "Probably two apples.",
       "target": "the number of apples",
@@ -35,6 +39,7 @@
     },
     {
       "id": "alternatives-hedge",
+      "mode": "strict",
       "state": [],
       "response": "Probably two apples, maybe three.",
       "target": "the number of apples",
@@ -43,6 +48,7 @@
     },
     {
       "id": "no-answer",
+      "mode": "strict",
       "state": [],
       "response": "I haven't had a chance to count the apples yet.",
       "target": "the number of apples",
@@ -51,6 +57,7 @@
     },
     {
       "id": "boolean-yes",
+      "mode": "strict",
       "state": [],
       "response": "Yes, your room is booked for Friday night.",
       "target": "whether the room is booked",
@@ -59,6 +66,7 @@
     },
     {
       "id": "boolean-no",
+      "mode": "lenient",
       "state": [],
       "response": "No, the room isn't booked yet; it's still available.",
       "target": "whether the room is booked",
@@ -67,6 +75,7 @@
     },
     {
       "id": "string-value",
+      "mode": "lenient",
       "state": [],
       "response": "I moved to Paris last spring and I've lived there ever since.",
       "target": "the city the user lives in",
@@ -75,6 +84,7 @@
     },
     {
       "id": "state-resolves-reference",
+      "mode": "lenient",
       "state": ["Room 4 is the blue room."],
       "response": "Done! I've booked you into the blue room.",
       "target": "the number of the room that was booked",
@@ -83,11 +93,201 @@
     },
     {
       "id": "state-only-value",
+      "mode": "lenient",
       "state": ["The meeting is in room 12."],
       "response": "See you at the meeting!",
       "target": "the meeting room number",
       "type": "number",
       "expected": null
+    },
+    {
+      "id": "lenient-i-think-so",
+      "mode": "lenient",
+      "state": [],
+      "response": "Is the room booked? I think so.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": true
+    },
+    {
+      "id": "lenient-reckon-so",
+      "mode": "lenient",
+      "state": [],
+      "response": "Is the room booked? Yeah, I reckon so.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": true
+    },
+    {
+      "id": "lenient-nah",
+      "mode": "lenient",
+      "state": [],
+      "response": "Is the room booked? Nah.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": false
+    },
+    {
+      "id": "lenient-probably-two",
+      "mode": "lenient",
+      "state": [],
+      "response": "Probably two apples.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": 2
+    },
+    {
+      "id": "lenient-likely-paris",
+      "mode": "lenient",
+      "state": [],
+      "response": "She's likely in Paris by now.",
+      "target": "the city she is in",
+      "type": "string",
+      "expected": "Paris"
+    },
+    {
+      "id": "lenient-revision-final-answer",
+      "mode": "lenient",
+      "state": [],
+      "response": "At first I thought there were 3 apples in the basket, but after counting again the answer is two.",
+      "target": "the number of apples in the basket",
+      "type": "number",
+      "expected": 2
+    },
+    {
+      "id": "lenient-split",
+      "mode": "lenient",
+      "state": [],
+      "response": "Two or three apples, I'm not sure which.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "lenient-split-string",
+      "mode": "lenient",
+      "state": [],
+      "response": "Maybe Paris, maybe Lyon.",
+      "target": "the city she is in",
+      "type": "string",
+      "expected": null
+    },
+    {
+      "id": "lenient-negation",
+      "mode": "lenient",
+      "state": [],
+      "response": "It's not two apples, I can tell you that much.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "lenient-dont-know",
+      "mode": "lenient",
+      "state": [],
+      "response": "I don't know how many apples there are.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "lenient-no-answer",
+      "mode": "lenient",
+      "state": [],
+      "response": "I haven't had a chance to count the apples yet.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "strict-i-think-so",
+      "mode": "strict",
+      "state": [],
+      "response": "Is the room booked? I think so.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": null
+    },
+    {
+      "id": "strict-number-word",
+      "mode": "strict",
+      "state": [],
+      "response": "There are seven apples left in the bowl.",
+      "target": "the number of apples in the bowl",
+      "type": "number",
+      "expected": 7
+    },
+    {
+      "id": "lenient-around-two",
+      "mode": "lenient",
+      "state": [],
+      "response": "Around two apples, I would say.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": 2
+    },
+    {
+      "id": "lenient-dont-think-so",
+      "mode": "lenient",
+      "state": [],
+      "response": "Is the room booked? I don't think so.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": false
+    },
+    {
+      "id": "lenient-probably-not",
+      "mode": "lenient",
+      "state": [],
+      "response": "Is the room booked? Probably not.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": false
+    },
+    {
+      "id": "lenient-i-think-two",
+      "mode": "lenient",
+      "state": [],
+      "response": "I think it's two apples.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": 2
+    },
+    {
+      "id": "strict-around-two",
+      "mode": "strict",
+      "state": [],
+      "response": "Around two apples, I would say.",
+      "target": "the number of apples",
+      "type": "number",
+      "expected": null
+    },
+    {
+      "id": "strict-dont-think-so",
+      "mode": "strict",
+      "state": [],
+      "response": "Is the room booked? I don't think so.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": null
+    },
+    {
+      "id": "strict-likely-paris",
+      "mode": "strict",
+      "state": [],
+      "response": "She's likely in Paris by now.",
+      "target": "the city she is in",
+      "type": "string",
+      "expected": null
+    },
+    {
+      "id": "strict-firm-no",
+      "mode": "strict",
+      "state": [],
+      "response": "Is the room booked? No.",
+      "target": "whether the room is booked",
+      "type": "boolean",
+      "expected": false
     }
   ]
 }

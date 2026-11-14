@@ -34,6 +34,17 @@ type RunOptions = {
    * @default the enclosing crucible.describe, else testDefaults.testTimeout, else 30000 + 1000 × (runs − 1) (39000 for 10 runs)
    */
   readonly testTimeout?: ResolvableRunOptions['testTimeout'];
+  /**
+   * Extraction strictness for every assertion that supports it (today
+   * `crucible.extract()`). `false` (lenient) takes the value a reply leans
+   * to: "I think so" is `true`, "probably two" is `2`; a genuine split
+   * ("two or three"), a bare negation, "I don't know" or no answer stay
+   * `null`. `true` treats any hedge as `null`. An `extract()` call's own
+   * `strict` wins over this.
+   *
+   * @default the enclosing crucible.describe, else testDefaults.strict, else false (lenient)
+   */
+  readonly strict?: ResolvableRunOptions['strict'];
 };
 
 export type { RunOptions };

@@ -25,6 +25,17 @@ class CrucibleDescribeTyping {
     });
   }
 
+  withStrictGroup(): void {
+    crucible.describe(CrucibleDescribeTyping.NAME, { strict: true }, () => {
+      crucible.it(CrucibleDescribeTyping.NAME, { strict: false }, async () => {});
+    });
+  }
+
+  withNonBooleanStrict(): void {
+    // @ts-expect-error strict is a boolean, never coerced
+    crucible.describe(CrucibleDescribeTyping.NAME, { strict: 'yes' }, CrucibleDescribeTyping.GROUP);
+  }
+
   withReplacedDescribe(): void {
     // @ts-expect-error the frozen surface cannot be reassigned
     crucible.describe = CrucibleDescribeTyping.GROUP;

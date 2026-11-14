@@ -3,6 +3,7 @@ import { CrucibleError } from '../core/errors.js';
 import type { RunOptions } from '../core/run-options.js';
 import { RunScope } from '../core/state.js';
 import { Capture } from '../core/test/capture.util.js';
+import { ExtractValue } from '../core/test/extract-value.enum.js';
 import { ProjectDefaults } from '../core/test/project-defaults.util.js';
 import { RunCount } from '../core/test/run-count.enum.js';
 import { RunnerHarness } from '../core/test/runner-harness.util.js';
@@ -321,6 +322,38 @@ describe('JestBinding — test timeout', () => {
         'no body',
         {},
         CustomTimeout.Short as unknown as () => void,
+      ),
+    );
+    expect(error.kind).toBe('usage');
+  });
+});
+
+describe('JestBinding — extraction strictness through the chain', () => {
+  it('a strict group makes its tests extract strictly over a lenient configuration', async () => {
+    await expect(
+      JestBindingHarness.extractedInGroup({ strict: true }, {}, { strict: false }),
+    ).resolves.toBeNull();
+  });
+
+  it('a lenient group relaxes a strict configuration', async () => {
+    await expect(
+      JestBindingHarness.extractedInGroup({ strict: false }, {}, { strict: true }),
+    ).resolves.toBe(ExtractValue.Two);
+  });
+
+  it("a test's own strict wins over its group", async () => {
+    await expect(
+      JestBindingHarness.extractedInGroup({ strict: false }, { strict: true }),
+    ).resolves.toBeNull();
+  });
+
+  it('rejects a non-boolean strict on a test as usage', () => {
+    const binding = JestBindingHarness.binding(new RegistrarFake());
+    const error = JestBindingHarness.errorFrom(() =>
+      binding.register(
+        GroupName.Invalid,
+        { strict: String(true) } as unknown as RunOptions,
+        async () => {},
       ),
     );
     expect(error.kind).toBe('usage');

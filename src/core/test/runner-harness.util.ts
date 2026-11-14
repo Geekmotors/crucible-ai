@@ -17,6 +17,11 @@ import { RunCount } from './run-count.enum.js';
 import { TraceHarness } from './trace-harness.util.js';
 import { TraceReporter } from '../trace-reporter.js';
 import { TimeBudget } from '../time-budget.util.js';
+import type { ExtractedValue } from '../extract-type.js';
+import { ExtractorHarness } from './extractor-harness.util.js';
+import { ExtractTarget } from './extract-target.enum.js';
+import { ExtractText } from './extract-text.enum.js';
+import { ModeAwareJudge } from './mode-aware-judge.fake.js';
 
 type RunBehavior = (scope: RunScope) => Promise<void>;
 
@@ -179,6 +184,21 @@ class RunnerHarness {
         runs,
       }),
     );
+  }
+
+  static async extractedUnder(opts: RunOptions, defaults: RunOptions): Promise<ExtractedValue[]> {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.extractor(new ModeAwareJudge(), scope);
+    const values: ExtractedValue[] = [];
+    await RunnerHarness.runner(scope, new ManualTimer(), defaults).execute(
+      async () => {
+        values.push(
+          await extractor.extract(ExtractText.Response, ExtractTarget.Apples, { as: 'number' }),
+        );
+      },
+      { runs: RunCount.Smaller, ...opts },
+    );
+    return values;
   }
 
   static async judgedExpiry(

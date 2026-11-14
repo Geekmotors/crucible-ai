@@ -42,6 +42,7 @@ describe('the generated config file with every commented setting uncommented', (
       runs: RunCount.BuiltIn,
       threshold: Threshold.BuiltIn,
       inferenceTimeout: InferenceTimeout.BuiltInMs,
+      strict: false,
     });
   });
 

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CrucibleError } from './errors.js';
-import type { ExtractedValue, ExtractType } from './extract-type.js';
+import type { ExtractedValue, ExtractMode, ExtractType } from './extract-type.js';
 import { TimeBudget } from './time-budget.util.js';
 
 type JudgedRecord = {
@@ -18,6 +18,7 @@ type VerdictRecord = JudgedRecord & {
 type ExtractionRecord = JudgedRecord & {
   readonly description: string;
   readonly type: ExtractType;
+  readonly mode: ExtractMode;
   readonly value: ExtractedValue;
 };
 
@@ -39,6 +40,7 @@ type RunStore = {
   readonly signal: AbortSignal;
   readonly run?: number;
   readonly inferenceTimeout: number;
+  readonly strict: boolean;
   seq: number;
 };
 
@@ -50,6 +52,7 @@ class RunScope {
     signal: AbortSignal = new AbortController().signal,
     run?: number,
     inferenceTimeout: number = TimeBudget.INFERENCE_MS,
+    strict: boolean = false,
   ): T {
     return this.storage.run(
       {
@@ -57,6 +60,7 @@ class RunScope {
         signal,
         run,
         inferenceTimeout,
+        strict,
         seq: 0,
       },
       body,
@@ -77,6 +81,10 @@ class RunScope {
 
   inferenceTimeout(): number {
     return this.store().inferenceTimeout;
+  }
+
+  strict(): boolean {
+    return this.store().strict;
   }
 
   appendState(entries: unknown): void {

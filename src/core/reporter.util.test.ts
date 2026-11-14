@@ -4,6 +4,7 @@ import { AssertionName } from './test/assertion-name.enum.js';
 import { BlankValue } from './test/blank-value.enum.js';
 import { ClaimText } from './test/claim-text.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
+import { ExtractModeName } from './test/extract-mode-name.enum.js';
 import { ExtractTarget } from './test/extract-target.enum.js';
 import { ExtractText } from './test/extract-text.enum.js';
 import { MultilineText } from './test/multiline-text.enum.js';
@@ -200,6 +201,7 @@ describe('Reporter — extractions in a failed run', () => {
       [
         ReportHarness.extractingRun('failed', [
           ReportHarness.extraction({
+            mode: ExtractModeName.Strict,
             reasoning: 'The speaker hedges with "probably".',
             response: 'Probably two apples.',
           }),
@@ -214,7 +216,7 @@ describe('Reporter — extractions in a failed run', () => {
         '[FAILED] Run #1',
         '  First failure: no assertion returned false; the body threw',
         '  Thrown: Error: failed',
-        `  Extraction 1 of 1: "${ExtractTarget.Apples}" as number → null`,
+        `  Extraction 1 of 1 (strict): "${ExtractTarget.Apples}" as number → null`,
         '    Judge reasoning: The speaker hedges with "probably".',
         '    Response excerpt: Probably two apples.',
       ].join('\n'),
@@ -236,9 +238,11 @@ describe('Reporter — extractions in a failed run', () => {
       ],
       Threshold.Certain,
     );
-    expect(message).toContain(`Extraction 1 of 2: "${ExtractTarget.Apples}" as number → 2`);
     expect(message).toContain(
-      `Extraction 2 of 2: "${ExtractTarget.City}" as string → "${ExtractText.City}"`,
+      `Extraction 1 of 2 (lenient): "${ExtractTarget.Apples}" as number → 2`,
+    );
+    expect(message).toContain(
+      `Extraction 2 of 2 (lenient): "${ExtractTarget.City}" as string → "${ExtractText.City}"`,
     );
   });
 
@@ -257,7 +261,7 @@ describe('Reporter — extractions in a failed run', () => {
       `First failed assertion: ${AssertionName.Coherent} (assertion 1 of 1`,
     );
     expect(message).toContain(ClaimText.NamesPrice);
-    expect(message).toContain(`Extraction 1 of 1: "${ExtractTarget.Apples}"`);
+    expect(message).toContain(`Extraction 1 of 1 (lenient): "${ExtractTarget.Apples}"`);
   });
 
   it('bounds the extraction’s response excerpt at the configured length', () => {
@@ -273,11 +277,17 @@ describe('Reporter — extractions in a failed run', () => {
 
   it('lists extractions among the judge calls at full verbosity, without repeating them', () => {
     const message = ReportHarness.renderedVerdict(
-      [ReportHarness.extractingRun('failed', [ReportHarness.extraction({ value: 3 })])],
+      [
+        ReportHarness.extractingRun('failed', [
+          ReportHarness.extraction({ mode: ExtractModeName.Strict, value: 3 }),
+        ]),
+      ],
       Threshold.Certain,
       ReportHarness.fullReporter(),
     );
-    expect(message).toContain(`Judge call 1 of 1: extract "${ExtractTarget.Apples}" as number → 3`);
+    expect(message).toContain(
+      `Judge call 1 of 1: extract (strict) "${ExtractTarget.Apples}" as number → 3`,
+    );
     expect(message).not.toContain('Extraction 1 of 1');
   });
 
@@ -286,7 +296,9 @@ describe('Reporter — extractions in a failed run', () => {
       [ReportHarness.extractingRun('passed', [ReportHarness.extraction({ value: 2 })])],
       Threshold.Certain,
     );
-    expect(message).toContain(`Judge call 1 of 1: extract "${ExtractTarget.Apples}" as number → 2`);
+    expect(message).toContain(
+      `Judge call 1 of 1: extract (lenient) "${ExtractTarget.Apples}" as number → 2`,
+    );
   });
 });
 

@@ -121,7 +121,7 @@ class Runner {
   ): () => void {
     const controller = new AbortController();
     const runs = Array.from({ length: options.runs }, (_, index) =>
-      this.start(body, controller.signal, index + 1, options.inferenceTimeout),
+      this.start(body, controller.signal, index + 1, options),
     );
     const settled: (RunResult | undefined)[] = runs.map(() => undefined);
     let pending = options.runs;
@@ -175,13 +175,14 @@ class Runner {
     body: () => unknown,
     signal: AbortSignal,
     run: number,
-    inferenceTimeout: number,
+    options: ResolvedRunOptions,
   ): InFlightRun {
     return this.scope.enterRun(
       () => ({ context: this.scope.context(), settled: this.settle(body) }),
       signal,
       run,
-      inferenceTimeout,
+      options.inferenceTimeout,
+      options.strict,
     );
   }
 

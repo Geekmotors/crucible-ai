@@ -44,6 +44,7 @@ writes `crucible.config.jsonc` in the current directory:
   //   "threshold": 0.9, // at least 9 of 10 runs must pass
   //   "inferenceTimeout": 30000, // ms per judge request
   //   testTimeout defaults to 30000 + 1000 per run after the first; set "testTimeout": <ms> to fix it
+  //   "strict": false, // true: extract() treats any hedge ("probably two") as null
   // },
 }
 ```
@@ -125,7 +126,7 @@ a wrong path only loses the editor hints.
 | `apiKeyEnv` | no; every provider | environment variable **name**: letters, digits and `_`, not starting with a digit | `CRUCIBLE_JUDGE_KEY` | The variable that holds the judge's API key ([Judge key](#judge-key)) |
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
-| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647) | `{}` (built-ins: `runs` 10, `threshold` 0.9) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)); a [`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe) group or the test itself overrides them per field. With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass |
+| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647), and `strict` (`true` or `false`) | `{}` (built-ins: `runs` 10, `threshold` 0.9, `strict` false) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)); a [`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe) group or the test itself overrides them per field. With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass; `"strict": true` makes every `crucible.extract()` treat a hedged reply as `null` ([extract](api.md#crucibleextract)) |
 | `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
 
 No other top-level field is accepted.
@@ -178,7 +179,7 @@ the first problem:
 | `meta` present but not an object (`null`, an array, a string…) | `config` |
 | `verbosity` not one of the three levels — checked even when `CRUCIBLE_VERBOSE` is set | `config` |
 | `CRUCIBLE_VERBOSE` set to anything other than the three levels (an empty value is ignored) | `usage` |
-| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout` | `config` |
+| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout`/`strict` | `config` |
 | `excerptChars` not an integer ≥ 1 | `config` |
 | The key variable (`CRUCIBLE_JUDGE_KEY`, or the one `apiKeyEnv` names) missing or blank when a judge call is made — always for `openrouter` and `openai`; for `openai-compatible` only when `apiKeyEnv` is set | `config` |
 | The key variable holding a character no API key carries (inner whitespace, a control character, non-ASCII) when a judge call is made; the value is never echoed | `config` |

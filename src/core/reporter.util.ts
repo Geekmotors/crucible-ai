@@ -208,7 +208,7 @@ class Reporter {
     if (call.kind === 'extraction') {
       return this.extractionLines(
         heading,
-        `${call.record.assertion} ${this.extracted(call.record)}`,
+        `${call.record.assertion} (${call.record.mode}) ${this.extracted(call.record)}`,
         call.record,
       );
     }
@@ -287,7 +287,7 @@ class Reporter {
     const extractions = [...context.extractions].sort((left, right) => left.seq - right.seq);
     return extractions.map((record, index) =>
       this.extractionLines(
-        `Extraction ${index + 1} of ${extractions.length}`,
+        `Extraction ${index + 1} of ${extractions.length} (${record.mode})`,
         this.extracted(record),
         record,
       ),

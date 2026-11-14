@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
+import type { ExtractOptions } from './extract-type.js';
 import { RunScope } from './state.js';
 import { Capture } from './test/capture.util.js';
 import { ExpiredDeadline } from './test/expired-deadline.fake.js';
@@ -8,6 +9,7 @@ import { ExtractReply } from './test/extract-reply.enum.js';
 import { ExtractTarget } from './test/extract-target.enum.js';
 import { ExtractText } from './test/extract-text.enum.js';
 import { ExtractValue } from './test/extract-value.enum.js';
+import { ExtractModeName } from './test/extract-mode-name.enum.js';
 import { ExtractorHarness } from './test/extractor-harness.util.js';
 import { TraceHarness } from './test/trace-harness.util.js';
 import { VerbosityLevel } from './test/verbosity-level.enum.js';
@@ -39,6 +41,39 @@ describe('Extractor — typed values', () => {
     await expect(
       ExtractorHarness.extracted('```json\n' + ExtractReply.Two + '\n```', { as: 'number' }),
     ).resolves.toBe(ExtractValue.Two);
+  });
+});
+
+describe('Extractor — lenient or strict', () => {
+  it('extracts leniently by default, taking the value the reply leans to', async () => {
+    await expect(ExtractorHarness.leaning({ as: 'number' })).resolves.toBe(ExtractValue.Two);
+  });
+
+  it('extracts strictly when the call asks for it', async () => {
+    await expect(ExtractorHarness.leaning({ as: 'number', strict: true })).resolves.toBeNull();
+  });
+
+  it('extracts strictly when the run resolved strict', async () => {
+    await expect(ExtractorHarness.leaning({ as: 'number' }, true)).resolves.toBeNull();
+  });
+
+  it("the call's own strict wins over the run's", async () => {
+    await expect(ExtractorHarness.leaning({ as: 'number', strict: false }, true)).resolves.toBe(
+      ExtractValue.Two,
+    );
+  });
+
+  it('extracts leniently when the run resolved lenient', async () => {
+    await expect(ExtractorHarness.leaning({ as: 'number' }, false)).resolves.toBe(ExtractValue.Two);
+  });
+
+  it.each<[string, ExtractOptions, boolean, ExtractModeName]>([
+    ['the default lenient', { as: 'number' }, false, ExtractModeName.Lenient],
+    ["the call's strict", { as: 'number', strict: true }, false, ExtractModeName.Strict],
+    ["the run's strict", { as: 'number' }, true, ExtractModeName.Strict],
+  ])('records %s mode the extraction used', async (_label, options, strictRun, mode) => {
+    const context = await ExtractorHarness.leaningContext(options, strictRun);
+    expect(context.extractions[0]?.mode).toBe(mode);
   });
 });
 
@@ -99,6 +134,9 @@ describe('Extractor — usage', () => {
     ['options that are not an object', ExtractText.Response, ExtractTarget.Apples, 'number'],
     ['null options', ExtractText.Response, ExtractTarget.Apples, null],
     ['a null type', ExtractText.Response, ExtractTarget.Apples, { as: null }],
+    ['a string strict', ExtractText.Response, ExtractTarget.Apples, { strict: String(true) }],
+    ['a null strict', ExtractText.Response, ExtractTarget.Apples, { strict: null }],
+    ['an unknown option', ExtractText.Response, ExtractTarget.Apples, { strcit: true }],
   ])('rejects %s as a usage error', async (_label, text, description, options) => {
     const error = await ExtractorHarness.usageFailure(text, description, options);
     expect(error).toBeInstanceOf(CrucibleError);
@@ -139,6 +177,11 @@ describe('Extractor — records and trace', () => {
   it('traces the extracted value with its description and type', async () => {
     const output = await ExtractorHarness.tracedOutput([ExtractReply.Two], new TraceHarness());
     expect(output).toContain(`judge value 2 for extract "${ExtractTarget.Apples}" as number`);
+  });
+
+  it('traces the mode the extraction used', async () => {
+    const output = await ExtractorHarness.tracedOutput([ExtractReply.Two], new TraceHarness());
+    expect(output).toContain(`as number (${ExtractModeName.Lenient})`);
   });
 
   it('traces an unusable reply before the re-ask', async () => {
