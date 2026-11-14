@@ -1,0 +1,568 @@
+{
+  "area": "run-options",
+  "operation": "resolve",
+  "description": "Resolve the effective run options of a test (and of one extract call) from the built-in defaults, the configured testDefaults, enclosing groups (outer to inner), the test's own options and an extract call's options.",
+  "cases": [
+    {
+      "id": "run-options-resolve-nothing-declared",
+      "description": "With nothing declared anywhere every field takes its built-in value: 10 runs, threshold 0.9, 30 s inference timeout, a 39 s test timeout and lenient extraction.",
+      "input": {},
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-runs-only",
+      "description": "A test that declares only runs keeps the built-in threshold; the test timeout grows with the declared runs.",
+      "input": { "test": { "runs": 20 } },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-threshold-only",
+      "description": "A test that declares only a threshold keeps the built-in 10 runs.",
+      "input": { "test": { "threshold": 0.95 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.95,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-single-certain-run",
+      "description": "One run at threshold 1 gets the 30 s base test timeout.",
+      "input": { "test": { "runs": 1, "threshold": 1 } },
+      "expect": {
+        "value": {
+          "runs": 1,
+          "threshold": 1,
+          "inferenceTimeout": 30000,
+          "testTimeout": 30000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-config-fills-omitted-fields",
+      "description": "Every field the test leaves out comes from the configured testDefaults.",
+      "input": { "testDefaults": { "runs": 20, "threshold": 0.95 } },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.95,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-runs-keeps-config-threshold",
+      "description": "Fields merge one at a time: the test's runs win and the configured threshold stays.",
+      "input": { "testDefaults": { "runs": 20, "threshold": 0.95 }, "test": { "runs": 5 } },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.95,
+          "inferenceTimeout": 30000,
+          "testTimeout": 34000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-overrides-config",
+      "description": "A test that declares runs and threshold uses its own values for both.",
+      "input": {
+        "testDefaults": { "runs": 20, "threshold": 0.95 },
+        "test": { "runs": 5, "threshold": 0.5 }
+      },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 30000,
+          "testTimeout": 34000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-config-partial-falls-back",
+      "description": "A field the configured testDefaults leave unset falls back to its built-in value.",
+      "input": { "testDefaults": { "threshold": 0.95 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.95,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-config-timeouts",
+      "description": "Configured inference and test timeouts apply when the test declares none.",
+      "input": { "testDefaults": { "inferenceTimeout": 50000, "testTimeout": 60000 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-timeout-over-config",
+      "description": "A test's own testTimeout wins over the configured one; the configured inferenceTimeout stays.",
+      "input": {
+        "testDefaults": { "inferenceTimeout": 50000, "testTimeout": 60000 },
+        "test": { "testTimeout": 5000 }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 50000,
+          "testTimeout": 5000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-config-strict",
+      "description": "A configured strict applies when the test leaves strict unset.",
+      "input": { "testDefaults": { "strict": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-strict-over-config",
+      "description": "A test's own strict wins over the configured one.",
+      "input": { "testDefaults": { "strict": true }, "test": { "strict": false } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-undefined-runs-keeps-config",
+      "description": "A field the test sets to undefined counts as not declared, so the configured value stays.",
+      "input": { "testDefaults": { "runs": 20 }, "test": { "runs": { "$special": "undefined" } } },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-formula-capped-at-timer-max",
+      "description": "The default test timeout never exceeds 2147483647 ms, however many runs there are.",
+      "input": { "test": { "runs": 3000000 } },
+      "expect": {
+        "value": {
+          "runs": 3000000,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 2147483647,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-formula-first-capped-run-count",
+      "description": "2147455 runs is the first run count whose formula value passes the cap, so it is clipped to 2147483647 ms.",
+      "input": { "test": { "runs": 2147455 } },
+      "expect": {
+        "value": {
+          "runs": 2147455,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 2147483647,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-formula-last-uncapped-run-count",
+      "description": "2147454 runs is the last run count the formula serves unclipped: 30000 + 2147453 * 1000 ms.",
+      "input": { "test": { "runs": 2147454 } },
+      "expect": {
+        "value": {
+          "runs": 2147454,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 2147483000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-group-over-config",
+      "description": "A test inside a group inherits the group's fields over the configured testDefaults.",
+      "input": { "testDefaults": { "runs": 20, "threshold": 0.95 }, "groups": [{ "runs": 5 }] },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.95,
+          "inferenceTimeout": 30000,
+          "testTimeout": 34000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-inner-group-over-outer",
+      "description": "An inner group overrides the outer group field by field and keeps the rest.",
+      "input": { "groups": [{ "runs": 20, "threshold": 0.5 }, { "threshold": 0.35 }] },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.35,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-over-group",
+      "description": "A test's own fields win over every group, field by field.",
+      "input": { "groups": [{ "runs": 20, "threshold": 0.5 }], "test": { "runs": 1 } },
+      "expect": {
+        "value": {
+          "runs": 1,
+          "threshold": 0.5,
+          "inferenceTimeout": 30000,
+          "testTimeout": 30000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-undefined-keeps-value-from-above",
+      "description": "A field set to undefined in an inner group or the test keeps the value from further up.",
+      "input": {
+        "groups": [{ "runs": 20 }, { "runs": { "$special": "undefined" } }],
+        "test": { "runs": { "$special": "undefined" } }
+      },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-empty-group-changes-nothing",
+      "description": "A group that declares nothing changes nothing.",
+      "input": { "groups": [{}] },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-group-inference-timeout",
+      "description": "A group's inferenceTimeout reaches the tests inside it.",
+      "input": { "groups": [{ "inferenceTimeout": 60000 }] },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 60000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-group-strict-over-config",
+      "description": "A group's strict wins over a lenient configured default.",
+      "input": { "testDefaults": { "strict": false }, "groups": [{ "strict": true }] },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-inner-group-relaxes-strict",
+      "description": "An inner group can turn strict off again for its own tests.",
+      "input": { "groups": [{ "strict": true }, { "strict": false }] },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-strict-over-group",
+      "description": "A test's own strict wins over its group's.",
+      "input": { "groups": [{ "strict": false }], "test": { "strict": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-formula-uses-group-runs",
+      "description": "With no testTimeout declared anywhere the formula uses the runs the group resolves.",
+      "input": { "groups": [{ "runs": 20 }] },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-group-timeout-beats-formula",
+      "description": "A group testTimeout beats the formula even when an inner group changes runs.",
+      "input": { "groups": [{ "testTimeout": 50000 }, { "runs": 100 }] },
+      "expect": {
+        "value": {
+          "runs": 100,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 50000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-config-timeout-beats-formula",
+      "description": "A configured testTimeout beats the formula when a group changes runs.",
+      "input": { "testDefaults": { "testTimeout": 60000 }, "groups": [{ "runs": 100 }] },
+      "expect": {
+        "value": {
+          "runs": 100,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 60000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-unset-timeout-keeps-config-timeout",
+      "description": "A test that sets testTimeout to undefined keeps the configured testTimeout; the formula does not come back.",
+      "input": {
+        "testDefaults": { "testTimeout": 60000 },
+        "test": { "runs": 20, "testTimeout": { "$special": "undefined" } }
+      },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 60000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-nearest-timeout-inner-group",
+      "description": "The nearest declared testTimeout wins: the inner group's over the outer group's and the configured one.",
+      "input": {
+        "testDefaults": { "testTimeout": 40000 },
+        "groups": [{ "testTimeout": 60000 }, { "testTimeout": 50000 }]
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 50000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-test-timeout-over-group",
+      "description": "A test's own testTimeout wins over its group's.",
+      "input": { "groups": [{ "testTimeout": 50000 }], "test": { "testTimeout": 5000 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 5000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-every-layer",
+      "description": "Each field comes from the nearest layer that declares it: config, outer group, inner group, test.",
+      "input": {
+        "testDefaults": {
+          "runs": 20,
+          "threshold": 0.95,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        },
+        "groups": [{ "runs": 5, "inferenceTimeout": 40000 }, { "threshold": 0.5 }],
+        "test": { "strict": false }
+      },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 40000,
+          "testTimeout": 60000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-strict-over-lenient-run",
+      "description": "An extract call that asks for strict extracts strictly in a lenient test.",
+      "input": { "call": { "strict": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-lenient-over-strict-test",
+      "description": "An extract call's own strict false wins over the test's strict.",
+      "input": { "test": { "strict": true }, "call": { "strict": false } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-keeps-strict-run",
+      "description": "An extract call that leaves strict unset uses the test's resolved strict.",
+      "input": { "test": { "strict": true }, "call": {} },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-keeps-lenient-run",
+      "description": "An extract call that leaves strict unset in a lenient test extracts leniently.",
+      "input": { "call": {} },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-unset-strict-keeps-run",
+      "description": "An extract call whose strict is undefined keeps the strict mode the test resolved.",
+      "input": { "test": { "strict": true }, "call": { "strict": { "$special": "undefined" } } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-call-over-group-and-config",
+      "description": "An extract call's strict wins over the group's and the configured one.",
+      "input": {
+        "testDefaults": { "strict": true },
+        "groups": [{ "strict": true }],
+        "call": { "strict": false }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false
+        }
+      }
+    }
+  ]
+}

@@ -18,11 +18,7 @@ import { ROUTING_META } from '../providers/test/routing-meta.fake.js';
 import { TestModel } from '../providers/test/test-model.enum.js';
 import { ExcerptChars } from './test/excerpt-chars.enum.js';
 import { InvalidExcerptChars } from './test/invalid-excerpt-chars.enum.js';
-import { CustomTimeout } from './test/custom-timeout.enum.js';
-import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
-import { InvalidTimeout } from './test/invalid-timeout.enum.js';
 import { RunCount } from './test/run-count.enum.js';
-import { Threshold } from './test/threshold.enum.js';
 import { ProviderName } from '../providers/test/provider-name.enum.js';
 
 describe('ConfigStore with a valid config', () => {
@@ -204,78 +200,6 @@ describe('ConfigStore verbosity override', () => {
           { provider: 'fake', model: TestModel.Generic, verbosity: 'loud' },
           'debug',
         ),
-      ),
-    ).toBe('config');
-  });
-});
-
-describe('ConfigStore testDefaults', () => {
-  it('resolves configured runs and threshold', () => {
-    const testDefaults = { runs: RunCount.Gated, threshold: Threshold.Strict };
-    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
-    expect(store.get().testDefaults).toEqual(testDefaults);
-  });
-
-  it('resolves configured inference and test timeouts', () => {
-    const testDefaults = {
-      inferenceTimeout: CustomTimeout.Long,
-      testTimeout: CustomTimeout.Longer,
-    };
-    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults });
-    expect(store.get().testDefaults).toEqual(testDefaults);
-  });
-
-  it('accepts a single configured field, leaving the other unset', () => {
-    const store = ConfigHarness.store({
-      provider: 'fake',
-      model: TestModel.Generic,
-      testDefaults: { threshold: Threshold.Strict },
-    });
-    expect(store.get().testDefaults).toEqual({ threshold: Threshold.Strict });
-  });
-
-  it('resolves a configured strict extraction default', () => {
-    const store = ConfigHarness.store({
-      provider: 'fake',
-      model: TestModel.Generic,
-      testDefaults: { strict: true },
-    });
-    expect(store.get().testDefaults).toEqual({ strict: true });
-  });
-
-  it('resolves to no defaults when testDefaults is absent', () => {
-    const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
-    expect(store.get().testDefaults).toEqual({});
-  });
-
-  it.each([
-    ['zero threshold', { threshold: InvalidTestDefault.Zero }],
-    ['threshold above one', { threshold: InvalidTestDefault.AboveOne }],
-    ['negative threshold', { threshold: InvalidTestDefault.Negative }],
-    ['string threshold', { threshold: String(Threshold.Strict) }],
-    ['zero runs', { runs: InvalidTestDefault.Zero }],
-    ['negative runs', { runs: InvalidTestDefault.Negative }],
-    ['fractional runs', { runs: InvalidTestDefault.Fractional }],
-    ['string runs', { runs: String(RunCount.Gated) }],
-    ['unknown key', { run: RunCount.Gated }],
-    ['null', null],
-    ['array', [RunCount.Gated]],
-    ['number', RunCount.Gated],
-    ['zero inferenceTimeout', { inferenceTimeout: InvalidTimeout.Zero }],
-    ['fractional inferenceTimeout', { inferenceTimeout: InvalidTimeout.Fractional }],
-    [
-      'inferenceTimeout above the timer maximum',
-      { inferenceTimeout: InvalidTimeout.AboveTimerMax },
-    ],
-    ['negative testTimeout', { testTimeout: InvalidTimeout.Negative }],
-    ['string testTimeout', { testTimeout: String(CustomTimeout.Long) }],
-    ['testTimeout above the timer maximum', { testTimeout: InvalidTimeout.AboveTimerMax }],
-    ['string strict', { strict: String(true) }],
-    ['numeric strict', { strict: 1 }],
-  ])('rejects %s as a config failure at load', (_label, testDefaults) => {
-    expect(
-      ConfigHarness.errorKind(
-        ConfigHarness.store({ provider: 'fake', model: TestModel.Generic, testDefaults }),
       ),
     ).toBe('config');
   });

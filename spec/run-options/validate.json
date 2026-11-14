@@ -1,0 +1,1105 @@
+{
+  "area": "run-options",
+  "operation": "validate",
+  "description": "Validate a run options value given in test options, group options or the configured testDefaults; a bad value is a usage error in code and a config error in the config file.",
+  "cases": [
+    {
+      "id": "run-options-validate-test-empty",
+      "description": "An empty object is valid test options.",
+      "input": { "source": "test", "options": {} },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-test-field-unset",
+      "description": "A known field set to undefined counts as missing, so the test options are valid.",
+      "input": { "source": "test", "options": { "runs": { "$special": "undefined" } } },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-test-runs-and-threshold",
+      "description": "Runs and a threshold are valid test options.",
+      "input": { "source": "test", "options": { "runs": 20, "threshold": 0.95 } },
+      "expect": { "value": { "runs": 20, "threshold": 0.95 } }
+    },
+    {
+      "id": "run-options-validate-test-single-certain-run",
+      "description": "One run at threshold 1 is valid test options.",
+      "input": { "source": "test", "options": { "runs": 1, "threshold": 1 } },
+      "expect": { "value": { "runs": 1, "threshold": 1 } }
+    },
+    {
+      "id": "run-options-validate-test-tiny-threshold",
+      "description": "A threshold just above 0 is valid test options.",
+      "input": { "source": "test", "options": { "threshold": 1e-12 } },
+      "expect": { "value": { "threshold": 1e-12 } }
+    },
+    {
+      "id": "run-options-validate-test-timeouts",
+      "description": "Inference and test timeouts are valid test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": 50000, "testTimeout": 5000 } },
+      "expect": { "value": { "inferenceTimeout": 50000, "testTimeout": 5000 } }
+    },
+    {
+      "id": "run-options-validate-test-timeouts-at-one",
+      "description": "Timeouts of 1 ms are valid test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": 1, "testTimeout": 1 } },
+      "expect": { "value": { "inferenceTimeout": 1, "testTimeout": 1 } }
+    },
+    {
+      "id": "run-options-validate-test-timeouts-at-timer-max",
+      "description": "Timeouts at the 2147483647 ms timer maximum are valid test options.",
+      "input": {
+        "source": "test",
+        "options": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 }
+      },
+      "expect": { "value": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 } }
+    },
+    {
+      "id": "run-options-validate-test-strict-true",
+      "description": "strict true is valid test options.",
+      "input": { "source": "test", "options": { "strict": true } },
+      "expect": { "value": { "strict": true } }
+    },
+    {
+      "id": "run-options-validate-test-strict-false",
+      "description": "strict false is valid test options.",
+      "input": { "source": "test", "options": { "strict": false } },
+      "expect": { "value": { "strict": false } }
+    },
+    {
+      "id": "run-options-validate-test-every-field",
+      "description": "Every field at once is valid test options.",
+      "input": {
+        "source": "test",
+        "options": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-validate-test-not-object-null",
+      "description": "null instead of an object is a usage error in test options.",
+      "input": { "source": "test", "options": null },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-not-object-array",
+      "description": "An array instead of an object is a usage error in test options.",
+      "input": { "source": "test", "options": [20] },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-not-object-empty-array",
+      "description": "An empty array is not valid test options.",
+      "input": { "source": "test", "options": [] },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-not-object-number",
+      "description": "A number instead of an object is a usage error in test options.",
+      "input": { "source": "test", "options": 20 },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-not-object-string",
+      "description": "A string instead of an object is a usage error in test options.",
+      "input": { "source": "test", "options": "runs" },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-not-object-boolean",
+      "description": "A boolean instead of an object is a usage error in test options.",
+      "input": { "source": "test", "options": true },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-unknown-key",
+      "description": "An unknown key (a misspelt runs) is a usage error in test options.",
+      "input": { "source": "test", "options": { "run": 5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-unknown-key-unset",
+      "description": "An unknown key is refused in test options even when its value is undefined.",
+      "input": { "source": "test", "options": { "run": { "$special": "undefined" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-zero",
+      "description": "runs of 0 is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-negative",
+      "description": "Negative runs is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-fractional",
+      "description": "Fractional runs is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-string",
+      "description": "runs given as a string is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": "5" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-null",
+      "description": "runs of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-boolean",
+      "description": "A boolean is not a valid runs value in test options.",
+      "input": { "source": "test", "options": { "runs": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-nan",
+      "description": "runs of NaN is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-infinity",
+      "description": "Infinite runs is a usage error in test options.",
+      "input": { "source": "test", "options": { "runs": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-runs-negative-infinity",
+      "description": "Negative infinity is not a valid runs value in test options.",
+      "input": { "source": "test", "options": { "runs": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-zero",
+      "description": "A threshold of 0 is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-above-one",
+      "description": "A threshold above 1 is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": 1.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-just-above-one",
+      "description": "The smallest double above 1 is not a valid threshold in test options.",
+      "input": { "source": "test", "options": { "threshold": 1.0000000000000002 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-negative",
+      "description": "A negative threshold is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": -0.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-string",
+      "description": "A threshold given as a string is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": "0.9" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-null",
+      "description": "A threshold of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-boolean",
+      "description": "A boolean is not a valid threshold in test options.",
+      "input": { "source": "test", "options": { "threshold": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-nan",
+      "description": "A threshold of NaN is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-infinity",
+      "description": "An infinite threshold is a usage error in test options.",
+      "input": { "source": "test", "options": { "threshold": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-threshold-negative-infinity",
+      "description": "Negative infinity is not a valid threshold in test options.",
+      "input": { "source": "test", "options": { "threshold": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-zero",
+      "description": "inferenceTimeout of 0 is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-negative",
+      "description": "A negative inferenceTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-fractional",
+      "description": "A fractional inferenceTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-above-timer-max",
+      "description": "inferenceTimeout above the 2147483647 ms timer maximum is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-string",
+      "description": "inferenceTimeout given as a string is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": "50000" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-null",
+      "description": "inferenceTimeout of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-boolean",
+      "description": "A boolean is not a valid inferenceTimeout in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-nan",
+      "description": "inferenceTimeout of NaN is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-infinity",
+      "description": "An infinite inferenceTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-inference-timeout-negative-infinity",
+      "description": "Negative infinity is not a valid inferenceTimeout in test options.",
+      "input": { "source": "test", "options": { "inferenceTimeout": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-zero",
+      "description": "testTimeout of 0 is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-negative",
+      "description": "A negative testTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-fractional",
+      "description": "A fractional testTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-above-timer-max",
+      "description": "testTimeout above the 2147483647 ms timer maximum is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-string",
+      "description": "testTimeout given as a string is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": "50000" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-null",
+      "description": "testTimeout of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-boolean",
+      "description": "A boolean is not a valid testTimeout in test options.",
+      "input": { "source": "test", "options": { "testTimeout": false } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-nan",
+      "description": "testTimeout of NaN is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-infinity",
+      "description": "An infinite testTimeout is a usage error in test options.",
+      "input": { "source": "test", "options": { "testTimeout": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-test-timeout-negative-infinity",
+      "description": "Negative infinity is not a valid testTimeout in test options.",
+      "input": { "source": "test", "options": { "testTimeout": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-strict-string",
+      "description": "strict given as a string is a usage error in test options.",
+      "input": { "source": "test", "options": { "strict": "true" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-strict-number",
+      "description": "strict given as a number is a usage error in test options.",
+      "input": { "source": "test", "options": { "strict": 1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-strict-null",
+      "description": "strict of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "strict": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-empty",
+      "description": "An empty object is valid group options.",
+      "input": { "source": "group", "options": {} },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-group-field-unset",
+      "description": "A known field set to undefined counts as missing, so the group options are valid.",
+      "input": { "source": "group", "options": { "runs": { "$special": "undefined" } } },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-group-runs-and-threshold",
+      "description": "Runs and a threshold are valid group options.",
+      "input": { "source": "group", "options": { "runs": 20, "threshold": 0.95 } },
+      "expect": { "value": { "runs": 20, "threshold": 0.95 } }
+    },
+    {
+      "id": "run-options-validate-group-single-certain-run",
+      "description": "One run at threshold 1 is valid group options.",
+      "input": { "source": "group", "options": { "runs": 1, "threshold": 1 } },
+      "expect": { "value": { "runs": 1, "threshold": 1 } }
+    },
+    {
+      "id": "run-options-validate-group-tiny-threshold",
+      "description": "A threshold just above 0 is valid group options.",
+      "input": { "source": "group", "options": { "threshold": 1e-12 } },
+      "expect": { "value": { "threshold": 1e-12 } }
+    },
+    {
+      "id": "run-options-validate-group-timeouts",
+      "description": "Inference and test timeouts are valid group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": 50000, "testTimeout": 5000 } },
+      "expect": { "value": { "inferenceTimeout": 50000, "testTimeout": 5000 } }
+    },
+    {
+      "id": "run-options-validate-group-timeouts-at-one",
+      "description": "Timeouts of 1 ms are valid group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": 1, "testTimeout": 1 } },
+      "expect": { "value": { "inferenceTimeout": 1, "testTimeout": 1 } }
+    },
+    {
+      "id": "run-options-validate-group-timeouts-at-timer-max",
+      "description": "Timeouts at the 2147483647 ms timer maximum are valid group options.",
+      "input": {
+        "source": "group",
+        "options": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 }
+      },
+      "expect": { "value": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 } }
+    },
+    {
+      "id": "run-options-validate-group-strict-true",
+      "description": "strict true is valid group options.",
+      "input": { "source": "group", "options": { "strict": true } },
+      "expect": { "value": { "strict": true } }
+    },
+    {
+      "id": "run-options-validate-group-strict-false",
+      "description": "strict false is valid group options.",
+      "input": { "source": "group", "options": { "strict": false } },
+      "expect": { "value": { "strict": false } }
+    },
+    {
+      "id": "run-options-validate-group-every-field",
+      "description": "Every field at once is valid group options.",
+      "input": {
+        "source": "group",
+        "options": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-validate-group-not-object-null",
+      "description": "null instead of an object is a usage error in group options.",
+      "input": { "source": "group", "options": null },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-not-object-array",
+      "description": "An array instead of an object is a usage error in group options.",
+      "input": { "source": "group", "options": [20] },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-not-object-empty-array",
+      "description": "An empty array is not valid group options.",
+      "input": { "source": "group", "options": [] },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-not-object-number",
+      "description": "A number instead of an object is a usage error in group options.",
+      "input": { "source": "group", "options": 20 },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-not-object-string",
+      "description": "A string instead of an object is a usage error in group options.",
+      "input": { "source": "group", "options": "runs" },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-not-object-boolean",
+      "description": "A boolean instead of an object is a usage error in group options.",
+      "input": { "source": "group", "options": true },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-unknown-key",
+      "description": "An unknown key (a misspelt runs) is a usage error in group options.",
+      "input": { "source": "group", "options": { "run": 5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-unknown-key-unset",
+      "description": "An unknown key is refused in group options even when its value is undefined.",
+      "input": { "source": "group", "options": { "run": { "$special": "undefined" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-zero",
+      "description": "runs of 0 is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-negative",
+      "description": "Negative runs is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-fractional",
+      "description": "Fractional runs is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-string",
+      "description": "runs given as a string is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": "5" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-null",
+      "description": "runs of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-boolean",
+      "description": "A boolean is not a valid runs value in group options.",
+      "input": { "source": "group", "options": { "runs": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-nan",
+      "description": "runs of NaN is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-infinity",
+      "description": "Infinite runs is a usage error in group options.",
+      "input": { "source": "group", "options": { "runs": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-runs-negative-infinity",
+      "description": "Negative infinity is not a valid runs value in group options.",
+      "input": { "source": "group", "options": { "runs": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-zero",
+      "description": "A threshold of 0 is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-above-one",
+      "description": "A threshold above 1 is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": 1.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-just-above-one",
+      "description": "The smallest double above 1 is not a valid threshold in group options.",
+      "input": { "source": "group", "options": { "threshold": 1.0000000000000002 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-negative",
+      "description": "A negative threshold is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": -0.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-string",
+      "description": "A threshold given as a string is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": "0.9" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-null",
+      "description": "A threshold of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-boolean",
+      "description": "A boolean is not a valid threshold in group options.",
+      "input": { "source": "group", "options": { "threshold": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-nan",
+      "description": "A threshold of NaN is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-infinity",
+      "description": "An infinite threshold is a usage error in group options.",
+      "input": { "source": "group", "options": { "threshold": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-threshold-negative-infinity",
+      "description": "Negative infinity is not a valid threshold in group options.",
+      "input": { "source": "group", "options": { "threshold": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-zero",
+      "description": "inferenceTimeout of 0 is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-negative",
+      "description": "A negative inferenceTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-fractional",
+      "description": "A fractional inferenceTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-above-timer-max",
+      "description": "inferenceTimeout above the 2147483647 ms timer maximum is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-string",
+      "description": "inferenceTimeout given as a string is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": "50000" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-null",
+      "description": "inferenceTimeout of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-boolean",
+      "description": "A boolean is not a valid inferenceTimeout in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": true } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-nan",
+      "description": "inferenceTimeout of NaN is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-infinity",
+      "description": "An infinite inferenceTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "inferenceTimeout": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-inference-timeout-negative-infinity",
+      "description": "Negative infinity is not a valid inferenceTimeout in group options.",
+      "input": {
+        "source": "group",
+        "options": { "inferenceTimeout": { "$special": "-Infinity" } }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-zero",
+      "description": "testTimeout of 0 is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": 0 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-negative",
+      "description": "A negative testTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": -1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-fractional",
+      "description": "A fractional testTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": 2.5 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-above-timer-max",
+      "description": "testTimeout above the 2147483647 ms timer maximum is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-string",
+      "description": "testTimeout given as a string is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": "50000" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-null",
+      "description": "testTimeout of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-boolean",
+      "description": "A boolean is not a valid testTimeout in group options.",
+      "input": { "source": "group", "options": { "testTimeout": false } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-nan",
+      "description": "testTimeout of NaN is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": { "$special": "NaN" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-infinity",
+      "description": "An infinite testTimeout is a usage error in group options.",
+      "input": { "source": "group", "options": { "testTimeout": { "$special": "Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-test-timeout-negative-infinity",
+      "description": "Negative infinity is not a valid testTimeout in group options.",
+      "input": { "source": "group", "options": { "testTimeout": { "$special": "-Infinity" } } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-strict-string",
+      "description": "strict given as a string is a usage error in group options.",
+      "input": { "source": "group", "options": { "strict": "true" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-strict-number",
+      "description": "strict given as a number is a usage error in group options.",
+      "input": { "source": "group", "options": { "strict": 1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-strict-null",
+      "description": "strict of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "strict": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-config-empty",
+      "description": "An empty object is valid configured testDefaults.",
+      "input": { "source": "config", "options": {} },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-config-runs-and-threshold",
+      "description": "Runs and a threshold are valid configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": 20, "threshold": 0.95 } },
+      "expect": { "value": { "runs": 20, "threshold": 0.95 } }
+    },
+    {
+      "id": "run-options-validate-config-single-certain-run",
+      "description": "One run at threshold 1 is valid configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": 1, "threshold": 1 } },
+      "expect": { "value": { "runs": 1, "threshold": 1 } }
+    },
+    {
+      "id": "run-options-validate-config-tiny-threshold",
+      "description": "A threshold just above 0 is valid configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": 1e-12 } },
+      "expect": { "value": { "threshold": 1e-12 } }
+    },
+    {
+      "id": "run-options-validate-config-timeouts",
+      "description": "Inference and test timeouts are valid configured testDefaults.",
+      "input": {
+        "source": "config",
+        "options": { "inferenceTimeout": 50000, "testTimeout": 5000 }
+      },
+      "expect": { "value": { "inferenceTimeout": 50000, "testTimeout": 5000 } }
+    },
+    {
+      "id": "run-options-validate-config-timeouts-at-one",
+      "description": "Timeouts of 1 ms are valid configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": 1, "testTimeout": 1 } },
+      "expect": { "value": { "inferenceTimeout": 1, "testTimeout": 1 } }
+    },
+    {
+      "id": "run-options-validate-config-timeouts-at-timer-max",
+      "description": "Timeouts at the 2147483647 ms timer maximum are valid configured testDefaults.",
+      "input": {
+        "source": "config",
+        "options": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 }
+      },
+      "expect": { "value": { "inferenceTimeout": 2147483647, "testTimeout": 2147483647 } }
+    },
+    {
+      "id": "run-options-validate-config-strict-true",
+      "description": "strict true is valid configured testDefaults.",
+      "input": { "source": "config", "options": { "strict": true } },
+      "expect": { "value": { "strict": true } }
+    },
+    {
+      "id": "run-options-validate-config-strict-false",
+      "description": "strict false is valid configured testDefaults.",
+      "input": { "source": "config", "options": { "strict": false } },
+      "expect": { "value": { "strict": false } }
+    },
+    {
+      "id": "run-options-validate-config-every-field",
+      "description": "Every field at once is valid configured testDefaults.",
+      "input": {
+        "source": "config",
+        "options": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.5,
+          "inferenceTimeout": 50000,
+          "testTimeout": 60000,
+          "strict": true
+        }
+      }
+    },
+    {
+      "id": "run-options-validate-config-not-object-null",
+      "description": "null instead of an object is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": null },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-not-object-array",
+      "description": "An array instead of an object is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": [20] },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-not-object-empty-array",
+      "description": "An empty array is not valid testDefaults.",
+      "input": { "source": "config", "options": [] },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-not-object-number",
+      "description": "A number instead of an object is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": 20 },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-not-object-string",
+      "description": "A string instead of an object is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": "runs" },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-not-object-boolean",
+      "description": "A boolean instead of an object is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": true },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-unknown-key",
+      "description": "An unknown key (a misspelt runs) is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "run": 5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-zero",
+      "description": "runs of 0 is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": 0 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-negative",
+      "description": "Negative runs is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": -1 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-fractional",
+      "description": "Fractional runs is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": 2.5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-string",
+      "description": "runs given as a string is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": "5" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-null",
+      "description": "runs of null is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "runs": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-runs-boolean",
+      "description": "A boolean is not a valid runs value in testDefaults.",
+      "input": { "source": "config", "options": { "runs": true } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-zero",
+      "description": "A threshold of 0 is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": 0 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-above-one",
+      "description": "A threshold above 1 is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": 1.5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-just-above-one",
+      "description": "The smallest double above 1 is not a valid threshold in testDefaults.",
+      "input": { "source": "config", "options": { "threshold": 1.0000000000000002 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-negative",
+      "description": "A negative threshold is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": -0.5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-string",
+      "description": "A threshold given as a string is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": "0.9" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-null",
+      "description": "A threshold of null is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "threshold": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-threshold-boolean",
+      "description": "A boolean is not a valid threshold in testDefaults.",
+      "input": { "source": "config", "options": { "threshold": true } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-zero",
+      "description": "inferenceTimeout of 0 is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": 0 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-negative",
+      "description": "A negative inferenceTimeout is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": -1 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-fractional",
+      "description": "A fractional inferenceTimeout is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": 2.5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-above-timer-max",
+      "description": "inferenceTimeout above the 2147483647 ms timer maximum is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-string",
+      "description": "inferenceTimeout given as a string is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": "50000" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-null",
+      "description": "inferenceTimeout of null is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-inference-timeout-boolean",
+      "description": "A boolean is not a valid inferenceTimeout in testDefaults.",
+      "input": { "source": "config", "options": { "inferenceTimeout": true } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-zero",
+      "description": "testTimeout of 0 is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": 0 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-negative",
+      "description": "A negative testTimeout is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": -1 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-fractional",
+      "description": "A fractional testTimeout is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": 2.5 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-above-timer-max",
+      "description": "testTimeout above the 2147483647 ms timer maximum is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": 2147483648 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-string",
+      "description": "testTimeout given as a string is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": "50000" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-null",
+      "description": "testTimeout of null is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-test-timeout-boolean",
+      "description": "A boolean is not a valid testTimeout in testDefaults.",
+      "input": { "source": "config", "options": { "testTimeout": false } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-strict-string",
+      "description": "strict given as a string is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "strict": "true" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-strict-number",
+      "description": "strict given as a number is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "strict": 1 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-strict-null",
+      "description": "strict of null is a config error in configured testDefaults.",
+      "input": { "source": "config", "options": { "strict": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-test-absent",
+      "description": "Test options given as undefined (an empty options slot) are a usage error.",
+      "input": { "source": "test", "options": { "$special": "undefined" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-absent",
+      "description": "Group options given as undefined are a usage error.",
+      "input": { "source": "group", "options": { "$special": "undefined" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-config-absent",
+      "description": "A config without testDefaults has no defaults: the accepted value is an empty object.",
+      "input": { "source": "config", "options": { "$special": "undefined" } },
+      "expect": { "value": {} }
+    }
+  ]
+}
