@@ -23,21 +23,21 @@ gateway, a local server such as Ollama. Hosted judge calls are paid model
 calls.
 
 ```sh
-npm install --save-dev crucible-ai
+npm install --save-dev crucible
 ```
 
-`crucible-ai` ships both ESM and CommonJS builds and its own type
+`crucible` ships both ESM and CommonJS builds and its own type
 definitions, so it works with whichever module setup your Jest already uses
 (for TypeScript tests, typically `ts-jest`). Crucible registers tests through
 Jest's global `it`, so keep Jest's default `injectGlobals: true` (see
 [gotchas](gotchas.md#jest-must-inject-its-globals)).
 
-**On Vitest**, import from `crucible-ai/vitest` instead of `crucible-ai`
+**On Vitest**, import from `crucible/vitest` instead of `crucible`
 everywhere in this guide, and take `expect` from `vitest`:
 
 ```ts
 import { expect } from 'vitest';
-import { crucible } from 'crucible-ai/vitest';
+import { crucible } from 'crucible/vitest';
 ```
 
 The API is the same; it registers tests through Vitest's own `test` and
@@ -91,14 +91,14 @@ needed.
 In the directory you run Jest from (normally your project root), run:
 
 ```sh
-npx crucible-ai init
+npx crucible init
 ```
 
 It writes `crucible.config.jsonc`. The top sets the judge:
 
 ```jsonc
 {
-  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
+  "$schema": "./node_modules/crucible/schemas/crucible.config.schema.json",
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
   // OpenRouter reasoning setting that speeds up the model above; extra request fields
@@ -188,7 +188,7 @@ defaults when you hover an option. The body follows arrange → act → assert.
 `remember`/`ask` calls with however you build and call your system:
 
 ```ts
-import { crucible } from 'crucible-ai';
+import { crucible } from 'crucible';
 import { createAssistant } from '../src/assistant';
 
 crucible.it('keeps the meeting place confidential', async () => {

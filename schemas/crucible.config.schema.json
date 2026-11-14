@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/Geekmotors/crucible-ai/main/schemas/crucible.config.schema.json",
+  "$id": "https://raw.githubusercontent.com/Geekmotors/crucible/main/schemas/crucible.config.schema.json",
   "title": "Crucible config",
-  "description": "Configuration for crucible-ai, read from crucible.config.json or crucible.config.jsonc in the directory Jest runs from. Never put an API key in this file.",
+  "description": "Configuration for crucible, read from crucible.config.json or crucible.config.jsonc in the directory Jest runs from. Never put an API key in this file.",
   "type": "object",
   "allowComments": true,
   "allowTrailingCommas": true,

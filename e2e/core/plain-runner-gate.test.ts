@@ -1,6 +1,6 @@
 import { expect, it } from '@jest/globals';
-import { crucible } from 'crucible-ai';
-import type { RunContext } from 'crucible-ai';
+import { crucible } from 'crucible';
+import type { RunContext } from 'crucible';
 import scenario from './fixtures/plain-runner-gate.json' with { type: 'json' };
 
 const options = { runs: scenario.runs, threshold: scenario.threshold };

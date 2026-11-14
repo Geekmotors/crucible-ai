@@ -5,7 +5,7 @@ plain markdown file — the **instruction schema** — that the judge model read
 as its instructions on every call. For `coherent()` that file is
 [`schemas/coherent.md`](../schemas/coherent.md); for `extract()` it is
 [`schemas/extract.md`](../schemas/extract.md). Both ship inside the
-`crucible-ai` package.
+`crucible` package.
 
 - [Why a schema](#why-a-schema)
 - [What `coherent.md` contains](#what-coherentmd-contains)
@@ -239,7 +239,7 @@ Because the rules are the system prompt, **editing `coherent.md` changes how
 no TypeScript change** — no rebuild of the
 TypeScript code is involved, and the next test run reads the edited file.
 Crucible reads the file from the installed package
-(`node_modules/crucible-ai/schemas/coherent.md`, `…/extract.md`) the first
+(`node_modules/crucible/schemas/coherent.md`, `…/extract.md`) the first
 time a test file makes a call that needs it.
 
 That makes the schema the place to work on judgment quality. If the judge
@@ -258,7 +258,7 @@ one.
 
 ## Versioning
 
-Schemas are versioned with the package: `crucible-ai@x.y.z` always uses the
+Schemas are versioned with the package: `crucible@x.y.z` always uses the
 `schemas/` that shipped in `x.y.z`, so library and schema can never drift
 apart. A change to a schema's rules is a change to Crucible's behaviour and
 appears in the package version and release notes. Each schema's frontmatter

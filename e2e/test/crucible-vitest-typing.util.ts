@@ -1,6 +1,6 @@
 import { test } from 'vitest';
-import { crucible, CrucibleError } from 'crucible-ai/vitest';
-import type { CrucibleDescribe, CrucibleIt, RunContext, RunOptions } from 'crucible-ai/vitest';
+import { crucible, CrucibleError } from 'crucible/vitest';
+import type { CrucibleDescribe, CrucibleIt, RunContext, RunOptions } from 'crucible/vitest';
 import { Gate } from './gate.enum.js';
 
 class CrucibleVitestTyping {
