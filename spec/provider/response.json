@@ -1,0 +1,1569 @@
+{
+  "area": "provider",
+  "operation": "response",
+  "description": "Turns the HTTP responses of one judge call's attempts into the judge's reply text or an error.",
+  "cases": [
+    {
+      "id": "provider-response-success",
+      "description": "A 200 envelope yields choices[0].message.content exactly, white space kept.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "  {\"verdict\": true, \"reasoning\": \"consistent\"}\n"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "  {\"verdict\": true, \"reasoning\": \"consistent\"}\n"
+      }
+    },
+    {
+      "id": "provider-response-success-empty-content",
+      "description": "Empty content is a reply (whether it is usable is judge/reply's business).",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": ""
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": ""
+      }
+    },
+    {
+      "id": "provider-response-success-extra-fields",
+      "description": "Other envelope members (id, usage, extra choices) are ignored; only the first choice counts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "id": "gen-1",
+              "usage": {
+                "cost": 0.0001
+              },
+              "choices": [
+                {
+                  "index": 0,
+                  "finish_reason": "stop",
+                  "message": {
+                    "role": "assistant",
+                    "content": "first"
+                  }
+                },
+                {
+                  "message": {
+                    "content": "second"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "first"
+      }
+    },
+    {
+      "id": "provider-response-success-other-2xx",
+      "description": "Any 2xx status is a success.",
+      "input": {
+        "responses": [
+          {
+            "status": 201,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "created"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "created"
+      }
+    },
+    {
+      "id": "provider-response-success-null-error-member",
+      "description": "An error member holding null is ignored.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": null,
+              "choices": [
+                {
+                  "message": {
+                    "content": "fine"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "fine"
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-empty-object",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-empty-choices",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": []
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": []
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": []
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-choices-not-list",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": {
+                "0": {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": {
+                "0": {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": {
+                "0": {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-missing-message",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [{}]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [{}]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [{}]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-missing-content",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {}
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {}
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {}
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-null-content",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": null
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": null
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": null
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-number-content",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": 42
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": 42
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": 42
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-array-content",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "x"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "x"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "x"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-root-array",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": []
+          },
+          {
+            "status": 200,
+            "json": []
+          },
+          {
+            "status": 200,
+            "json": []
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-root-null",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": null
+          },
+          {
+            "status": 200,
+            "json": null
+          },
+          {
+            "status": 200,
+            "json": null
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-malformed-envelope-root-string",
+      "description": "A 2xx body without a string choices[0].message.content is retryable; three in a row exhaust the attempts.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": "text"
+          },
+          {
+            "status": 200,
+            "json": "text"
+          },
+          {
+            "status": 200,
+            "json": "text"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-unparseable-body",
+      "description": "A 2xx body that is not JSON is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "text": "<html>bad gateway</html>"
+          },
+          {
+            "status": 200,
+            "text": "<html>bad gateway</html>"
+          },
+          {
+            "status": 200,
+            "text": "<html>bad gateway</html>"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-fatal-code",
+      "description": "An error member with a numeric code is classified like that HTTP status: 401 is fatal.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 401,
+                "message": "No auth credentials found"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-retryable-code",
+      "description": "An error member with code 502 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 502,
+                "message": "upstream"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 502,
+                "message": "upstream"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 502,
+                "message": "upstream"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-rate-limit-code",
+      "description": "An error member with code 429 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 429
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 429
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 429
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-without-code",
+      "description": "An error member without a numeric code is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "message": "moderated"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "message": "moderated"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "message": "moderated"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-string-code",
+      "description": "A code given as a string is not numeric, so retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": "401"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": "401"
+              }
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": "401"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-success-code",
+      "description": "An embedded error with a numeric code outside 400 to 499 (here 200) is classified like that status, so retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 200
+              },
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 200
+              },
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 200
+              },
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-not-object",
+      "description": "An embedded error that is not an object (here a string) has no code, so retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": "overloaded"
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": "overloaded"
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": "overloaded"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-false",
+      "description": "An error member that is false is neither absent nor null, so the attempt fails retryably even beside valid choices.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": false,
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": false,
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": 200,
+            "json": {
+              "error": false,
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-embedded-error-wins-over-content",
+      "description": "An error member fails the response even beside valid content.",
+      "input": {
+        "responses": [
+          {
+            "status": 200,
+            "json": {
+              "error": {
+                "code": 403
+              },
+              "choices": [
+                {
+                  "message": {
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-400-fatal",
+      "description": "HTTP 400 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 400,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-401-fatal",
+      "description": "HTTP 401 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 401,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-402-fatal",
+      "description": "HTTP 402 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 402,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-403-fatal",
+      "description": "HTTP 403 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 403,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-404-fatal",
+      "description": "HTTP 404 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 404,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-405-fatal",
+      "description": "HTTP 405 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 405,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-410-fatal",
+      "description": "HTTP 410 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 410,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-413-fatal",
+      "description": "HTTP 413 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 413,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-422-fatal",
+      "description": "HTTP 422 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 422,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-499-fatal",
+      "description": "HTTP 499 is fatal: no retry, infra not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 499,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-408-retryable",
+      "description": "HTTP 408 is retryable even though it is 4xx.",
+      "input": {
+        "responses": [
+          {
+            "status": 408,
+            "json": {}
+          },
+          {
+            "status": 408,
+            "json": {}
+          },
+          {
+            "status": 408,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-429-retryable",
+      "description": "HTTP 429 is retryable even though it is 4xx.",
+      "input": {
+        "responses": [
+          {
+            "status": 429,
+            "json": {}
+          },
+          {
+            "status": 429,
+            "json": {}
+          },
+          {
+            "status": 429,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-500-retryable",
+      "description": "HTTP 500 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 500,
+            "json": {}
+          },
+          {
+            "status": 500,
+            "json": {}
+          },
+          {
+            "status": 500,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-502-retryable",
+      "description": "HTTP 502 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 502,
+            "json": {}
+          },
+          {
+            "status": 502,
+            "json": {}
+          },
+          {
+            "status": 502,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-503-retryable",
+      "description": "HTTP 503 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 503,
+            "json": {}
+          },
+          {
+            "status": 503,
+            "json": {}
+          },
+          {
+            "status": 503,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-504-retryable",
+      "description": "HTTP 504 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 504,
+            "json": {}
+          },
+          {
+            "status": 504,
+            "json": {}
+          },
+          {
+            "status": 504,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-529-retryable",
+      "description": "HTTP 529 is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 529,
+            "json": {}
+          },
+          {
+            "status": 529,
+            "json": {}
+          },
+          {
+            "status": 529,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-status-3xx-retryable",
+      "description": "A non-2xx status outside 400-499 (here 304) is retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 304,
+            "text": ""
+          },
+          {
+            "status": 304,
+            "text": ""
+          },
+          {
+            "status": 304,
+            "text": ""
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-error-status-body-ignored",
+      "description": "A non-2xx body is never read, even when it holds content.",
+      "input": {
+        "responses": [
+          {
+            "status": 401,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "x"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-network-failure",
+      "description": "A network failure (no HTTP response) is retryable.",
+      "input": {
+        "responses": [
+          {
+            "failure": "network"
+          },
+          {
+            "failure": "network"
+          },
+          {
+            "failure": "network"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-retry-then-success",
+      "description": "A retryable failure is retried and a later success is the reply.",
+      "input": {
+        "responses": [
+          {
+            "status": 503,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "second"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "second"
+      }
+    },
+    {
+      "id": "provider-response-two-failures-then-success",
+      "description": "Two retryable failures then a success: the third attempt's reply.",
+      "input": {
+        "responses": [
+          {
+            "failure": "network"
+          },
+          {
+            "status": 429,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "third"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "third"
+      }
+    },
+    {
+      "id": "provider-response-three-attempts-only",
+      "description": "A call makes at most three attempts: a success on a fourth is never fetched.",
+      "input": {
+        "responses": [
+          {
+            "status": 500,
+            "json": {}
+          },
+          {
+            "status": 500,
+            "json": {}
+          },
+          {
+            "status": 500,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "fourth"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "id": "provider-response-fatal-after-retry",
+      "description": "A fatal response after a retryable one ends the call, not retryable.",
+      "input": {
+        "responses": [
+          {
+            "status": 503,
+            "json": {}
+          },
+          {
+            "status": 401,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "never"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-fatal-ends-call",
+      "description": "A fatal response ends the call at once: the next response is never fetched.",
+      "input": {
+        "responses": [
+          {
+            "status": 403,
+            "json": {}
+          },
+          {
+            "status": 200,
+            "json": {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "never"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "id": "provider-response-mixed-retryable-failures-exhaust",
+      "description": "Different retryable failures still count toward the same three attempts.",
+      "input": {
+        "responses": [
+          {
+            "failure": "network"
+          },
+          {
+            "status": 200,
+            "json": {}
+          },
+          {
+            "status": 502,
+            "json": {}
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "infra",
+          "retryable": true
+        }
+      }
+    }
+  ]
+}

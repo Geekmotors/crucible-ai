@@ -109,7 +109,7 @@ development_status:
   epic-8: in-progress
   8-1-spec-run-options-and-verdicts: done
   8-2-spec-payloads-and-reports: done
-  8-3-spec-parsing-and-providers: backlog
+  8-3-spec-parsing-and-providers: done
   8-4-porting-guide-and-coverage: backlog
   8-6-harden-prompt-fencing: backlog
   8-5-live-tests-only-where-needed: backlog

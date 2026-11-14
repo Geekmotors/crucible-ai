@@ -5,7 +5,6 @@ import { Capture } from './capture.util.js';
 import { RunOptionsResolver } from '../run-options-resolver.util.js';
 import { FakeConfigBoundary } from './config-boundary.fake.js';
 import { ConfigFileName } from './config-file-name.enum.js';
-import type { ConfigFileRead } from '../config.js';
 import { ProviderRegistry } from '../../providers/registry.js';
 import { FakeAdapter } from '../../providers/test/adapter.fake.js';
 import { FakeEnvironment } from '../../providers/test/environment.fake.js';
@@ -28,14 +27,6 @@ class ConfigHarness {
       new FakeConfigBoundary({ [ConfigFileName.Json]: { found: true, raw } }, verbosityOverride),
       ConfigHarness.registryWithFake(),
     );
-  }
-
-  static storeWithFiles(files: Record<string, ConfigFileRead>): ConfigStore {
-    return new ConfigStore(new FakeConfigBoundary(files), ConfigHarness.registryWithFake());
-  }
-
-  static found(raw: string): ConfigFileRead {
-    return { found: true, raw };
   }
 
   static builtInStore(
@@ -77,12 +68,6 @@ class ConfigHarness {
     const error = Capture.thrown(() => store.get());
     expect(error).toBeInstanceOf(CrucibleError);
     return (error as CrucibleError).kind;
-  }
-
-  static revealsInError(store: ConfigStore, secret: string): boolean {
-    const error = Capture.thrown(() => store.get());
-    expect(error).toBeInstanceOf(CrucibleError);
-    return (error as CrucibleError).message.includes(secret);
   }
 }
 

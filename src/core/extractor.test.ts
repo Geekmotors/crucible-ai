@@ -17,32 +17,8 @@ import { OptionsHarness } from './test/options-harness.util.js';
 import { StateFact } from './test/state-fact.enum.js';
 
 describe('Extractor — typed values', () => {
-  it('resolves the number the judge extracted when a number is requested', async () => {
-    await expect(ExtractorHarness.extracted(ExtractReply.Two, { as: 'number' })).resolves.toBe(
-      ExtractValue.Two,
-    );
-  });
-
   it('resolves a string by default', async () => {
     await expect(ExtractorHarness.extracted(ExtractReply.City)).resolves.toBe(ExtractText.City);
-  });
-
-  it('resolves a boolean when a boolean is requested', async () => {
-    await expect(ExtractorHarness.extracted(ExtractReply.Booked, { as: 'boolean' })).resolves.toBe(
-      true,
-    );
-  });
-
-  it('resolves null when the judge finds no single committed value', async () => {
-    await expect(
-      ExtractorHarness.extracted(ExtractReply.Hedged, { as: 'number' }),
-    ).resolves.toBeNull();
-  });
-
-  it('accepts a reply wrapped in a markdown code fence', async () => {
-    await expect(
-      ExtractorHarness.extracted('```json\n' + ExtractReply.Two + '\n```', { as: 'number' }),
-    ).resolves.toBe(ExtractValue.Two);
   });
 });
 
@@ -65,30 +41,6 @@ describe('Extractor — lenient or strict', () => {
 });
 
 describe('Extractor — unusable judge replies', () => {
-  it('re-asks once when the value does not match the requested type, and accepts a valid second reply', async () => {
-    await expect(
-      ExtractorHarness.extractedFrom([ExtractReply.TwoAsText, ExtractReply.Two], { as: 'number' }),
-    ).resolves.toBe(ExtractValue.Two);
-  });
-
-  it.each([
-    ['a value of the wrong type', ExtractReply.TwoAsText],
-    ['a non-finite number', ExtractReply.Infinite],
-    ['no value', ExtractReply.NoValue],
-    ['no reasoning', ExtractReply.NoReasoning],
-    ['no JSON at all', ExtractReply.NotJson],
-  ])('a reply with %s, twice, is a retryable infra error', async (_label, reply) => {
-    const error = await ExtractorHarness.failure(reply, { as: 'number' });
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('infra');
-    expect((error as CrucibleError).retryable).toBe(true);
-  });
-
-  it('a string value is the wrong type for a boolean request', async () => {
-    const error = await ExtractorHarness.failure(ExtractReply.City, { as: 'boolean' });
-    expect((error as CrucibleError).kind).toBe('infra');
-  });
-
   it('an unusable reply after the re-ask leaves an ErrorRecord readable within the run', async () => {
     const context = await ExtractorHarness.recordedContext(
       [ExtractReply.NotJson, ExtractReply.NotJson],

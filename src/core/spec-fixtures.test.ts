@@ -28,6 +28,10 @@ describe('spec fixture files', () => {
     expect(ConformanceGoldens.drift()).toEqual([]);
   });
 
+  it('holds request goldens built from the current harness config and first conformance payloads', () => {
+    expect(ConformanceGoldens.requestDrift()).toEqual([]);
+  });
+
   it.each(MalformedFixture.all())('the schema refuses a fixture with %s', (_label, file) => {
     expect(schema.violations(file)).not.toEqual([]);
   });

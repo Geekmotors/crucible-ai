@@ -768,7 +768,7 @@
                 "verdict": {
                   "claim": "c",
                   "verdict": false,
-                  "reasoning": "crlf\r\nlone cr\rls ps end",
+                  "reasoning": "crlf\r\nlone cr\rls\u2028ps\u2029end",
                   "response": "The response text."
                 }
               }
@@ -836,7 +836,7 @@
                 "verdict": {
                   "claim": "Zoë’s café is open ☕",
                   "verdict": false,
-                  "reasoning": "مرحبا 👩‍💻",
+                  "reasoning": "مرحبا 👩\u200d💻",
                   "response": "東京 𝔘𝔫𝔦"
                 }
               }
@@ -845,7 +845,7 @@
         ]
       },
       "expect": {
-        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: Zoë’s café is open ☕\n  Judge reasoning: مرحبا 👩‍💻\n  Response excerpt: 東京 𝔘𝔫𝔦\n  Thrown: AssertionError: expected false to be true"
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: Zoë’s café is open ☕\n  Judge reasoning: مرحبا 👩\u200d💻\n  Response excerpt: 東京 𝔘𝔫𝔦\n  Thrown: AssertionError: expected false to be true"
       }
     },
     {

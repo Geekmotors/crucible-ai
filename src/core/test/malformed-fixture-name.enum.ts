@@ -24,6 +24,17 @@ enum MalformedFixtureName {
   ValueForTextOperation = 'a value outcome for an operation whose outcome is text',
   ZeroExcerptChars = 'an excerpt bound below 1',
   RetryWithoutDelay = 'a retried provider failure without its delay',
+  EmptyConcealment = 'an empty list of strings an error must not reveal',
+  UnknownFileToken = 'a config file token other than unreadable',
+  UnknownConfigFile = 'a config file name the spec does not read',
+  ExtractReplyWithoutType = 'an extract reply without its requested type',
+  ValueForResponse = 'a value outcome for provider responses',
+  ResponseWithoutBody = 'an HTTP response without a body',
+  UsageErrorForJsonc = 'a usage error for JSONC parsing',
+  ErrorForPlainHttpWarning = 'an error outcome for the plain-http warning',
+  TextForPlainHttpWarning = 'a non-boolean plain-http warning value',
+  FatalJudgeReply = 'a non-retryable judge reply failure',
+  ConfigErrorForJudgeReply = 'a config error for a judge reply',
 }
 
 export { MalformedFixtureName };

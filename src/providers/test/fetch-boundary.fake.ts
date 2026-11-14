@@ -46,20 +46,6 @@ class FakeFetchBoundary {
     });
   }
 
-  static failing(error: Error): FakeFetchBoundary {
-    return new FakeFetchBoundary(() => Promise.reject(error));
-  }
-
-  static withUnparseableBody(): FakeFetchBoundary {
-    return new FakeFetchBoundary(() =>
-      Promise.resolve({
-        ok: true,
-        status: FakeFetchBoundary.OK,
-        json: () => Promise.reject(new SyntaxError('bad json')),
-      }),
-    );
-  }
-
   static successEnvelope(text: string): unknown {
     return { choices: [{ message: { content: text } }] };
   }

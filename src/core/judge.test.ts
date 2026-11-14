@@ -20,44 +20,6 @@ import { StateFact } from './test/state-fact.enum.js';
 import type { CoherentOptions } from './assertion-options.js';
 
 describe('Judge', () => {
-  it('resolves true when the judge reply says the response is coherent', async () => {
-    await expect(
-      JudgeHarness.judgeReply('{"verdict":true,"reasoning":"consistent"}'),
-    ).resolves.toBe(true);
-  });
-
-  it('resolves false when the judge reply says the response contradicts the claim', async () => {
-    await expect(
-      JudgeHarness.judgeReply('{"verdict":false,"reasoning":"contradiction"}'),
-    ).resolves.toBe(false);
-  });
-
-  it('parses a reply padded with whitespace and newlines', async () => {
-    await expect(
-      JudgeHarness.judgeReply('\n\n   {"verdict":true,"reasoning":"consistent"}  \n'),
-    ).resolves.toBe(true);
-  });
-
-  it('a non-JSON reply is a retryable infra error, never a verdict', async () => {
-    const error = await JudgeHarness.replyFailure('the response is coherent');
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('infra');
-    expect((error as CrucibleError).retryable).toBe(true);
-  });
-
-  it('a JSON reply without a boolean verdict and string reasoning is a retryable infra error', async () => {
-    const error = await JudgeHarness.replyFailure('{"verdict":"yes","reasoning":42}');
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('infra');
-    expect((error as CrucibleError).retryable).toBe(true);
-  });
-
-  it('re-asks once after an unparseable reply and accepts a valid second reply', async () => {
-    await expect(
-      JudgeHarness.judgeReplies(['not json at all', '{"verdict":true,"reasoning":"second try"}']),
-    ).resolves.toBe(true);
-  });
-
   it('an unparseable reply after the re-ask leaves an ErrorRecord readable within the run', async () => {
     const scope = new RunScope();
     const judge = JudgeHarness.judge(
@@ -72,12 +34,6 @@ describe('Judge', () => {
     expect((outcome.error as CrucibleError).kind).toBe('infra');
     expect((outcome.error as CrucibleError).retryable).toBe(true);
     expect(outcome.errors).toHaveLength(1);
-  });
-
-  it('parses a verdict wrapped in markdown code fences', async () => {
-    await expect(
-      JudgeHarness.judgeReply('```json\n{"verdict":true,"reasoning":"fenced"}\n```'),
-    ).resolves.toBe(true);
   });
 
   it.each([

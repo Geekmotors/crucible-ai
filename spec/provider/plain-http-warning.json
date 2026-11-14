@@ -1,0 +1,227 @@
+{
+  "area": "provider",
+  "operation": "plain-http-warning",
+  "description": "Decides whether sending the judge key warns that it travels unencrypted.",
+  "cases": [
+    {
+      "id": "provider-plain-http-warning-remote-http",
+      "description": "A key sent over plain http to a remote host warns.",
+      "input": {
+        "baseUrl": "http://gateway.example.com/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-remote-http-no-key",
+      "description": "No key sent, no warning.",
+      "input": {
+        "baseUrl": "http://gateway.example.com/v1",
+        "keySent": false
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-https",
+      "description": "https never warns.",
+      "input": {
+        "baseUrl": "https://gateway.example.com/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-localhost",
+      "description": "localhost is loopback.",
+      "input": {
+        "baseUrl": "http://localhost:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-localhost-upper-case",
+      "description": "Host names compare case-insensitively (LOCALHOST).",
+      "input": {
+        "baseUrl": "http://LOCALHOST:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-loopback",
+      "description": "127.0.0.1 is loopback.",
+      "input": {
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-loopback-range",
+      "description": "Every 127.x.y.z address is loopback.",
+      "input": {
+        "baseUrl": "http://127.8.9.10:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-shorthand",
+      "description": "127.1 is the IPv4 address 127.0.0.1 after URL parsing, so loopback.",
+      "input": {
+        "baseUrl": "http://127.1:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv6-loopback",
+      "description": "[::1] is loopback.",
+      "input": {
+        "baseUrl": "http://[::1]:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv6-loopback-expanded",
+      "description": "[0:0:0:0:0:0:0:1] is [::1] after URL parsing, so loopback.",
+      "input": {
+        "baseUrl": "http://[0:0:0:0:0:0:0:1]:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-decimal",
+      "description": "A loopback IPv4 address written as one decimal number (2130706433 is 127.0.0.1 after parsing) does not warn.",
+      "input": {
+        "baseUrl": "http://2130706433:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-hex",
+      "description": "A loopback IPv4 address written in hexadecimal parts (0x7f.1 is 127.0.0.1 after parsing) does not warn.",
+      "input": {
+        "baseUrl": "http://0x7f.1:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-trailing-dot",
+      "description": "An IPv4 address with a trailing dot parses to the same address, so 127.0.0.1. does not warn.",
+      "input": {
+        "baseUrl": "http://127.0.0.1.:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-localhost-trailing-dot",
+      "description": "A host name keeps its trailing dot after parsing, so localhost. is not the name localhost and warns.",
+      "input": {
+        "baseUrl": "http://localhost.:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv4-mapped-ipv6",
+      "description": "An IPv4-mapped IPv6 address is not [::1], so [::ffff:127.0.0.1] warns.",
+      "input": {
+        "baseUrl": "http://[::ffff:127.0.0.1]:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-loopback-lookalike-address",
+      "description": "A host name that starts like a loopback address is remote.",
+      "input": {
+        "baseUrl": "http://127.0.0.1.gateway.example.com/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-loopback-lookalike-name",
+      "description": "A host name that starts with localhost is remote.",
+      "input": {
+        "baseUrl": "http://localhost.gateway.example.com/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-private-address",
+      "description": "Private network addresses are not loopback.",
+      "input": {
+        "baseUrl": "http://192.168.1.20:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-unspecified-address",
+      "description": "0.0.0.0 is not loopback.",
+      "input": {
+        "baseUrl": "http://0.0.0.0:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "id": "provider-plain-http-warning-ipv6-other",
+      "description": "Other IPv6 addresses are remote.",
+      "input": {
+        "baseUrl": "http://[fe80::1]:11434/v1",
+        "keySent": true
+      },
+      "expect": {
+        "value": true
+      }
+    }
+  ]
+}

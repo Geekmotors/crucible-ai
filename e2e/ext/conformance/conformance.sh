@@ -13,6 +13,7 @@ CALL_TIMEOUT_SECONDS=120
 EXIT_MISMATCH=1
 EXIT_USAGE=2
 DEFAULT_KEY_ENV=CRUCIBLE_JUDGE_KEY
+CONTENT_TYPE=application/json
 
 jq_lib() {
   jq -L "$HARNESS_DIR" "$@"
@@ -160,9 +161,13 @@ require_key() {
   warn_plain_http
 }
 
+authorization() {
+  printf 'Bearer %s' "$KEY_VALUE"
+}
+
 auth_config() {
   if [ -n "$KEY_VALUE" ]; then
-    printf 'header = "Authorization: Bearer %s"\n' "$KEY_VALUE"
+    printf 'header = "Authorization: %s"\n' "$(authorization)"
   fi
 }
 
@@ -184,6 +189,19 @@ request_body() {
 \$matrix[0].cases[\$index] | ${1}_request(\$schema; \$judge[0])"
 }
 
+print_request() {
+  request_body "$1" "$2" | jq -c \
+    --arg url "$ENDPOINT" \
+    --arg authorization "$(if [ -n "$KEY_VALUE" ]; then authorization; fi)" \
+    --arg content_type "$CONTENT_TYPE" \
+    '{
+      method: "POST",
+      url: $url,
+      headers: ((if $authorization == "" then {} else { Authorization: $authorization } end) + { "Content-Type": $content_type }),
+      body: .
+    }'
+}
+
 strict_outcome() {
   jq_lib -s -c \
     --slurpfile matrix "$(cases_file "$1")" \
@@ -199,7 +217,7 @@ call_judge() {
       --silent --show-error \
       --max-time "$CALL_TIMEOUT_SECONDS" \
       --cacert "$CA_BUNDLE" \
-      --header 'Content-Type: application/json' \
+      --header "Content-Type: $CONTENT_TYPE" \
       --data-binary "@$1" \
       --output "$2" \
       --write-out '%{http_code} %{time_total}' \
@@ -292,6 +310,20 @@ case "${1:-run}" in
   payloads)
     print_payloads
     ;;
+  request)
+    case "${2:-}" in
+      coherent | extract) ;;
+      *) usage_error "usage: conformance.sh request <coherent|extract> <case index>" ;;
+    esac
+    case "${3:-}" in
+      '' | *[!0-9]*) usage_error "usage: conformance.sh request <coherent|extract> <case index>" ;;
+    esac
+    jq -e --argjson index "$3" '$index < (.cases | length)' "$(cases_file "$2")" >/dev/null ||
+      usage_error "no case $3 in $(cases_file "$2")"
+    resolve_endpoint
+    require_key
+    print_request "$2" "$3"
+    ;;
   key-env)
     resolve_endpoint
     printf '%s %s\n' "$KEY_ENV" "$KEY_NEED"
@@ -305,7 +337,7 @@ case "${1:-run}" in
     run_matrix
     ;;
   *)
-    echo "usage: conformance.sh [run|payloads|key-env]" >&2
+    echo "usage: conformance.sh [run|payloads|request <suite> <case index>|key-env]" >&2
     exit "$EXIT_USAGE"
     ;;
 esac

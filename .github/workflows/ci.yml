@@ -31,7 +31,7 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
-      - run: make spec-payloads-check
+      - run: make spec-goldens-check
       - run: npm run build
       - run: npm run verify:pack
       - run: npx tsc --noEmit -p e2e
