@@ -47,17 +47,36 @@ npm install --save-dev crucible-ai
 
 ## Quick start
 
-**1. Add `crucible.config.json`** to the directory you run Jest from, and commit it:
+**1. Create the config file** in the directory you run Jest from, and commit it:
 
-```json
+```sh
+npx crucible-ai init
+```
+
+This writes `crucible.config.jsonc`: the provider, the judge model and an OpenRouter reasoning setting that speeds it up, then every other setting as a commented line showing its default (trimmed here):
+
+```jsonc
 {
+  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
-  "meta": { "reasoning": { "effort": "low" } }
+  // OpenRouter reasoning setting that speeds up the model above; extra request fields
+  // go to the provider as-is, so remove or change this when you switch provider.
+  "meta": { "reasoning": { "effort": "low" } },
+
+  // Every line below shows a default. Uncomment a line to change it.
+  // "apiKeyEnv": "CRUCIBLE_JUDGE_KEY", // the variable holding the key, never the key
+  // "testDefaults": {
+  //   "runs": 10,
+  //   "threshold": 0.9, // at least 9 of 10 runs must pass
+  //   ...
+  // },
 }
 ```
 
-To judge with OpenAI instead, use `{ "provider": "openai", "model": "gpt-5-mini" }`. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"`. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
+The `$schema` line gives your editor autocomplete and hover docs for every field. `init` never overwrites: if `crucible.config.json` or `crucible.config.jsonc` already exists, it changes nothing and exits non-zero.
+
+To judge with OpenAI instead, set `"provider": "openai"` and `"model": "gpt-5-mini"`, and remove the OpenRouter `meta` line. For Azure OpenAI, a gateway or a local model server, use `"provider": "openai-compatible"` with a `"baseUrl"`. See [Providers](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#providers).
 
 **2. Set your API key** in the environment. Never put it in the config file.
 

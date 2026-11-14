@@ -8,7 +8,7 @@ Releases are staged by `.github/workflows/publish.yml` when a `v*` tag is pushed
    - fails unless the tag is exactly `v` + the `package.json` version
    - fails unless the tagged commit is on `main`
    - `npm ci`, lint, format check, typecheck, unit tests, build
-   - `npm run verify:pack`: the tarball may contain only `dist/`, `schemas/*.md`, `README.md`, `CHANGELOG.md`, `LICENSE` and `package.json`
+   - `npm run verify:pack`: the tarball may contain only `dist/` (including the `crucible-ai` CLI, `dist/cli.js`), `schemas/*.md`, `schemas/crucible.config.schema.json`, `README.md`, `CHANGELOG.md`, `LICENSE` and `package.json`
 2. **publish** (needs verify; GitHub environment `npm`; the only job with `id-token: write`)
    - installs npm 11.21.2 (staged publishing needs npm 11.15.0 or later and Node 22.14.0 or later)
    - `npm ci --ignore-scripts`, build, pack check again

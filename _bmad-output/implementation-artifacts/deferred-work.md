@@ -297,3 +297,33 @@
 - source_spec: 6-1-sensible-defaults.md
   summary: No live e2e exercises the new 10-run default end to end (all fixtures pin runs or use `testDefaults`); `failure-report` scenarios would become 10 real judge calls each if their `testDefaults` were removed.
   evidence: `e2e/ext/fixtures/projects/failure-report/`.
+
+## Deferred from: code review of 6-2-commented-config-and-init.md (2026-11-14)
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: Syntax errors without a V8 `position N` in the JSON.parse message (e.g. truncated file) report no line number.
+  evidence: `src/core/jsonc-reader.util.ts` `lineOfFailure`.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: Duplicate keys silently keep the last value; VS Code warns. Uncommenting a template line already set elsewhere gives a surprising effective config.
+  evidence: `src/core/jsonc-reader.util.ts`, `src/core/config.ts`.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: A partial `init` write (ENOSPC/EIO after open) leaves a truncated `crucible.config.jsonc` that blocks re-running init.
+  evidence: `src/cli/node-project-files.ts`.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: EPIPE on closed stdout/stderr crashes the CLI with a stack trace instead of its exit code.
+  evidence: `src/cli.ts`, `src/cli/stream-cli-output.ts`.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: The generated template is copied by hand into README, configuration.md and getting-started.md; nothing checks they match `ConfigTemplate`.
+  evidence: `src/cli/config-template.util.ts`, docs.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: CLI has no `--version`.
+  evidence: `src/cli/crucible-cli.ts`.
+
+- source_spec: 6-2-commented-config-and-init.md
+  summary: `ConfigStore.fileName` is mutable state set as a side effect of `readRaw`; file names are chosen by tuple index (`CONFIG_FILE_NAMES[1]`).
+  evidence: `src/core/config.ts`, `src/cli/config-template.util.ts`.

@@ -1,16 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CONFIG_FILE_NAME } from './config-boundary.js';
 import type { ConfigBoundary, ConfigFileRead } from './config-boundary.js';
 
 class FileSystemConfigBoundary implements ConfigBoundary {
-  describeSource(): string {
-    return join(process.cwd(), CONFIG_FILE_NAME);
+  describeLocation(name: string): string {
+    return join(process.cwd(), name);
   }
 
-  readConfigFile(): ConfigFileRead {
+  readConfigFile(name: string): ConfigFileRead {
     try {
-      return { found: true, raw: readFileSync(this.describeSource(), 'utf8') };
+      return { found: true, raw: readFileSync(this.describeLocation(name), 'utf8') };
     } catch (cause) {
       if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
         return { found: false, reason: 'missing' };

@@ -93,7 +93,7 @@ kind `usage`:
 ### Project-wide defaults: `testDefaults`
 
 To apply one reliability bar to every inference test, set `testDefaults` in
-`crucible.config.json`:
+the config file:
 
 ```json
 {
@@ -151,7 +151,7 @@ tests that run, not suite collection. Validation of the options you pass to
 
 Every `crucible.it()` test loads the config when it executes, even a test
 that passes every option or makes no `coherent()` or `extract()` call. A missing or invalid
-`crucible.config.json` therefore fails every `crucible.it()` test as kind
+config file therefore fails every `crucible.it()` test as kind
 `config`.
 
 ### What a run is, and how it is classified
@@ -296,7 +296,7 @@ Failing claims (first failure of each of the 5 failed runs):
   its first failing assertion and claim, so you can see whether the failures
   share one cause.
 - **Response excerpt length.** 500 characters by default. Set
-  `"excerptChars"` (an integer ≥ 1) in `crucible.config.json` to change it; an
+  `"excerptChars"` (an integer ≥ 1) in the config file to change it; an
   invalid value fails at config load as a `CrucibleError` of kind `config`.
   Lengths are counted in UTF-16 code units, and the cut never splits an emoji
   or other surrogate pair, so the excerpt can differ from the limit by one;
@@ -315,7 +315,7 @@ levels; each includes everything the level before it shows.
 | `full` | Every run in the report, with all of its judge output: each `coherent` and `extract` call in the order it was recorded (passing verdicts included), its claim or extracted value, the judge reasoning, the bounded response excerpt, and any judge errors. There is no three-run bound and no tally. A passing test prints the same report under a `PASSED:` headline when it finishes. |
 | `debug` | `full`, plus a live trace while the test runs: engine start-up and the resolved config, test start (runs, threshold, deadline), each provider request and response, retry attempts and backoff, judge re-asks, each recorded verdict, extracted value or judge error, how each run settled, and the verdict. |
 
-Set the level in `crucible.config.json` with `"verbosity"`, or for a single
+Set the level in the config file with `"verbosity"`, or for a single
 invocation with the `CRUCIBLE_VERBOSE` environment variable. The variable wins
 over the config file; an empty value is ignored:
 

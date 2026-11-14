@@ -1,0 +1,26 @@
+enum JsoncText {
+  LineComments = '// leading\n{\n  "name": "crucible", // trailing\n  // own line\n  "runs": 10\n}\n',
+  BlockComments = '/* leading */ {\n  /* spans\n     lines */\n  "name": /* inline */ "crucible"\n}',
+  TrailingCommaInObject = '{ "name": "crucible", "runs": 10, }',
+  TrailingCommaInArray = '{ "list": [1, 2, 3,], }',
+  TrailingCommaBeforeComment = '{\n  "name": "crucible", // last\n  /* done */\n}',
+  LineMarkerInString = '{ "url": "https://example.test/v1" }',
+  BlockMarkerInString = '{ "glob": "src/**/*.ts", "close": "*/" }',
+  CommaBraceInString = '{ "text": "a,}b,]" }',
+  EscapedQuote = '{ "quote": "say \\"hi\\" // not a comment" }',
+  EscapedBackslashBeforeQuote = '{ "path": "C:\\\\", "next": 1 // comment\n}',
+  ByteOrderMark = '\uFEFF{ "name": "crucible" }',
+  Plain = '{ "name": "crucible", "runs": 10 }',
+  UnterminatedBlockComment = '{\n  "name": "crucible"\n  /* never closed\n}',
+  UnterminatedString = '{\n  "name": "crucible\n}',
+  MissingCommaOnLineThree = '{\n  "name": "crucible"\n  "runs": 10\n}',
+  LoneComma = '{ , }',
+  LeakedKey = '{ "provider": "openrouter", sk-or-v1-leaked-secret-value }',
+  BlockCommentBetweenDigits = '{ "runs": 1/* split */0 }',
+  CarriageReturnLines = '{\r  "name": "crucible", // trailing\r  "runs": 10\r}',
+  MissingCommaOnLineThreeCarriageReturn = '{\r  "name": "crucible"\r  "runs": 10\r}',
+  Empty = '',
+  OnlyComment = '// nothing here\n',
+}
+
+export { JsoncText };

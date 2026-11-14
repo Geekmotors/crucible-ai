@@ -2,16 +2,16 @@ import type { ConfigBoundary, ConfigFileRead } from '../config.js';
 
 class FakeConfigBoundary implements ConfigBoundary {
   constructor(
-    private read: ConfigFileRead,
+    private files: Record<string, ConfigFileRead>,
     private verbosityOverride?: string,
   ) {}
 
-  describeSource(): string {
-    return 'fake://crucible.config.json';
+  describeLocation(name: string): string {
+    return `fake://${name}`;
   }
 
-  readConfigFile(): ConfigFileRead {
-    return this.read;
+  readConfigFile(name: string): ConfigFileRead {
+    return this.files[name] ?? { found: false, reason: 'missing' };
   }
 
   readVerbosityOverride(): string | undefined {

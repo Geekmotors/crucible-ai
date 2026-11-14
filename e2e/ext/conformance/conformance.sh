@@ -94,7 +94,7 @@ resolve_compatible_endpoint() {
 
 resolve_endpoint() {
   jq -e 'type == "object"' "$JUDGE_CONFIG" >/dev/null 2>&1 ||
-    usage_error "judge config $JUDGE_CONFIG is unreadable or not a JSON object"
+    usage_error "judge config $JUDGE_CONFIG is unreadable or not a plain JSON object. The harness reads plain JSON only: comments and trailing commas (fine in crucible.config.jsonc) are not supported here, so pass a plain JSON config as CONFORMANCE_CONFIG"
   PROVIDER=$(judge_setting provider)
   case "$PROVIDER" in
     openrouter)

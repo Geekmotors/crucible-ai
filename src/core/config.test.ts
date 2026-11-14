@@ -1,7 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
-import { ConfigStore } from './config.js';
 import { ConfigHarness } from './test/config-harness.util.js';
-import { FakeConfigBoundary } from './test/config-boundary.fake.js';
+import { ConfigFileName } from './test/config-file-name.enum.js';
+import { ConfigSchemaHarness } from './test/config-schema-harness.util.js';
+import { ConfigText } from './test/config-text.enum.js';
+import { LeakedSecret } from './test/leaked-secret.enum.js';
+import { ReadFailure } from './test/read-failure.enum.js';
 import { ApiKey } from '../providers/test/api-key.enum.js';
 import { BaseUrl } from '../providers/test/base-url.enum.js';
 import { ChatAdapterHarness } from '../providers/test/chat-adapter-harness.util.js';
@@ -91,19 +94,70 @@ describe('ConfigStore rejects invalid configs as config failures', () => {
   );
 
   it('a missing config file is a config failure', () => {
-    const store = new ConfigStore(
-      new FakeConfigBoundary({ found: false, reason: 'missing' }),
-      ConfigHarness.registryWithFake(),
-    );
-    expect(ConfigHarness.errorKind(store)).toBe('config');
+    expect(ConfigHarness.errorKind(ConfigHarness.storeWithFiles({}))).toBe('config');
   });
 
   it('an unreadable config file is a config failure', () => {
-    const store = new ConfigStore(
-      new FakeConfigBoundary({ found: false, reason: 'unreadable', detail: 'EACCES' }),
-      ConfigHarness.registryWithFake(),
-    );
+    const store = ConfigHarness.storeWithFiles({
+      [ConfigFileName.Json]: {
+        found: false,
+        reason: 'unreadable',
+        detail: ReadFailure.PermissionDenied,
+      },
+    });
     expect(ConfigHarness.errorKind(store)).toBe('config');
+  });
+});
+
+describe('ConfigStore reads either config file name as JSON with comments', () => {
+  it.each([ConfigFileName.Json, ConfigFileName.Jsonc])(
+    'reads %s with comments and trailing commas',
+    (name) => {
+      const store = ConfigHarness.storeWithFiles({
+        [name]: ConfigHarness.found(ConfigText.CommentedJsonc),
+      });
+      expect(store.get().model).toBe(TestModel.Generic);
+    },
+  );
+
+  it('accepts and ignores a "$schema" reference', () => {
+    expect(ConfigHarness.store(ConfigText.WithSchemaReference).get().model).toBe(TestModel.Generic);
+  });
+
+  it('both config files present is a config failure', () => {
+    const raw = JSON.stringify({ provider: 'fake', model: TestModel.Generic });
+    const store = ConfigHarness.storeWithFiles({
+      [ConfigFileName.Json]: ConfigHarness.found(raw),
+      [ConfigFileName.Jsonc]: ConfigHarness.found(raw),
+    });
+    expect(ConfigHarness.errorKind(store)).toBe('config');
+  });
+
+  it('an unreadable second config file is a config failure', () => {
+    const store = ConfigHarness.storeWithFiles({
+      [ConfigFileName.Json]: {
+        found: false,
+        reason: 'unreadable',
+        detail: ReadFailure.PermissionDenied,
+      },
+      [ConfigFileName.Jsonc]: ConfigHarness.found(ConfigText.CommentedJsonc),
+    });
+    expect(ConfigHarness.errorKind(store)).toBe('config');
+  });
+
+  it('an unterminated comment is a config failure', () => {
+    expect(ConfigHarness.errorKind(ConfigHarness.store(ConfigText.UnterminatedComment))).toBe(
+      'config',
+    );
+  });
+
+  it('a malformed file never echoes its content', () => {
+    expect(
+      ConfigHarness.revealsInError(
+        ConfigHarness.store(ConfigText.MalformedWithKey),
+        LeakedSecret.InMalformedConfig,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -420,4 +474,36 @@ describe('ConfigStore rejects invalid provider settings as config failures', () 
       expect(ConfigHarness.revealsInError(store, InvalidKeyEnv.KeyValue)).toBe(false);
     },
   );
+});
+
+describe('ConfigStore and the shipped JSON Schema agree on defaults', () => {
+  const reply = ChatAdapterHarness.rawJudgeReply;
+  const judge = { provider: ProviderName.OpenRouter, model: TestModel.Generic };
+
+  it('a config holding every schema default resolves like one that sets none', () => {
+    const explicit = ConfigHarness.builtInStore({ ...ConfigSchemaHarness.defaults(), ...judge });
+    expect(ConfigHarness.resolvedSettings(explicit)).toEqual(
+      ConfigHarness.resolvedSettings(ConfigHarness.builtInStore(judge)),
+    );
+  });
+
+  it('schema defaults keep the test timeout growing with runs', () => {
+    const runs = { runs: RunCount.Gated };
+    const explicit = ConfigHarness.builtInStore({
+      ...ConfigSchemaHarness.defaultsWithTestDefaults(runs),
+      ...judge,
+    });
+    expect(ConfigHarness.resolvedSettings(explicit)).toEqual(
+      ConfigHarness.resolvedSettings(ConfigHarness.builtInStore({ ...judge, testDefaults: runs })),
+    );
+  });
+
+  it('the schema default key variable is the one the judge reads', async () => {
+    const store = ConfigHarness.builtInStore(
+      { ...ConfigSchemaHarness.defaults(), ...judge },
+      FakeFetchBoundary.serving(EndpointUrl.OpenRouter, ApiKey.Valid, reply),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
+    );
+    await expect(ChatAdapterHarness.complete(store.get().provider)).resolves.toBe(reply);
+  });
 });
