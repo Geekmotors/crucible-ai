@@ -94,6 +94,6 @@ development_status:
   6-1-sensible-defaults: done
   6-2-commented-config-and-init: done
   6-3-describe-group-settings: done
-  6-4-lenient-strict-extract: backlog
+  6-4-lenient-strict-extract: done
   6-5-facts-per-call-and-per-run: backlog
   epic-6-retrospective: optional

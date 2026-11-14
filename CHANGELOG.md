@@ -35,6 +35,26 @@ contain breaking changes, and they are marked **Breaking** below.
   forwards a `RunOptions | TestBody` union no longer compiles; branch on the
   argument and call the matching form. JavaScript callers still get the
   runtime `usage` error.
+- **Breaking:** `crucible.extract()` is now lenient by default: a colloquial
+  or mildly hedged answer resolves to the value it leans to ("I think so" →
+  `true`, "nah" → `false`, "probably two" → `2`, "likely Paris" →
+  `"Paris"`). `null` remains for no answer, a genuine split ("two or
+  three"), a bare negation ("it's not two") and "I don't know". Before, any
+  hedge was `null`. To keep the old behaviour, pass `strict: true` on the
+  call, the test or a `crucible.describe` group, or set
+  `"testDefaults": { "strict": true }` in the config file.
+- **Breaking:** `crucible.extract()` options other than `as` and `strict`
+  are a `usage` error, as they already are for `crucible.it()`,
+  `crucible.describe()` and `testDefaults`; before, a misspelt key such as
+  `{ strcit: true }` was silently ignored.
+- Failure report and trace lines for an extraction name its mode, for
+  anyone parsing reports: `Extraction 1 of 2 (lenient): …` (was
+  `Extraction 1 of 2: …`), `Judge call 1 of 1: extract (strict) "…"` at
+  `full`, and `judge value 2 for extract "…" as number (lenient)` in the
+  `debug` trace.
+- The extract schema (`schemas/extract.md`) defines both modes and takes a
+  new `MODE` section (`lenient` or `strict`) after `TYPE`; another
+  implementation assembling extract payloads must send it.
 
 ### Added
 
@@ -58,13 +78,21 @@ contain breaking changes, and they are marked **Breaking** below.
   Crucible ignores `"$schema"`.
 - `crucible.describe(name, fn)` and `crucible.describe(name, options, fn)`
   register a Jest `describe` block whose run options (`runs`, `threshold`,
-  `inferenceTimeout`, `testTimeout`) every `crucible.it()` inside inherits,
+  `inferenceTimeout`, `testTimeout`, `strict`) every `crucible.it()` inside
+  inherits,
   at any depth. Each field resolves on its own, last wins: built-in default,
   `testDefaults`, outer group, inner group, the test's own options. Without
   a `testTimeout` at any level, the test timeout follows the resolved
   `runs`. Invalid options, a missing callback, a surplus argument or a
   callback that returns a value (an async one included) are a `usage` error
   at collection. Tests outside a group are unchanged.
+- `strict` (boolean, default `false`): a run option for `crucible.it()`,
+  `crucible.describe()` and `testDefaults`, and an option of
+  `crucible.extract()`. It resolves last wins — built-in, `testDefaults`,
+  outer group, inner group, the test, then the `extract()` call — and
+  applies to every assertion that supports it (today `extract()`). A value
+  that is not a boolean is a `usage` error (a `config` error in
+  `testDefaults`). The config JSON Schema and the `init` template list it.
 
 ### Fixed
 

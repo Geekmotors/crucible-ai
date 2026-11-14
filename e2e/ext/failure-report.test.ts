@@ -28,7 +28,7 @@ describe('a deliberately failing inference test', () => {
 
   it('shows what the judge extracted, and why, under the failed run', () => {
     expect(outcome.output).toMatch(
-      ReportPattern.extractionWithReasoning(`"${extraction.target}" as number → null`),
+      ReportPattern.strictExtractionWithReasoning(`"${extraction.target}" as number → null`),
     );
   });
 

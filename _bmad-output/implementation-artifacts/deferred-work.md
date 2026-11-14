@@ -342,3 +342,13 @@
 
 - **Sync-only describe callback lives in core.** Vitest allows async suite callbacks. When the Vitest adapter is built, move the thenable check into the Jest binding (or make it per-binding). Decided: keep shared for now.
 - **One settings stack per loaded module copy.** Mixing `index.cjs` and `index.js`, or `jest.isolateModules`, silently drops describe inheritance (config and state behave the same today). Decided: document in gotchas when the Vitest epic touches the binding layer; detection not worth it yet.
+
+## Deferred from: code review of 6-4-lenient-strict-extract.md (2026-11-14)
+
+- source_spec: 6-4-lenient-strict-extract.md
+  summary: `RunScope.enterRun` takes run settings positionally (signal, run, inferenceTimeout, strict); call sites pass `undefined` placeholders. Switch to a settings object.
+  evidence: `src/core/state.ts`, `src/core/test/extractor-harness.util.ts`.
+
+- source_spec: 6-4-lenient-strict-extract.md
+  summary: Built-in `strict: false` lives in both `RunScope.enterRun`'s parameter default and `RunOptionsResolver.DEFAULT_STRICT`.
+  evidence: `src/core/state.ts`, `src/core/run-options-resolver.util.ts`.

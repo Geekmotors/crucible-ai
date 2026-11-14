@@ -6,6 +6,7 @@ class RunOptionsValidator {
     'threshold',
     'inferenceTimeout',
     'testTimeout',
+    'strict',
   ]);
 
   violation(candidate: unknown, subject: string): string | undefined {
@@ -28,6 +29,9 @@ class RunOptionsValidator {
     );
     if (badTimeout !== undefined) {
       return `"${badTimeout}" in ${subject} must be an integer number of milliseconds from 1 to ${TimeBudget.TIMER_MAX_MS}; received ${String(opts[badTimeout])}.`;
+    }
+    if (opts.strict !== undefined && typeof opts.strict !== 'boolean') {
+      return `"strict" in ${subject} must be true or false; received ${String(opts.strict)}.`;
     }
     return undefined;
   }

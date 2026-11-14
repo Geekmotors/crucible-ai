@@ -25,7 +25,7 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 ## Features
 
 - **Semantic assertions:** `crucible.coherent(actual, expectation)` returns the judge's `true`/`false` verdict, which you assert with plain Jest.
-- **Value extraction:** `crucible.extract(text, description, { as })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it.
+- **Value extraction:** `crucible.extract(text, description, { as, strict })` pulls one typed value out of prose (a count, a name, a yes/no), or `null` when the text commits to none, so you can use any Jest matcher on it. Lenient by default ("probably two" → `2`); `strict: true` makes any hedge `null`.
 - **State-aware judging:** `crucible.load()` and `crucible.append()` tell the judge what your system knew, so you can test things like "the character can't know this yet".
 - **Reliability gates:** every test runs its whole body concurrently (10 runs by default) and passes on the pass rate (0.9 by default); `{ runs, threshold }` tunes both.
 - **Readable failures:** the report shows the pass rate, each failed run and the judge's reasoning.
@@ -153,7 +153,13 @@ crucible.it('counts the apples', async () => {
 });
 ```
 
-The judge takes the final answer ("I thought 3, but it's two" → `2`) and returns `null` when the text commits to no single value: a hedge ("probably two"), a bare negation ("not two") or no answer. Always `await` it. When the assertion fails, the report shows what the judge extracted and why.
+The judge takes the final answer ("I thought 3, but it's two" → `2`). Extraction is lenient by default: it takes the value the text leans to ("probably two" → `2`, "I think so" → `true`) and returns `null` when there is none to take: a split ("two or three"), a bare negation ("not two"), "I don't know" or no answer. Where a firm commitment matters, pass `strict: true` and any hedge is `null`; set it on the call, the test, a `crucible.describe` group or `testDefaults` (last wins):
+
+```ts
+expect(await crucible.extract(reply, 'whether the room is booked', { as: 'boolean', strict: true })).toBe(true);
+```
+
+Always `await` it. When the assertion fails, the report shows what the judge extracted, in which mode, and why.
 
 ### Set timeouts
 

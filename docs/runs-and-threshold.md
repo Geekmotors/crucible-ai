@@ -58,6 +58,7 @@ test.
 | `threshold` | the enclosing `crucible.describe`, else `testDefaults.threshold`, else `0.9` | number with 0 < `threshold` ≤ 1 | Minimum fraction of runs that must pass |
 | `inferenceTimeout` | the enclosing `crucible.describe`, else `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
 | `testTimeout` | the trailing `timeout` argument, else the enclosing `crucible.describe`, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
+| `strict` | the enclosing `crucible.describe`, else `testDefaults.strict`, else `false` | `true` or `false` | How [`crucible.extract()`](api.md#crucibleextract) treats a hedged reply: `false` (lenient) takes the value it leans to ("probably two" → `2`), `true` makes any hedge `null`. A call's own `{ strict }` wins over it |
 
 With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
 the test is a reliability gate: 10 runs, and at least 9 must pass. Each run
@@ -83,10 +84,12 @@ kind `usage`:
 - `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
   2147483647 (`0`, `2.5`, `'50000'`, `2147483648`) — out-of-range values are
   rejected, never clamped
+- `strict` that is not `true` or `false` (`'true'`, `1`, `null`) — never
+  coerced
 - a trailing `timeout` argument that breaks the same rule, or a trailing
   `timeout` together with a `testTimeout` option
-- any option key other than `runs`, `threshold`, `inferenceTimeout` and
-  `testTimeout`
+- any option key other than `runs`, `threshold`, `inferenceTimeout`,
+  `testTimeout` and `strict`
 - options that are not an object (including `null` or an array), a missing
   body, or two bodies
 
@@ -112,7 +115,7 @@ Each option is resolved **per field**, in this order:
    the next one out
 3. the value in `testDefaults`
 4. the built-in default (`runs: 10`, `threshold: 0.9`, `inferenceTimeout:
-   30000`, `testTimeout: 30000 + 1000 × (runs − 1)`)
+   30000`, `testTimeout: 30000 + 1000 × (runs − 1)`, `strict: false`)
 
 So with the config above:
 
@@ -149,7 +152,7 @@ crucible.describe('refund policy', { runs: 20 }, () => {
     /* 20 runs; threshold from testDefaults, else 0.9 */
   });
 
-  crucible.describe('strict cases', { threshold: 1 }, () => {
+  crucible.describe('zero-tolerance cases', { threshold: 1 }, () => {
     crucible.it('never promises cash', async () => {
       /* 20 runs, all must pass */
     });
@@ -164,6 +167,20 @@ The full chain, per field, last wins:
 
 ```text
 built-in default → testDefaults → outer crucible.describe → inner crucible.describe → crucible.it options / trailing timeout
+```
+
+`strict` has one more level: a `crucible.extract()` call's own `{ strict }`
+wins over everything above, for that call only.
+
+```ts
+crucible.describe('booking answers', { strict: true }, () => {
+  crucible.it('states the room number firmly', async () => {
+    /* "probably room 4" extracts as null here */
+  });
+  crucible.it('accepts a lean', { strict: false }, async () => {
+    /* "probably room 4" extracts as 4 here */
+  });
+});
 ```
 
 **The test timeout and groups.** The built-in test timeout is computed from
@@ -194,8 +211,9 @@ made:
   (0, 1]
 - `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
   2147483647
-- any key other than `runs`, `threshold`, `inferenceTimeout` and
-  `testTimeout` inside `testDefaults`
+- `strict` that is not `true` or `false`
+- any key other than `runs`, `threshold`, `inferenceTimeout`, `testTimeout`
+  and `strict` inside `testDefaults`
 - `testDefaults` that is not an object (`null`, an array, a number)
 
 Defaults are resolved when a test **executes**, not when Jest collects the
@@ -324,7 +342,8 @@ Failing claims (first failure of each of the 5 failed runs):
   call errored before any false verdict, that error is shown instead.
 - **Extractions in a failed run.** After those fields, every
   [`crucible.extract()`](api.md#crucibleextract) the run made is listed in
-  call order — description, requested type, the value the judge returned
+  call order — its mode (`lenient` or `strict`), description, requested
+  type, the value the judge returned
   (`null` included), its reasoning and a bounded response excerpt — so a
   failing `expect(...).toBe(2)` shows what the judge extracted and why:
 
@@ -332,7 +351,7 @@ Failing claims (first failure of each of the 5 failed runs):
   [FAILED] Run #1
     First failure: no assertion returned false; the body threw
     Thrown: Error: expect(received).toBe(expected)
-    Extraction 1 of 1: "the number of apples" as number → null
+    Extraction 1 of 1 (strict): "the number of apples" as number → null
       Judge reasoning: The reply hedges between two and three ("Probably two, maybe three").
       Response excerpt: Probably two apples, maybe three.
   ```
@@ -393,10 +412,10 @@ A run at `full` lists its judge calls like this:
 ```
 
 An extraction is listed among the judge calls as
-`Judge call 2 of 2: extract "the number of apples" as number → 2`, followed by
+`Judge call 2 of 2: extract (lenient) "the number of apples" as number → 2`, followed by
 its judge reasoning and response excerpt; at `full` the `Extraction` lines of
 a failed run are not repeated. In a `debug` trace it appears as
-`judge value 2 for extract "the number of apples" as number`, followed by
+`judge value 2 for extract "the number of apples" as number (lenient)`, followed by
 the reasoning.
 
 A `debug` trace looks like this (lines from concurrent runs interleave, so

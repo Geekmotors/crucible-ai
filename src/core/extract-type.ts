@@ -8,8 +8,11 @@ type ExtractType = keyof ExtractTypeMap;
 
 type ExtractedValue = ExtractTypeMap[ExtractType] | null;
 
+type ExtractMode = 'lenient' | 'strict';
+
 type ExtractOptions<T extends ExtractType = ExtractType> = {
   readonly as?: T;
+  readonly strict?: boolean;
 };
 
 type RequestedType<O extends ExtractOptions | undefined> = O extends ExtractOptions
@@ -23,4 +26,4 @@ type ExtractedValueFor<O extends ExtractOptions | undefined> =
   | (undefined extends RequestedType<O> ? string : never)
   | null;
 
-export type { ExtractedValue, ExtractedValueFor, ExtractOptions, ExtractType };
+export type { ExtractedValue, ExtractedValueFor, ExtractMode, ExtractOptions, ExtractType };

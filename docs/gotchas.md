@@ -8,7 +8,7 @@ protect you from.
 - [A verdict nobody asserts never fails a test](#a-verdict-nobody-asserts-never-fails-a-test)
 - [Assert true claims, not false ones](#assert-true-claims-not-false-ones)
 - [The judge can say false when the answer is true](#the-judge-can-say-false-when-the-answer-is-true)
-- [`extract()` returns `null` when there is no single committed value](#extract-returns-null-when-there-is-no-single-committed-value)
+- [`extract()` returns `null` when there is no value to take](#extract-returns-null-when-there-is-no-value-to-take)
 - [`extract()` is async: always `await` it](#extract-is-async-always-await-it)
 
 **Runs and state**
@@ -102,22 +102,32 @@ structural:
 Judge *infrastructure* failures (timeouts, rate limits, provider errors) are
 different: they are never counted as `false`. The run is reported as errored.
 
-## `extract()` returns `null` when there is no single committed value
+## `extract()` returns `null` when there is no value to take
 
 `null` from `crucible.extract()` is an answer, not an error: the judge found no
-single value the text commits to. That is the case when the text
+value the text commits to. By default extraction is **lenient**: a mildly
+hedged or colloquial answer counts as the value it leans to ("probably two" →
+`2`, "around two" → `2`, "I think so" → `true`, "I don't think so" →
+`false`). It is still `null` when the text
 
-- hedges, even about one value: "Probably two", "I think two", "around two";
-- offers alternatives: "Probably two, maybe three", "two or three";
+- splits between values with no lean: "two or three", "maybe Paris, maybe
+  Lyon";
 - only says what the value is not: "It's not two";
+- says it cannot answer: "I don't know";
 - never answers: "I haven't counted yet".
 
-The judge does not pick the likeliest value or fall back on the state: a value
-only the state holds is `null` too. So `expect(...).toBe(2)` fails on a hedged
-reply, which is usually what you want — and the failure report lists the
-extraction with the judge's reasoning, so you can see it was a hedge, not a
-wrong number. If a hedged answer is acceptable, say so in the assertion
-(`expect([2, null]).toContain(value)`) rather than in the description.
+With `strict: true` (on the call, the test, a `crucible.describe` group or
+`testDefaults`), any hedge is `null` too: "Probably two", "I think two",
+"around two", "I think so". Use it where a firm commitment is the point, or
+where an estimate must not pass for an exact value.
+
+The judge never invents a lean the text does not show or falls back on the
+state: a value only the state holds is `null` too. So `expect(...).toBe(2)` fails on a split
+reply (or, strict, a hedged one), which is usually what you want — and the
+failure report lists the extraction, its mode and the judge's reasoning, so
+you can see it was a split or a hedge, not a wrong number. If a `null` is acceptable, say
+so in the assertion (`expect([2, null]).toContain(value)`) rather than in the
+description.
 
 Two cases are not `null`: a revised answer extracts the *final* value ("I
 thought 3, but it's two" → `2`), and for `{ as: 'boolean' }` a committed

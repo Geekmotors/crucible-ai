@@ -9,6 +9,7 @@ import { Capture } from './capture.util.js';
 import { ExtractTarget } from './extract-target.enum.js';
 import { ExtractText } from './extract-text.enum.js';
 import { JudgeHarness } from './judge-harness.util.js';
+import { ModeAwareJudge } from './mode-aware-judge.fake.js';
 import { ScriptedAdapter } from './scripted-adapter.fake.js';
 import { TraceHarness } from './trace-harness.util.js';
 
@@ -69,6 +70,33 @@ class ExtractorHarness {
         .catch(() => undefined);
       return scope.context();
     });
+  }
+
+  static leaning(options?: ExtractOptions, strictRun?: boolean): Promise<ExtractedValue> {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.extractor(new ModeAwareJudge(), scope);
+    return scope.enterRun(
+      () => extractor.extract(ExtractText.Response, ExtractTarget.Apples, options),
+      undefined,
+      undefined,
+      undefined,
+      strictRun,
+    );
+  }
+
+  static async leaningContext(options?: ExtractOptions, strictRun?: boolean): Promise<RunContext> {
+    const scope = new RunScope();
+    const extractor = ExtractorHarness.extractor(new ModeAwareJudge(), scope);
+    return scope.enterRun(
+      async () => {
+        await extractor.extract(ExtractText.Response, ExtractTarget.Apples, options);
+        return scope.context();
+      },
+      undefined,
+      undefined,
+      undefined,
+      strictRun,
+    );
   }
 
   static async tracedOutput(replies: string[], traced: TraceHarness): Promise<string> {

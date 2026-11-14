@@ -19,6 +19,8 @@ describe('RunOptionsResolver', () => {
     [{ inferenceTimeout: CustomTimeout.Long }],
     [{ testTimeout: CustomTimeout.Short }],
     [{ inferenceTimeout: TimeoutBudget.TimerMaxMs, testTimeout: TimeoutBudget.TimerMaxMs }],
+    [{ strict: true }],
+    [{ strict: false }],
   ])('accepts valid options %j', (opts) => {
     expect(() => new RunOptionsResolver().validate(opts)).not.toThrow();
   });
@@ -48,6 +50,9 @@ describe('RunOptionsResolver', () => {
     [{ testTimeout: InvalidTimeout.AboveTimerMax }],
     [{ inferenceTimeout: String(CustomTimeout.Long) }],
     [{ testTimeout: Number.POSITIVE_INFINITY }],
+    [{ strict: String(true) }],
+    [{ strict: 1 }],
+    [{ strict: null }],
   ])('rejects %j as a usage error', (opts) => {
     const error = Capture.thrown(() => new RunOptionsResolver().validate(opts));
     expect(error).toBeInstanceOf(CrucibleError);
@@ -144,5 +149,19 @@ describe('RunOptionsResolver', () => {
         { inferenceTimeout: CustomTimeout.Long, testTimeout: CustomTimeout.Longer },
       ),
     ).toMatchObject({ inferenceTimeout: CustomTimeout.Long, testTimeout: CustomTimeout.Short });
+  });
+
+  it('extracts leniently when nothing declares strict', () => {
+    expect(new RunOptionsResolver().resolve({}).strict).toBe(false);
+  });
+
+  it('takes strict from the configured defaults when the test leaves it unset', () => {
+    expect(new RunOptionsResolver().resolve({}, { strict: true }).strict).toBe(true);
+  });
+
+  it('prefers a declared strict over the configured default', () => {
+    expect(new RunOptionsResolver().resolve({ strict: false }, { strict: true }).strict).toBe(
+      false,
+    );
   });
 });

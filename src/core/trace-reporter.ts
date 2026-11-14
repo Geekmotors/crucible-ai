@@ -150,7 +150,7 @@ class TraceReporter {
     if ('description' in record) {
       this.emit(
         `judge value ${JSON.stringify(record.value)} for ${record.assertion} ` +
-          `"${record.description}" as ${record.type}`,
+          `"${record.description}" as ${record.type} (${record.mode})`,
         this.payload('reasoning', record.reasoning),
       );
       return;

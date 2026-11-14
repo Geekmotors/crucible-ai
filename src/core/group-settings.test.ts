@@ -116,6 +116,35 @@ describe('GroupSettings — inheritance', () => {
     expect(resolved?.inferenceTimeout).toBe(InferenceTimeout.BuiltInMs * 2);
   });
 
+  it('a group strict reaches the tests inside it over a lenient configured default', () => {
+    const harness = new GroupSettingsHarness();
+    let resolved: ResolvedRunOptions | undefined;
+    harness.within({ strict: true }, () => {
+      resolved = harness.resolve({}, { strict: false });
+    });
+    expect(resolved?.strict).toBe(true);
+  });
+
+  it('an inner group can relax strict again for its own tests', () => {
+    const harness = new GroupSettingsHarness();
+    let resolved: ResolvedRunOptions | undefined;
+    harness.within({ strict: true }, () => {
+      harness.within({ strict: false }, () => {
+        resolved = harness.resolve();
+      });
+    });
+    expect(resolved?.strict).toBe(false);
+  });
+
+  it("the test's own strict wins over the group's", () => {
+    const harness = new GroupSettingsHarness();
+    let resolved: ResolvedRunOptions | undefined;
+    harness.within({ strict: false }, () => {
+      resolved = harness.resolve({ strict: true });
+    });
+    expect(resolved?.strict).toBe(true);
+  });
+
   it('options changed after the group is declared do not reach its tests', () => {
     const harness = new GroupSettingsHarness();
     const options = { runs: RunCount.Smaller };
@@ -190,6 +219,7 @@ describe('GroupSettings — validation', () => {
     [{ threshold: InvalidTestDefault.AboveOne }],
     [{ testTimeout: InvalidTimeout.Zero }],
     [{ inferenceTimeout: InvalidTimeout.AboveTimerMax }],
+    [{ strict: String(true) }],
     [{ run: RunCount.Smaller }],
     [null],
     [undefined],

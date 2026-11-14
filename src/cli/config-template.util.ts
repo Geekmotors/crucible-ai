@@ -24,6 +24,7 @@ class ConfigTemplate {
     '  //   "threshold": 0.9, // at least 9 of 10 runs must pass',
     '  //   "inferenceTimeout": 30000, // ms per judge request',
     '  //   testTimeout defaults to 30000 + 1000 per run after the first; set "testTimeout": <ms> to fix it',
+    '  //   "strict": false, // true: extract() treats any hedge ("probably two") as null',
     '  // },',
     '}',
     '',

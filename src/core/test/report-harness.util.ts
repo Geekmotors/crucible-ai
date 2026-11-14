@@ -7,6 +7,7 @@ import type { Verbosity } from '../verbosity.js';
 import type { ErrorRecord, ExtractionRecord, RunContext, VerdictRecord } from '../state.js';
 import { AssertionName } from './assertion-name.enum.js';
 import { ClaimText } from './claim-text.enum.js';
+import { ExtractModeName } from './extract-mode-name.enum.js';
 import { ExtractTarget } from './extract-target.enum.js';
 import { Threshold } from './threshold.enum.js';
 import { VerbosityLevel } from './verbosity-level.enum.js';
@@ -37,6 +38,7 @@ class ReportHarness {
       assertion: AssertionName.Extract,
       description: ExtractTarget.Apples,
       type: 'number',
+      mode: ExtractModeName.Lenient,
       value: null,
       reasoning: 'the reasoning',
       response: 'the response',

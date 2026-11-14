@@ -3,7 +3,10 @@ import { crucible } from 'crucible-ai';
 import scenario from './extraction.json' with { type: 'json' };
 
 crucible.it(scenario.name, async () => {
-  expect(await crucible.extract(scenario.response, scenario.target, { as: 'number' })).toBe(
-    scenario.insisted,
-  );
+  expect(
+    await crucible.extract(scenario.response, scenario.target, {
+      as: 'number',
+      strict: scenario.strict,
+    }),
+  ).toBe(scenario.insisted);
 });

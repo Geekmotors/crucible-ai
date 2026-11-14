@@ -55,10 +55,12 @@ check:
    });
    ```
 
-   Use it when the value is the point and the phrasing is not. It resolves to
-   `null` when the reply does not commit to a single value — it hedges
-   ("probably two"), only negates ("not two") or never answers — so `null` is
-   a finding, not a crash. For a tolerance, use a Jest matcher on the value
+   Use it when the value is the point and the phrasing is not. By default it
+   takes the value the reply leans to ("probably two" → `2`, "I think so" →
+   `true`), and resolves to `null` when there is none to take — the reply
+   splits ("two or three"), only negates ("not two"), says "I don't know" or
+   never answers — so `null` is a finding, not a crash. Pass
+   `{ strict: true }` to make any hedge `null`. For a tolerance, use a Jest matcher on the value
    (`toBeCloseTo`, `toBeGreaterThan`).
 3. **`coherent()`** for claims that are inherently semantic: what prose
    means, whether reasoning holds, whether a response is consistent with the

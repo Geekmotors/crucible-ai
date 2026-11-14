@@ -7,6 +7,7 @@ import { ProjectDefaults } from './test/project-defaults.util.js';
 import { ProviderFault } from './test/provider-fault.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Threshold } from './test/threshold.enum.js';
+import { ExtractValue } from './test/extract-value.enum.js';
 import { RunnerHarness } from './test/runner-harness.util.js';
 import { StartGate } from './test/start-gate.util.js';
 import { TimeoutBudget } from './test/timeout-budget.enum.js';
@@ -351,6 +352,26 @@ describe('Runner — tuned timeouts', () => {
       expect((error as CrucibleVerdictError).outcome).toBe('errored');
     },
   );
+});
+
+describe('Runner — extraction strictness', () => {
+  it('every run extracts leniently when nothing declares strict', async () => {
+    const values = await RunnerHarness.extractedUnder({}, {});
+    expect(values).toEqual(Array.from({ length: RunCount.Smaller }, () => ExtractValue.Two));
+  });
+
+  it.each<[string, RunOptions, RunOptions]>([
+    ['declared', { strict: true }, {}],
+    ['configured', {}, { strict: true }],
+  ])('every run extracts strictly under a %s strict', async (_label, opts, defaults) => {
+    const values = await RunnerHarness.extractedUnder(opts, defaults);
+    expect(values).toEqual(Array.from({ length: RunCount.Smaller }, () => null));
+  });
+
+  it('a declared lenient beats a configured strict', async () => {
+    const values = await RunnerHarness.extractedUnder({ strict: false }, { strict: true });
+    expect(values).toEqual(Array.from({ length: RunCount.Smaller }, () => ExtractValue.Two));
+  });
 });
 
 describe('Runner — verbosity', () => {

@@ -234,6 +234,15 @@ describe('ConfigStore testDefaults', () => {
     expect(store.get().testDefaults).toEqual({ threshold: Threshold.Strict });
   });
 
+  it('resolves a configured strict extraction default', () => {
+    const store = ConfigHarness.store({
+      provider: 'fake',
+      model: TestModel.Generic,
+      testDefaults: { strict: true },
+    });
+    expect(store.get().testDefaults).toEqual({ strict: true });
+  });
+
   it('resolves to no defaults when testDefaults is absent', () => {
     const store = ConfigHarness.store({ provider: 'fake', model: TestModel.Generic });
     expect(store.get().testDefaults).toEqual({});
@@ -261,6 +270,8 @@ describe('ConfigStore testDefaults', () => {
     ['negative testTimeout', { testTimeout: InvalidTimeout.Negative }],
     ['string testTimeout', { testTimeout: String(CustomTimeout.Long) }],
     ['testTimeout above the timer maximum', { testTimeout: InvalidTimeout.AboveTimerMax }],
+    ['string strict', { strict: String(true) }],
+    ['numeric strict', { strict: 1 }],
   ])('rejects %s as a config failure at load', (_label, testDefaults) => {
     expect(
       ConfigHarness.errorKind(
