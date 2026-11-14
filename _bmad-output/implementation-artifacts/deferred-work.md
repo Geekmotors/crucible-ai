@@ -440,3 +440,18 @@
 - One leading space is a positional marker, not an escape: a reader that trims leading white space still sees ` >>>` as a fence. A stronger design is a per-request random fence token or escaping markers inside content; changes `schemas/*.md` (system prompt) and every port. Decide after `make conformance` evidence.
 - epics.md Story 8.6 AC lists the old break set (`\n`, `\r\n`, `\r`, U+2028, U+2029) and sections; the shipped rule adds VT, FF, U+001C–U+001E, U+0085, invisible-character removal and covers TYPE/MODE. Amend the epic for traceability.
 - jq builder compiles the fence regex once per line (~25 µs/line on jq 1.7.1, linear). Fine for conformance cases; prefilter lines without `<`/`>` if large cases appear.
+
+## Deferred from: dev of 8-4-porting-guide-and-coverage (2026-11-14)
+
+- Argument forms of `crucible.it` / `describe` / `gate` (options before the body, trailing timeout, two bodies, an argument after the last, trailing timeout beside `testTimeout`) have no fixture: they take functions, which the fixture format cannot hold. Listed as port-tested in `spec/PORTING.md` and in `surface.json` (`portTests`). Option: a `$special: "function"` token and a `declaration/forms` operation (fixture-format change, every runner updates).
+- `reportText` in `spec/surface.json` is hand-maintained: there is no TypeScript source of truth for report labels to derive from. The check verifies every listed marker against its cited cases' expected text, and a new report field changes existing `report/render` goldens, but adding the field to the manifest is a manual step.
+- The surface check's "mentions" test is a heuristic (key anywhere in the input, equal string, or quoted inside a string), so a case can be cited for an option it only carries rather than tests. Cheap and catches mis-citations; tighten per section only if it proves too loose.
+
+## Deferred from: code review of 8-4-porting-guide-and-coverage (2026-11-14)
+
+- `functions` items in `spec/surface.json` are only checked to cite existing cases; `crucible.load`/`append` and `t.*` cite `payload/*` cases that do not go through them. A fixture cannot tell `t.coherent` from `crucible.coherent`; mark these as port-tested or accept.
+- `CRUCIBLE_VERBOSE` has no TS source to derive from, so environment drift is one-way (only the default key variable is checked).
+- Operation drift compares the manifest with the `SpecFixtures` import registry, not the files under `spec/`; an unregistered file is caught by `make spec-goldens-check` (CI), not `npm test`.
+- The default/values comparison is one-sided (a manifest default with no schema default is unchecked) and uses the editor config schema, not runtime defaults.
+- `assertionCallInput` in `spec/fixture.schema.json` does not cap `args` at 3 entries: the in-house schema checker has no `maxItems`.
+- `docs` anchors in `spec/surface.json` are not link-checked.

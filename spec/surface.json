@@ -1,0 +1,846 @@
+{
+  "$schema": "./surface.schema.json",
+  "description": "Every public item a Crucible port provides, each pinned by fixture cases. spec/PORTING.md explains how a port uses it; the TypeScript coverage check (src/core/spec-surface.test.ts) fails when an item has no fixture, a cited case does not exercise it, or the TypeScript surface and this list differ.",
+  "operations": [
+    { "name": "run-options/resolve", "docs": "spec/README.md#run-options--resolve" },
+    { "name": "run-options/validate", "docs": "spec/README.md#run-options--validate" },
+    { "name": "verdict/compute", "docs": "spec/README.md#verdict--compute" },
+    { "name": "payload/coherent", "docs": "spec/README.md#payload--coherent" },
+    { "name": "payload/extract", "docs": "spec/README.md#payload--extract" },
+    { "name": "report/render", "docs": "spec/README.md#report--render" },
+    { "name": "report/trace", "docs": "spec/README.md#report--trace" },
+    { "name": "jsonc/parse", "docs": "spec/README.md#jsonc--parse" },
+    { "name": "config/load", "docs": "spec/README.md#config--load" },
+    { "name": "provider/request", "docs": "spec/README.md#provider--request" },
+    { "name": "provider/response", "docs": "spec/README.md#provider--response" },
+    {
+      "name": "provider/plain-http-warning",
+      "docs": "spec/README.md#provider--plain-http-warning"
+    },
+    { "name": "judge/reply", "docs": "spec/README.md#judge--reply" },
+    { "name": "assertion/call", "docs": "spec/README.md#assertion--call" }
+  ],
+  "functions": [
+    {
+      "name": "crucible.it",
+      "docs": "docs/api.md#crucibleit",
+      "summary": "Registers one runner test whose body runs `runs` times concurrently and passes when at least `threshold` of the runs pass; throws the verdict error with the report otherwise.",
+      "fixtures": [
+        "run-options-validate-test-runs-zero",
+        "run-options-resolve-every-layer",
+        "verdict-compute-default-gate-passes",
+        "report-render-failed-verdict"
+      ],
+      "portTests": "Argument forms (options, trailing timeout, two bodies, an argument after the timeout, a trailing timeout beside testTimeout), registration with the runner, the runner timeout it is given, variants and blocked variants, concurrency, deadline, fatal abort and discarded runs."
+    },
+    {
+      "name": "crucible.describe",
+      "docs": "docs/api.md#crucibledescribe",
+      "summary": "Registers a runner group whose options every crucible.it inside inherits, field by field.",
+      "fixtures": [
+        "run-options-validate-group-runs-zero",
+        "run-options-resolve-inner-group-over-outer"
+      ],
+      "portTests": "Argument forms, synchronous callback (a returned value or promise is a usage error), settings reaching nested and plain runner groups, no leak into sibling groups, variants and blocked variants."
+    },
+    {
+      "name": "crucible.gate",
+      "docs": "docs/api.md#cruciblegate",
+      "summary": "Wraps a body into a test function for the runner's own it/test with the same runs, verdict and report as crucible.it.",
+      "fixtures": [
+        "run-options-validate-test-every-field",
+        "run-options-resolve-test-over-group",
+        "verdict-compute-strict-gate-errored"
+      ],
+      "portTests": "Argument forms, forwarding the runner's arguments after t, a function the runner never treats as a done-callback, groups captured when the gate is called."
+    },
+    {
+      "name": "crucible.coherent",
+      "docs": "docs/api.md#cruciblecoherent",
+      "summary": "Asks the judge whether a response is consistent with a claim given the run's facts; resolves to the verdict.",
+      "fixtures": [
+        "assertion-call-coherent-arguments-only",
+        "assertion-call-coherent-actual-number",
+        "payload-coherent-run-facts-then-call-facts",
+        "judge-reply-coherent-true"
+      ],
+      "portTests": "Usable only inside a running test body (usage error elsewhere), inference timeout, the call recorded for the report."
+    },
+    {
+      "name": "crucible.extract",
+      "docs": "docs/api.md#crucibleextract",
+      "summary": "Asks the judge for the one value a text commits to, typed as asked, or null.",
+      "fixtures": [
+        "assertion-call-extract-arguments-only",
+        "assertion-call-extract-text-number",
+        "payload-extract-strict-number",
+        "judge-reply-extract-number"
+      ],
+      "portTests": "Usable only inside a running test body, inference timeout, the call recorded for the report."
+    },
+    {
+      "name": "crucible.facts",
+      "docs": "docs/api.md#cruciblefacts",
+      "summary": "Adds facts to the current run, in order; every later judge call of the run sends them as STATE.",
+      "fixtures": [
+        "assertion-call-coherent-run-facts",
+        "assertion-call-facts-number",
+        "payload-coherent-run-facts"
+      ],
+      "portTests": "Facts are per run (concurrent runs never share them), copied, append-only, and a usage error outside a running test body."
+    },
+    {
+      "name": "crucible.load",
+      "docs": "docs/api.md#crucibleload-and-crucibleappend-deprecated",
+      "summary": "Deprecated alias of crucible.facts.",
+      "fixtures": ["payload-coherent-run-facts"]
+    },
+    {
+      "name": "crucible.append",
+      "docs": "docs/api.md#crucibleload-and-crucibleappend-deprecated",
+      "summary": "Deprecated alias of crucible.facts.",
+      "fixtures": ["payload-coherent-run-facts"]
+    },
+    {
+      "name": "t.facts",
+      "docs": "docs/api.md#the-run-context-t",
+      "summary": "crucible.facts bound to one run.",
+      "fixtures": ["payload-coherent-run-facts"],
+      "portTests": "Works from callbacks that lost the async context; a usage error once its run has ended."
+    },
+    {
+      "name": "t.coherent",
+      "docs": "docs/api.md#the-run-context-t",
+      "summary": "crucible.coherent bound to one run.",
+      "fixtures": ["payload-coherent-run-facts-then-call-facts"],
+      "portTests": "Works from callbacks that lost the async context; rejects with a usage error once its run has ended."
+    },
+    {
+      "name": "t.extract",
+      "docs": "docs/api.md#the-run-context-t",
+      "summary": "crucible.extract bound to one run.",
+      "fixtures": ["payload-extract-run-facts-then-call-facts"],
+      "portTests": "Works from callbacks that lost the async context; rejects with a usage error once its run has ended."
+    }
+  ],
+  "runOptions": [
+    {
+      "name": "runs",
+      "docs": "docs/api.md#crucibleit",
+      "default": 10,
+      "valid": "an integer of at least 1 (no upper bound; accept at least 2147483647)",
+      "fixtures": ["run-options-resolve-test-runs-only", "run-options-validate-test-runs-zero"]
+    },
+    {
+      "name": "threshold",
+      "docs": "docs/api.md#crucibleit",
+      "default": 0.9,
+      "valid": "a number greater than 0 and at most 1",
+      "fixtures": [
+        "run-options-resolve-test-threshold-only",
+        "run-options-validate-test-threshold-zero",
+        "verdict-compute-rounds-need-up-five-runs"
+      ]
+    },
+    {
+      "name": "inferenceTimeout",
+      "docs": "docs/api.md#crucibleit",
+      "default": 30000,
+      "valid": "an integer number of milliseconds from 1 to 2147483647",
+      "fixtures": [
+        "run-options-resolve-config-timeouts",
+        "run-options-validate-test-inference-timeout-zero"
+      ]
+    },
+    {
+      "name": "testTimeout",
+      "docs": "docs/api.md#crucibleit",
+      "default": "30000 + 1000 × (runs − 1) from the resolved runs, at most 2147483647, unless any layer declares one",
+      "valid": "an integer number of milliseconds from 1 to 2147483647",
+      "fixtures": [
+        "run-options-resolve-group-timeout-beats-formula",
+        "run-options-resolve-test-timeout-over-group",
+        "run-options-validate-test-test-timeout-above-timer-max"
+      ]
+    },
+    {
+      "name": "strict",
+      "docs": "docs/api.md#crucibleextract",
+      "default": false,
+      "valid": "true or false",
+      "fixtures": [
+        "run-options-resolve-test-strict-over-group",
+        "run-options-resolve-call-strict-over-lenient-run",
+        "run-options-validate-test-strict-string"
+      ]
+    }
+  ],
+  "callOptions": [
+    {
+      "assertion": "coherent",
+      "name": "facts",
+      "docs": "docs/api.md#cruciblecoherent",
+      "default": "none: the run's facts alone",
+      "valid": "a string or an array of strings; sent after the run's facts, for this call only",
+      "fixtures": [
+        "assertion-call-coherent-facts-array",
+        "assertion-call-coherent-run-facts-then-call-facts",
+        "assertion-call-coherent-facts-mixed-array"
+      ]
+    },
+    {
+      "assertion": "extract",
+      "name": "as",
+      "docs": "docs/api.md#crucibleextract",
+      "default": "string",
+      "valid": "one of the values",
+      "values": ["string", "number", "boolean"],
+      "fixtures": [
+        "assertion-call-extract-as-number",
+        "assertion-call-extract-as-boolean",
+        "assertion-call-extract-as-unknown-type"
+      ]
+    },
+    {
+      "assertion": "extract",
+      "name": "strict",
+      "docs": "docs/api.md#crucibleextract",
+      "default": "the test's resolved strict",
+      "valid": "true or false",
+      "fixtures": [
+        "run-options-resolve-call-strict-over-lenient-run",
+        "assertion-call-extract-strict-true",
+        "assertion-call-extract-strict-string"
+      ]
+    },
+    {
+      "assertion": "extract",
+      "name": "facts",
+      "docs": "docs/api.md#crucibleextract",
+      "default": "none: the run's facts alone",
+      "valid": "a string or an array of strings; sent after the run's facts, for this call only",
+      "fixtures": [
+        "assertion-call-extract-facts-string",
+        "assertion-call-extract-run-facts-then-call-facts",
+        "assertion-call-extract-facts-number"
+      ]
+    }
+  ],
+  "configFields": [
+    {
+      "name": "$schema",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "valid": "anything; ignored",
+      "fixtures": ["config-load-schema-ignored", "config-load-schema-any-value-ignored"]
+    },
+    {
+      "name": "provider",
+      "docs": "docs/configuration.md",
+      "required": true,
+      "values": ["openrouter", "openai", "openai-compatible"],
+      "valid": "exactly one of the values (case-sensitive, not trimmed)",
+      "fixtures": [
+        "config-load-provider-openai",
+        "config-load-provider-unknown",
+        "config-load-provider-number"
+      ]
+    },
+    {
+      "name": "model",
+      "docs": "docs/configuration.md",
+      "required": true,
+      "valid": "a string that is not blank; kept verbatim",
+      "fixtures": ["config-load-model-kept-verbatim", "config-load-model-blank"]
+    },
+    {
+      "name": "baseUrl",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "valid": "openai-compatible only (required there): an absolute http(s) WHATWG URL without credentials, query or fragment; never echoed",
+      "fixtures": [
+        "config-load-base-url-query",
+        "config-load-base-url-credentials",
+        "provider-request-base-url-trailing-slash"
+      ]
+    },
+    {
+      "name": "apiKeyEnv",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "default": "CRUCIBLE_JUDGE_KEY",
+      "valid": "a variable name matching [A-Za-z_][A-Za-z0-9_]*; never echoed",
+      "fixtures": [
+        "config-load-openrouter-api-key-env",
+        "config-load-api-key-env-dashed",
+        "provider-request-openrouter-api-key-env"
+      ]
+    },
+    {
+      "name": "meta",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "valid": "a JSON object, sent as extra request-body members",
+      "fixtures": [
+        "config-load-meta-pass-through",
+        "config-load-meta-array",
+        "provider-request-meta-pass-through"
+      ]
+    },
+    {
+      "name": "verbosity",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "default": "default",
+      "values": ["default", "full", "debug"],
+      "valid": "exactly one of the values; CRUCIBLE_VERBOSE overrides it",
+      "fixtures": [
+        "config-load-verbosity-full",
+        "config-load-verbosity-unknown",
+        "report-trace-default-is-silent"
+      ]
+    },
+    {
+      "name": "testDefaults",
+      "docs": "docs/runs-and-threshold.md#project-wide-defaults-testdefaults",
+      "required": false,
+      "valid": "run options as run-options/validate with source config",
+      "fixtures": [
+        "config-load-test-defaults",
+        "config-load-test-defaults-invalid",
+        "run-options-resolve-config-fills-omitted-fields"
+      ]
+    },
+    {
+      "name": "excerptChars",
+      "docs": "docs/configuration.md",
+      "required": false,
+      "default": 500,
+      "valid": "a number with no fractional part, at least 1",
+      "fixtures": [
+        "config-load-excerpt-chars",
+        "config-load-excerpt-chars-zero",
+        "report-render-response-truncated"
+      ]
+    }
+  ],
+  "providers": [
+    {
+      "name": "openrouter",
+      "docs": "docs/configuration.md",
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "baseUrl": "rejected",
+      "keyRequired": "always",
+      "fixtures": [
+        "provider-request-openrouter",
+        "config-load-openrouter-base-url-unsupported",
+        "provider-request-openrouter-key-missing"
+      ]
+    },
+    {
+      "name": "openai",
+      "docs": "docs/configuration.md",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "baseUrl": "rejected",
+      "keyRequired": "always",
+      "fixtures": [
+        "provider-request-openai",
+        "config-load-openai-base-url-unsupported",
+        "provider-request-openai-key-missing"
+      ]
+    },
+    {
+      "name": "openai-compatible",
+      "docs": "docs/configuration.md",
+      "endpoint": "<baseUrl>/chat/completions",
+      "baseUrl": "required",
+      "keyRequired": "only when apiKeyEnv is set; without a key no Authorization header is sent",
+      "fixtures": [
+        "provider-request-openai-compatible",
+        "provider-request-openai-compatible-keyless",
+        "provider-request-openai-compatible-default-key-sent"
+      ]
+    }
+  ],
+  "environment": [
+    {
+      "name": "CRUCIBLE_JUDGE_KEY",
+      "docs": "docs/configuration.md",
+      "meaning": "The judge API key, read when no apiKeyEnv is set; trimmed; printable ASCII only.",
+      "fixtures": [
+        "provider-request-openrouter",
+        "provider-request-key-trimmed",
+        "provider-request-openrouter-key-blank"
+      ]
+    },
+    {
+      "name": "CRUCIBLE_VERBOSE",
+      "docs": "docs/configuration.md",
+      "meaning": "Overrides the configured verbosity when set and not empty; an invalid value is a usage error.",
+      "fixtures": [
+        "config-load-override-wins",
+        "config-load-override-invalid-is-usage",
+        "config-load-override-empty-ignored"
+      ]
+    }
+  ],
+  "errorKinds": [
+    {
+      "kind": "usage",
+      "docs": "docs/api.md#crucibleerror",
+      "meaning": "An API called incorrectly: invalid test or group options, invalid assertion arguments or facts, an invalid CRUCIBLE_VERBOSE.",
+      "fixtures": [
+        "run-options-validate-test-runs-zero",
+        "run-options-validate-group-unknown-key",
+        "assertion-call-extract-unknown-option",
+        "config-load-override-invalid-is-usage"
+      ]
+    },
+    {
+      "kind": "config",
+      "docs": "docs/api.md#crucibleerror",
+      "meaning": "The config file or the key environment is wrong.",
+      "fixtures": [
+        "config-load-no-file",
+        "run-options-validate-config-runs-zero",
+        "jsonc-parse-unclosed-object",
+        "provider-request-openrouter-key-missing"
+      ]
+    },
+    {
+      "kind": "infra",
+      "retryable": true,
+      "docs": "docs/api.md#crucibleerror",
+      "meaning": "A transient provider failure after every attempt, or a judge reply unusable twice: the run is errored, not failed.",
+      "fixtures": [
+        "provider-response-mixed-retryable-failures-exhaust",
+        "judge-reply-coherent-two-unusable"
+      ]
+    },
+    {
+      "kind": "infra",
+      "retryable": false,
+      "docs": "docs/api.md#crucibleerror",
+      "meaning": "A request the provider will refuse again (bad key, no credit, unknown model): it aborts the whole test.",
+      "fixtures": [
+        "provider-response-status-401-fatal",
+        "provider-response-embedded-error-fatal-code"
+      ]
+    }
+  ],
+  "verdictOutcomes": [
+    {
+      "name": "passed",
+      "docs": "docs/runs-and-threshold.md",
+      "meaning": "At least need runs passed.",
+      "fixtures": ["verdict-compute-lenient-gate-passes", "verdict-compute-single-passed"]
+    },
+    {
+      "name": "failed",
+      "docs": "docs/runs-and-threshold.md",
+      "meaning": "Even if every errored run had passed, the test could not meet its threshold.",
+      "fixtures": ["verdict-compute-single-failed", "verdict-compute-lenient-gate-fails"]
+    },
+    {
+      "name": "errored",
+      "docs": "docs/runs-and-threshold.md",
+      "meaning": "Errored runs decide the verdict, so it says nothing about the system under test.",
+      "fixtures": ["verdict-compute-single-errored", "verdict-compute-strict-gate-errored"]
+    }
+  ],
+  "reportText": [
+    {
+      "name": "headline: smoke run failed",
+      "operation": "report/render",
+      "text": "FAILED: the smoke run (runs: 1) did not pass.",
+      "fixtures": ["report-render-smoke-failed"]
+    },
+    {
+      "name": "headline: failed",
+      "operation": "report/render",
+      "text": "FAILED: ",
+      "fixtures": ["report-render-failed-verdict", "report-render-pass-rate-floored"]
+    },
+    {
+      "name": "headline: smoke run passed",
+      "operation": "report/render",
+      "text": "PASSED: the smoke run (runs: 1) passed.",
+      "fixtures": ["report-render-passed-smoke"]
+    },
+    {
+      "name": "headline: passed",
+      "operation": "report/render",
+      "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).",
+      "fixtures": ["report-render-passed-report"]
+    },
+    {
+      "name": "headline: smoke run errored",
+      "operation": "report/render",
+      "text": "ERRORED, not failed: the smoke run (runs: 1) hit an infrastructure problem, so there is no verdict.",
+      "fixtures": ["report-render-smoke-errored"]
+    },
+    {
+      "name": "headline: errored",
+      "operation": "report/render",
+      "text": "errored run(s) left the result inconclusive.",
+      "fixtures": ["report-render-errored-zone"]
+    },
+    {
+      "name": "headline: smoke run aborted",
+      "operation": "report/render",
+      "text": "ERRORED, not failed: the smoke run (runs: 1) aborted on a fatal error. Fix the provider setup (API key, model) or configuration and rerun.",
+      "fixtures": ["report-render-aborted-smoke"]
+    },
+    {
+      "name": "headline: aborted",
+      "operation": "report/render",
+      "text": "ERRORED, not failed: aborted on a fatal error after ",
+      "fixtures": ["report-render-aborted", "report-render-aborted-without-discarded"]
+    },
+    {
+      "name": "headline: smoke run expired",
+      "operation": "report/render",
+      "text": "ERRORED, not failed: the smoke run (runs: 1) did not finish within its ",
+      "fixtures": ["report-render-expired-smoke"]
+    },
+    {
+      "name": "headline: expired",
+      "operation": "report/render",
+      "text": "ERRORED, not failed: the test did not finish within its ",
+      "fixtures": ["report-render-expired", "report-render-expired-no-discarded"]
+    },
+    {
+      "name": "settled runs and discarded count",
+      "operation": "report/render",
+      "text": "in-flight run(s) discarded to stop spend",
+      "fixtures": ["report-render-aborted", "report-render-expired"]
+    },
+    {
+      "name": "advice after an expired test",
+      "operation": "report/render",
+      "text": "Check for a slow system under test or a throttled judge provider.",
+      "fixtures": ["report-render-expired"]
+    },
+    {
+      "name": "run counts line",
+      "operation": "report/render",
+      "text": "\nRuns: ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "failed run section",
+      "operation": "report/render",
+      "text": "[FAILED] Run #",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "errored run section",
+      "operation": "report/render",
+      "text": "[ERRORED] Run #",
+      "fixtures": ["report-render-errored-zone"]
+    },
+    {
+      "name": "passed run section (full)",
+      "operation": "report/render",
+      "text": "[PASSED] Run #",
+      "fixtures": ["report-render-full-every-run"]
+    },
+    {
+      "name": "discarded run section (full)",
+      "operation": "report/render",
+      "text": "[DISCARDED] Run #",
+      "fixtures": ["report-render-full-every-run"]
+    },
+    {
+      "name": "discarded runs line",
+      "operation": "report/render",
+      "text": "[DISCARDED] Run(s) ",
+      "fixtures": ["report-render-discarded-in-verdict"]
+    },
+    {
+      "name": "field First failure: thrown",
+      "operation": "report/render",
+      "text": "  First failure: no assertion returned false; the body threw",
+      "fixtures": ["report-render-thrown-without-verdict"]
+    },
+    {
+      "name": "field First failure: judge error",
+      "operation": "report/render",
+      "text": "  First failure: a judge call errored after ",
+      "fixtures": ["report-render-judge-error-before-false-verdict"]
+    },
+    {
+      "name": "field Judge error",
+      "operation": "report/render",
+      "text": "  Judge error: ",
+      "fixtures": ["report-render-judge-error-before-false-verdict"]
+    },
+    {
+      "name": "field First failed assertion",
+      "operation": "report/render",
+      "text": "  First failed assertion: coherent (assertion ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "field Claim",
+      "operation": "report/render",
+      "text": "  Claim: ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "field Facts",
+      "operation": "report/render",
+      "text": "  Facts: ",
+      "fixtures": ["report-render-facts-shown"]
+    },
+    {
+      "name": "field Facts truncated",
+      "operation": "report/render",
+      "text": "  Facts (first ",
+      "fixtures": [
+        "report-render-facts-truncated-mid-fact",
+        "report-render-facts-truncated-on-whole-fact"
+      ]
+    },
+    {
+      "name": "field Judge reasoning",
+      "operation": "report/render",
+      "text": "  Judge reasoning: ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "field Response excerpt",
+      "operation": "report/render",
+      "text": "  Response excerpt: ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "field Response excerpt truncated",
+      "operation": "report/render",
+      "text": "  Response excerpt (first ",
+      "fixtures": ["report-render-response-truncated"]
+    },
+    {
+      "name": "field Thrown",
+      "operation": "report/render",
+      "text": "  Thrown: ",
+      "fixtures": ["report-render-failed-verdict"]
+    },
+    {
+      "name": "field Cause",
+      "operation": "report/render",
+      "text": "  Cause: ",
+      "fixtures": ["report-render-errored-zone"]
+    },
+    {
+      "name": "field Judge attempts",
+      "operation": "report/render",
+      "text": "  Judge attempts: ",
+      "fixtures": ["report-render-errored-zone"]
+    },
+    {
+      "name": "field Extraction i of m",
+      "operation": "report/render",
+      "text": "  Extraction 1 of ",
+      "fixtures": ["report-render-extraction-in-failed-run", "report-render-extraction-values"]
+    },
+    {
+      "name": "more failed runs line",
+      "operation": "report/render",
+      "text": "more failed run(s) not shown in full: ",
+      "fixtures": ["report-render-hidden-run-ranges"]
+    },
+    {
+      "name": "more errored runs line",
+      "operation": "report/render",
+      "text": "more errored run(s) not shown in full: ",
+      "fixtures": ["report-render-errored-runs-bounded-separately"]
+    },
+    {
+      "name": "claim tally",
+      "operation": "report/render",
+      "text": "Failing claims (first failure of each of the ",
+      "fixtures": ["report-render-tally-kinds", "report-render-tally-ties-keep-first-seen-order"]
+    },
+    {
+      "name": "tally label: judge call errored",
+      "operation": "report/render",
+      "text": " run(s): a judge call errored",
+      "fixtures": ["report-render-tally-kinds"]
+    },
+    {
+      "name": "tally label: thrown",
+      "operation": "report/render",
+      "text": " run(s): thrown without a false verdict",
+      "fixtures": ["report-render-tally-kinds"]
+    },
+    {
+      "name": "tally label: false verdict",
+      "operation": "report/render",
+      "text": " run(s): coherent ",
+      "fixtures": ["report-render-tally-ties-keep-first-seen-order"]
+    },
+    {
+      "name": "full: no judge calls",
+      "operation": "report/render",
+      "text": "  Judge calls: none recorded",
+      "fixtures": ["report-render-full-no-judge-calls"]
+    },
+    {
+      "name": "full: judge call verdict",
+      "operation": "report/render",
+      "text": ": coherent verdict ",
+      "fixtures": ["report-render-full-every-run"]
+    },
+    {
+      "name": "full: judge call extraction",
+      "operation": "report/render",
+      "text": ": extract (",
+      "fixtures": ["report-render-full-judge-calls-in-order"]
+    },
+    {
+      "name": "full: judge call error",
+      "operation": "report/render",
+      "text": ": errored after ",
+      "fixtures": ["report-render-full-judge-calls-in-order"]
+    },
+    {
+      "name": "trace: engine init",
+      "operation": "report/trace",
+      "text": "[crucible:debug] engine init: verbosity debug, trace written to stdout\n",
+      "fixtures": ["report-trace-header-once"]
+    },
+    {
+      "name": "trace: config resolved",
+      "operation": "report/trace",
+      "text": "[crucible:debug] config resolved: provider ",
+      "fixtures": ["report-trace-header-once", "report-trace-meta-keys-only"]
+    },
+    {
+      "name": "trace: run tag",
+      "operation": "report/trace",
+      "text": "[crucible:debug] run #",
+      "fixtures": ["report-trace-run-tag"]
+    },
+    {
+      "name": "trace: test started",
+      "operation": "report/trace",
+      "text": "test started: ",
+      "fixtures": ["report-trace-header-once"]
+    },
+    {
+      "name": "trace: run settled passed",
+      "operation": "report/trace",
+      "text": " settled passed\n",
+      "fixtures": ["report-trace-run-settled"]
+    },
+    {
+      "name": "trace: run settled failed",
+      "operation": "report/trace",
+      "text": " settled failed: ",
+      "fixtures": ["report-trace-run-settled"]
+    },
+    {
+      "name": "trace: run settled errored",
+      "operation": "report/trace",
+      "text": " settled errored: ",
+      "fixtures": ["report-trace-run-settled"]
+    },
+    {
+      "name": "trace: test aborted",
+      "operation": "report/trace",
+      "text": "test aborted on a fatal error: ",
+      "fixtures": ["report-trace-test-aborted"]
+    },
+    {
+      "name": "trace: test expired",
+      "operation": "report/trace",
+      "text": "test deadline of ",
+      "fixtures": ["report-trace-test-expired"]
+    },
+    {
+      "name": "trace: verdict pass",
+      "operation": "report/trace",
+      "text": "verdict pass: ",
+      "fixtures": ["report-trace-verdict-reached"]
+    },
+    {
+      "name": "trace: verdict fail",
+      "operation": "report/trace",
+      "text": "verdict fail: ",
+      "fixtures": ["report-trace-verdict-reached"]
+    },
+    {
+      "name": "trace: verdict errored",
+      "operation": "report/trace",
+      "text": "verdict errored: ",
+      "fixtures": ["report-trace-verdict-reached"]
+    },
+    {
+      "name": "trace: provider request",
+      "operation": "report/trace",
+      "text": "provider request attempt ",
+      "fixtures": ["report-trace-provider-request", "report-trace-provider-request-no-system"]
+    },
+    {
+      "name": "trace: prompt truncated",
+      "operation": "report/trace",
+      "text": "prompt (first ",
+      "fixtures": ["report-trace-prompt-truncated"]
+    },
+    {
+      "name": "trace: provider response",
+      "operation": "report/trace",
+      "text": "provider response attempt ",
+      "fixtures": ["report-trace-provider-response"]
+    },
+    {
+      "name": "trace: provider failure, retry",
+      "operation": "report/trace",
+      "text": "retryable, retrying in ",
+      "fixtures": ["report-trace-provider-failure-retry"]
+    },
+    {
+      "name": "trace: provider failure, fatal",
+      "operation": "report/trace",
+      "text": "(fatal, not retried)",
+      "fixtures": ["report-trace-provider-failure-final"]
+    },
+    {
+      "name": "trace: provider failure, exhausted",
+      "operation": "report/trace",
+      "text": "(retryable, but no attempts left)",
+      "fixtures": ["report-trace-provider-failure-final"]
+    },
+    {
+      "name": "trace: provider failure, aborted",
+      "operation": "report/trace",
+      "text": "(the call was aborted)",
+      "fixtures": ["report-trace-provider-failure-final"]
+    },
+    {
+      "name": "trace: judge reply rejected",
+      "operation": "report/trace",
+      "text": "judge reply ",
+      "fixtures": ["report-trace-judge-reply-rejected"]
+    },
+    {
+      "name": "trace: judge verdict",
+      "operation": "report/trace",
+      "text": "judge verdict ",
+      "fixtures": ["report-trace-judge-recorded-verdict"]
+    },
+    {
+      "name": "trace: judge value",
+      "operation": "report/trace",
+      "text": "judge value ",
+      "fixtures": ["report-trace-judge-recorded-extraction"]
+    },
+    {
+      "name": "trace: judge call errored",
+      "operation": "report/trace",
+      "text": "judge call errored after ",
+      "fixtures": ["report-trace-judge-recorded-error"]
+    }
+  ]
+}

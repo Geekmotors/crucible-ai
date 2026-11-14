@@ -1,0 +1,1139 @@
+{
+  "area": "assertion",
+  "operation": "call",
+  "description": "Validates the arguments of crucible.facts, crucible.coherent and crucible.extract (and t.*) the way a test body calls them, and builds the user message they send: call options reach the payload (facts after the run's facts, as → TYPE, strict → MODE), invalid arguments are usage errors.",
+  "cases": [
+    {
+      "id": "assertion-call-coherent-arguments-only",
+      "description": "A coherent call with no options sends the response and claim alone.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-options-unset",
+      "description": "Unset options are the same as none.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "$special": "undefined"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-empty-options",
+      "description": "Empty options are the same as none.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six.", "The reply names a time", {}]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-string",
+      "description": "A facts string is one fact for this call.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": "The user asked at noon."
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nThe user asked at noon.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-array",
+      "description": "A facts array gives one fact per entry, in order.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": ["First.", "Second."]
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nFirst.\nSecond.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-empty-array",
+      "description": "An empty facts array adds no fact and no STATE section.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": []
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-unset",
+      "description": "Unset facts are the same as none.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": {
+              "$special": "undefined"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-run-facts",
+      "description": "Each facts call adds its string or array entries to the run, in call order.",
+      "input": {
+        "assertion": "coherent",
+        "facts": ["One.", ["Two.", "Three."]],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nOne.\nTwo.\nThree.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-run-facts-then-call-facts",
+      "description": "Call facts follow the run's facts.",
+      "input": {
+        "assertion": "coherent",
+        "facts": ["Run fact."],
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": "Call fact."
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nRun fact.\nCall fact.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-run-facts-empty-array",
+      "description": "A facts call with an empty array adds nothing.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [[]],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-empty-strings",
+      "description": "Empty response and claim strings are valid.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["", ""]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\n\n>>>\n\nCLAIM\n<<<\n\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-ignores-test-strict",
+      "description": "A coherent call has no mode; the test's strict does not change it.",
+      "input": {
+        "assertion": "coherent",
+        "strict": true,
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nCLAIM\n<<<\nThe reply names a time\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-coherent-actual-number",
+      "description": "A number as the response is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [42, "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-actual-null",
+      "description": "Null as the response is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [null, "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-actual-unset",
+      "description": "An unset response is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          {
+            "$special": "undefined"
+          },
+          "The reply names a time"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-expectation-missing",
+      "description": "A missing claim is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six."]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-expectation-object",
+      "description": "An object as the claim is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          {
+            "claim": "The reply names a time"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-options-null",
+      "description": "Null options are a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six.", "The reply names a time", null]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-options-string",
+      "description": "A string as options is a usage error (pass { facts }).",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six.", "The reply names a time", "The user asked at noon."]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-options-array",
+      "description": "An array as options is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": ["The meeting is at six.", "The reply names a time", ["The user asked at noon."]]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-unknown-option",
+      "description": "An unknown option is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "fact": "The user asked at noon."
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-extract-option",
+      "description": "An extract option (as) is unknown to coherent: a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "as": "string"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-unknown-option-unset",
+      "description": "An unknown option is a usage error even when unset.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "strict": {
+              "$special": "undefined"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-number",
+      "description": "A number as facts is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": 42
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-null",
+      "description": "Null facts are a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": null
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-object",
+      "description": "An object as facts is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": {
+              "fact": "x"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-mixed-array",
+      "description": "An array holding a non-string is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": ["x", 42]
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-coherent-facts-nested-array",
+      "description": "An array holding an array is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "args": [
+          "The meeting is at six.",
+          "The reply names a time",
+          {
+            "facts": [["x"]]
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-number",
+      "description": "A facts call with a number is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [42],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-null",
+      "description": "A facts call with null is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [null],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-unset",
+      "description": "A facts call with no value is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [
+          {
+            "$special": "undefined"
+          }
+        ],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-object",
+      "description": "A facts call with an object is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [
+          {
+            "fact": "x"
+          }
+        ],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-mixed-array",
+      "description": "A facts call with an array holding a non-string is a usage error.",
+      "input": {
+        "assertion": "coherent",
+        "facts": [["x", 42]],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-facts-error-after-valid-call",
+      "description": "An invalid facts call fails even after a valid one.",
+      "input": {
+        "assertion": "coherent",
+        "facts": ["Valid.", 42],
+        "args": ["The meeting is at six.", "The reply names a time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-arguments-only",
+      "description": "With no options the type is string and the mode the test's (lenient by default).",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", "the meeting time"]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-options-unset",
+      "description": "Unset options are the same as none.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "$special": "undefined"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-empty-options",
+      "description": "Empty options are the same as none.",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", "the meeting time", {}]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-string",
+      "description": "as string sends the type string.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "string"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-number",
+      "description": "as number sends the type number.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "number"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nnumber\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-boolean",
+      "description": "as boolean sends the type boolean.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "boolean"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nboolean\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-unset",
+      "description": "An unset as is the default type, string.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": {
+              "$special": "undefined"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-true",
+      "description": "strict true sends the strict mode.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": true
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nstrict\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-false",
+      "description": "strict false sends the lenient mode.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": false
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-test-strict",
+      "description": "Without a call strict, the test's resolved strict decides the mode.",
+      "input": {
+        "assertion": "extract",
+        "strict": true,
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "number"
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nnumber\n>>>\n\nMODE\n<<<\nstrict\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-call-lenient-over-test-strict",
+      "description": "A call's strict false wins over a strict test.",
+      "input": {
+        "assertion": "extract",
+        "strict": true,
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": false
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-unset-keeps-test",
+      "description": "An unset call strict keeps the test's mode.",
+      "input": {
+        "assertion": "extract",
+        "strict": true,
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": {
+              "$special": "undefined"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "text": "RESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nstrict\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-facts-string",
+      "description": "A facts string is one fact for this call.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "facts": "The user asked at noon."
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nThe user asked at noon.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nstring\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-run-facts-then-call-facts",
+      "description": "Call facts follow the run's facts.",
+      "input": {
+        "assertion": "extract",
+        "facts": ["Run fact."],
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "boolean",
+            "facts": ["Call fact."]
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nRun fact.\nCall fact.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nboolean\n>>>\n\nMODE\n<<<\nlenient\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-every-option",
+      "description": "as, strict and facts together.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "number",
+            "strict": true,
+            "facts": ["Call fact."]
+          }
+        ]
+      },
+      "expect": {
+        "text": "STATE\n<<<\nCall fact.\n>>>\n\nRESPONSE\n<<<\nThe meeting is at six.\n>>>\n\nTARGET\n<<<\nthe meeting time\n>>>\n\nTYPE\n<<<\nnumber\n>>>\n\nMODE\n<<<\nstrict\n>>>"
+      }
+    },
+    {
+      "id": "assertion-call-extract-text-number",
+      "description": "A number as the text is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [42, "the meeting time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-text-unset",
+      "description": "An unset text is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          {
+            "$special": "undefined"
+          },
+          "the meeting time"
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-description-number",
+      "description": "A number as the description is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", 42]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-description-missing",
+      "description": "A missing description is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six."]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-options-null",
+      "description": "Null options are a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", "the meeting time", null]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-options-string",
+      "description": "A string as options is a usage error (pass { as }).",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", "the meeting time", "number"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-options-array",
+      "description": "An array as options is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": ["The meeting is at six.", "the meeting time", ["number"]]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-unknown-option",
+      "description": "An unknown option is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-unknown-option-unset",
+      "description": "An unknown option is a usage error even when unset.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strcit": {
+              "$special": "undefined"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-unknown-type",
+      "description": "A type outside string, number, boolean is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "date"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-wrong-casing",
+      "description": "Type names are case-sensitive.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": "Number"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-as-null",
+      "description": "A null type is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "as": null
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-string",
+      "description": "A string strict is a usage error, never coerced.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": "true"
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-number",
+      "description": "A number strict is a usage error, never coerced.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": 1
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-strict-null",
+      "description": "A null strict is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "strict": null
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-facts-number",
+      "description": "A number as facts is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "facts": 42
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-facts-mixed-array",
+      "description": "An array holding a non-string is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "facts": ["x", null]
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-facts-null",
+      "description": "Null as facts is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "facts": null
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-facts-object",
+      "description": "An object as facts is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "args": [
+          "The meeting is at six.",
+          "the meeting time",
+          {
+            "facts": {
+              "fact": "x"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "assertion-call-extract-run-facts-invalid",
+      "description": "An invalid facts call before an extract call is a usage error.",
+      "input": {
+        "assertion": "extract",
+        "facts": [42],
+        "args": ["The meeting is at six.", "the meeting time"]
+      },
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    }
+  ]
+}

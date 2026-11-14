@@ -328,6 +328,7 @@ Assert `toBe(true)` on claims that describe the behaviour you want. To check tha
 - [Judge models](https://github.com/Geekmotors/crucible-ai/blob/main/docs/judge-models.md): measured accuracy, latency and cost per model, and how to check yours
 - [All documentation](https://github.com/Geekmotors/crucible-ai/blob/main/docs/README.md)
 - [Shared spec](https://github.com/Geekmotors/crucible-ai/blob/main/spec/README.md): for contributors and ports, the language-neutral fixtures every implementation runs
+- [Porting guide](https://github.com/Geekmotors/crucible-ai/blob/main/spec/PORTING.md): the checklist for a new language port (public API, engine vs runner adapter, what to test, first-week order)
 
 ## License
 

@@ -36,19 +36,6 @@ describe('Judge', () => {
     expect(outcome.errors).toHaveLength(1);
   });
 
-  it.each([
-    ['undefined response', undefined, 'claim'],
-    ['object claim', 'response', { not: 'a string' }],
-  ])('rejects a non-string argument (%s) as a usage error', async (_label, response, claim) => {
-    const scope = new RunScope();
-    const judge = JudgeHarness.judge(new ScriptedAdapter([], 'retryable'), scope);
-    const error = await scope.enterRun(() =>
-      Capture.rejection(judge.judgeCoherent(response as string, claim as string)),
-    );
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('usage');
-  });
-
   it('judging outside a run scope is a usage error', async () => {
     const judge = JudgeHarness.judge(new ScriptedAdapter([], 'retryable'), new RunScope());
     const error = await Capture.rejection(judge.judgeCoherent('the response', 'the claim'));
@@ -232,23 +219,24 @@ describe('Judge — facts', () => {
     },
   );
 
-  it.each([
-    ['a string', StateFact.Casino],
-    ['an array', [StateFact.Casino]],
-    ['null', null],
-    ['an unknown key', { fact: StateFact.Casino }],
-    ...OptionsHarness.nonPlain(),
-  ])('rejects %s as coherent options as a usage error', async (_label, options) => {
-    const scope = new RunScope();
-    const judge = JudgeHarness.factJudge(scope, []);
-    const error = await scope.enterRun(() =>
-      Capture.rejection(
-        judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default, options as CoherentOptions),
-      ),
-    );
-    expect(error).toBeInstanceOf(CrucibleError);
-    expect((error as CrucibleError).kind).toBe('usage');
-  });
+  it.each(OptionsHarness.nonPlain())(
+    'rejects %s as coherent options as a usage error',
+    async (_label, options) => {
+      const scope = new RunScope();
+      const judge = JudgeHarness.factJudge(scope, []);
+      const error = await scope.enterRun(() =>
+        Capture.rejection(
+          judge.judgeCoherent(
+            JudgedResponse.Default,
+            ClaimText.Default,
+            options as CoherentOptions,
+          ),
+        ),
+      );
+      expect(error).toBeInstanceOf(CrucibleError);
+      expect((error as CrucibleError).kind).toBe('usage');
+    },
+  );
 
   it('per-call facts outside a run scope are a usage error', async () => {
     const judge = JudgeHarness.factJudge(new RunScope(), [StateFact.Home]);

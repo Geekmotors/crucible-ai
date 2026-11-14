@@ -15,6 +15,7 @@ import compute from '../../../spec/verdict/compute.json' with { type: 'json' };
 import configLoad from '../../../spec/config/load.json' with { type: 'json' };
 import judgeReply from '../../../spec/judge/reply.json' with { type: 'json' };
 import jsoncParse from '../../../spec/jsonc/parse.json' with { type: 'json' };
+import assertionCall from '../../../spec/assertion/call.json' with { type: 'json' };
 
 type FixtureCase = {
   id: string;
@@ -48,6 +49,7 @@ class SpecFixtures {
   static providerResponse: FixtureFile = providerResponse;
   static providerPlainHttpWarning: FixtureFile = providerPlainHttpWarning;
   static judgeReply: FixtureFile = judgeReply;
+  static assertionCall: FixtureFile = assertionCall;
 
   static files(): FixtureFile[] {
     return [
@@ -67,6 +69,7 @@ class SpecFixtures {
       SpecFixtures.providerResponse,
       SpecFixtures.providerPlainHttpWarning,
       SpecFixtures.judgeReply,
+      SpecFixtures.assertionCall,
     ];
   }
 }

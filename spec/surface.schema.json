@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Geekmotors/crucible-ai/blob/main/spec/surface.schema.json",
+  "title": "Crucible public surface manifest",
+  "description": "spec/surface.json: every public function, option, config field, provider, environment variable, error kind, verdict outcome and report text a port provides, each with the fixture case ids that pin it. See spec/PORTING.md.",
+  "type": "object",
+  "required": [
+    "description",
+    "operations",
+    "functions",
+    "runOptions",
+    "callOptions",
+    "configFields",
+    "providers",
+    "environment",
+    "errorKinds",
+    "verdictOutcomes",
+    "reportText"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "description": { "$ref": "#/definitions/prose" },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/operation" }
+    },
+    "functions": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/function" } },
+    "runOptions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/runOption" }
+    },
+    "callOptions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/callOption" }
+    },
+    "configFields": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/configField" }
+    },
+    "providers": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/provider" } },
+    "environment": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/variable" }
+    },
+    "errorKinds": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/errorKind" }
+    },
+    "verdictOutcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/outcome" }
+    },
+    "reportText": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/text" } }
+  },
+  "definitions": {
+    "prose": { "type": "string", "minLength": 1 },
+    "operationName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*/[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["name", "docs"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/operationName" },
+        "docs": { "$ref": "#/definitions/prose" }
+      }
+    },
+    "function": {
+      "type": "object",
+      "required": ["name", "docs", "summary", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "summary": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" },
+        "portTests": { "$ref": "#/definitions/prose" }
+      }
+    },
+    "runOption": {
+      "type": "object",
+      "required": ["name", "docs", "default", "valid", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "default": {},
+        "valid": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "callOption": {
+      "type": "object",
+      "required": ["assertion", "name", "docs", "default", "valid", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "assertion": { "enum": ["coherent", "extract"] },
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "default": {},
+        "valid": { "$ref": "#/definitions/prose" },
+        "values": { "type": "array", "minItems": 1 },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "configField": {
+      "type": "object",
+      "required": ["name", "docs", "required", "valid", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "required": { "type": "boolean" },
+        "default": {},
+        "values": { "type": "array", "minItems": 1 },
+        "valid": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "required": ["name", "docs", "endpoint", "baseUrl", "keyRequired", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "endpoint": { "$ref": "#/definitions/prose" },
+        "baseUrl": { "enum": ["required", "rejected"] },
+        "keyRequired": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "variable": {
+      "type": "object",
+      "required": ["name", "docs", "meaning", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "meaning": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "errorKind": {
+      "type": "object",
+      "required": ["kind", "docs", "meaning", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["usage", "config", "infra"] },
+        "retryable": { "type": "boolean" },
+        "docs": { "$ref": "#/definitions/prose" },
+        "meaning": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["name", "docs", "meaning", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["passed", "failed", "errored"] },
+        "docs": { "$ref": "#/definitions/prose" },
+        "meaning": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    },
+    "text": {
+      "type": "object",
+      "required": ["name", "operation", "text", "fixtures"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/prose" },
+        "operation": { "enum": ["report/render", "report/trace"] },
+        "text": { "$ref": "#/definitions/prose" },
+        "fixtures": { "$ref": "#/definitions/fixtures" }
+      }
+    }
+  }
+}
