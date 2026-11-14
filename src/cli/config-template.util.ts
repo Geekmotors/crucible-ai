@@ -5,7 +5,7 @@ class ConfigTemplate {
 
   private static readonly LINES = [
     '{',
-    '  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",',
+    '  "$schema": "./node_modules/crucible/schemas/crucible.config.schema.json",',
     '',
     '  // Judge provider: "openrouter", "openai" or "openai-compatible" (the last also needs',
     '  // a "baseUrl", e.g. "http://localhost:11434/v1"). The API key comes from the environment.',

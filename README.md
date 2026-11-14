@@ -1,8 +1,8 @@
 # Crucible
 
-[![npm](https://img.shields.io/npm/v/crucible-ai)](https://www.npmjs.com/package/crucible-ai)
+[![npm](https://img.shields.io/npm/v/crucible)](https://www.npmjs.com/package/crucible)
 [![ci](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
-[![license](https://img.shields.io/npm/l/crucible-ai)](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/crucible)](https://github.com/Geekmotors/crucible-ai/blob/main/LICENSE)
 
 Semantic assertions for code that calls LLMs, inside the Jest suite you already have.
 
@@ -42,7 +42,7 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 ## Installation
 
 ```sh
-npm install --save-dev crucible-ai
+npm install --save-dev crucible
 ```
 
 ## Quick start
@@ -50,14 +50,14 @@ npm install --save-dev crucible-ai
 **1. Create the config file** in the directory you run Jest or Vitest from, and commit it:
 
 ```sh
-npx crucible-ai init
+npx crucible init
 ```
 
 This writes `crucible.config.jsonc`: the provider, the judge model and an OpenRouter reasoning setting that speeds it up, then every other setting as a commented line showing its default (trimmed here):
 
 ```jsonc
 {
-  "$schema": "./node_modules/crucible-ai/schemas/crucible.config.schema.json",
+  "$schema": "./node_modules/crucible/schemas/crucible.config.schema.json",
   "provider": "openrouter",
   "model": "deepseek/deepseek-v4-flash-0731",
   // OpenRouter reasoning setting that speeds up the model above; extra request fields
@@ -87,7 +87,7 @@ export CRUCIBLE_JUDGE_KEY=...   # every provider reads it; "apiKeyEnv" in the co
 **3. Write a test.** With no options it is already a reliability gate: the body runs 10 times concurrently and the test passes when at least 9 runs pass:
 
 ```ts
-import { crucible } from 'crucible-ai';
+import { crucible } from 'crucible';
 import { createAssistant } from '../src/assistant';
 
 crucible.it('declines to export on the free plan', async () => {
@@ -278,11 +278,11 @@ The gate enforces its own test timeout but cannot set Jest's, so pass Jest a tim
 
 ### Using Vitest
 
-Import from `crucible-ai/vitest` instead of `crucible-ai`; the API is the same:
+Import from `crucible/vitest` instead of `crucible`; the API is the same:
 
 ```ts
 import { expect } from 'vitest';
-import { crucible } from 'crucible-ai/vitest';
+import { crucible } from 'crucible/vitest';
 
 crucible.it('keeps the meeting place from Bob', { runs: 5, threshold: 0.8 }, async (t) => {
   const reply = await createAssistant().ask('Bob: where is Jane meeting me?');

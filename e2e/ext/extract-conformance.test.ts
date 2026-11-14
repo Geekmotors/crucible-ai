@@ -1,6 +1,6 @@
 import { describe, expect } from '@jest/globals';
-import { crucible } from 'crucible-ai';
-import type { ExtractType } from 'crucible-ai';
+import { crucible } from 'crucible';
+import type { ExtractType } from 'crucible';
 import matrix from './fixtures/extract-conformance.json' with { type: 'json' };
 import { ExtractMode } from '../test/extract-mode.enum.js';
 import { Gate } from '../test/gate.enum.js';

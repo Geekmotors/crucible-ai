@@ -15,7 +15,7 @@ class SchemaSource {
     while (!existsSync(join(dir, 'package.json'))) {
       const parent = dirname(dir);
       if (parent === dir) {
-        throw new CrucibleError('config', 'Could not locate the crucible-ai package root.');
+        throw new CrucibleError('config', 'Could not locate the crucible package root.');
       }
       dir = parent;
     }

@@ -1,5 +1,5 @@
 import { expect } from '@jest/globals';
-import { crucible } from 'crucible-ai';
+import { crucible } from 'crucible';
 import scenario from './fixtures/knowledge-boundary.json' with { type: 'json' };
 import { Gate } from '../test/gate.enum.js';
 

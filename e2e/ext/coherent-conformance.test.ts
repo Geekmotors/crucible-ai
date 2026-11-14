@@ -1,5 +1,5 @@
 import { describe, expect } from '@jest/globals';
-import { crucible } from 'crucible-ai';
+import { crucible } from 'crucible';
 import matrix from './fixtures/coherent-conformance.json' with { type: 'json' };
 import { Gate } from '../test/gate.enum.js';
 

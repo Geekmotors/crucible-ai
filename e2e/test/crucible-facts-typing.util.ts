@@ -1,5 +1,5 @@
-import { crucible } from 'crucible-ai';
-import type { CoherentOptions } from 'crucible-ai';
+import { crucible } from 'crucible';
+import type { CoherentOptions } from 'crucible';
 
 class CrucibleFactsTyping {
   private static RESPONSE = 'Your meeting is in room C3.';
