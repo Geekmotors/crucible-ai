@@ -240,6 +240,22 @@ crucible.describe('refund policy', { runs: 20, threshold: 0.85 }, () => {
 
 Each field resolves on its own, last wins: built-in → `testDefaults` → outer `crucible.describe` → inner `crucible.describe` → the test's own options. Plain Jest `describe` blocks can sit inside or around a group. See [Runs and threshold](docs/runs-and-threshold.md#group-settings-crucibledescribe).
 
+### Focus, skip and parameterise
+
+`crucible.it` and `crucible.describe` have Jest's `only`, `skip`, `todo` and `each`, with the same options. `each` registers one gated test per row; row values arrive after `t`:
+
+```ts
+crucible.it.each([
+  ['free', false],
+  ['pro', true],
+])('answers whether the %s plan can export', { runs: 5, threshold: 0.8 }, async (t, plan, allowed) => {
+  const reply = await createAssistant({ plan }).ask('Can I export as PDF?');
+  expect(await t.extract(reply, 'whether exporting is allowed', { as: 'boolean' })).toBe(allowed);
+});
+```
+
+`failing` and `concurrent` are not supported. See [the API reference](docs/api.md#variants-only-skip-todo-each).
+
 ### Use your runner's own `it`
 
 `crucible.gate()` turns a body into a test function for Jest's own `it`, so every variant works: `it.only`, `it.skip`, `it.each`. The gate runs the body `runs` times, applies the threshold and throws the same report as `crucible.it`; row values arrive after `t`. Annotate them to type them:

@@ -4,10 +4,9 @@ import { CustomTimeout } from './test/custom-timeout.enum.js';
 import { GroupSettingsHarness } from './test/group-settings-harness.util.js';
 import { GroupBodyResult } from './test/group-body-result.enum.js';
 import { InferenceTimeout } from './test/inference-timeout.enum.js';
-import { InvalidTestDefault } from './test/invalid-test-default.enum.js';
-import { InvalidTimeout } from './test/invalid-timeout.enum.js';
 import { LateRejectionFake } from './test/late-rejection.fake.js';
 import { ProjectDefaults } from './test/project-defaults.util.js';
+import { RowValue } from './test/row-value.enum.js';
 import { RunCount } from './test/run-count.enum.js';
 import { Settle } from './test/settle.util.js';
 import { Threshold } from './test/threshold.enum.js';
@@ -91,7 +90,7 @@ describe('GroupSettings — inheritance', () => {
     const harness = new GroupSettingsHarness();
     const error = GroupSettingsHarness.errorFrom(() =>
       harness.within({ runs: RunCount.Gated }, () => {
-        harness.within(null, () => {});
+        harness.within({}, async () => {});
       }),
     );
     expect(error.kind).toBe('usage');
@@ -101,7 +100,7 @@ describe('GroupSettings — inheritance', () => {
     const harness = new GroupSettingsHarness();
     GroupSettingsHarness.errorFrom(() =>
       harness.within({ runs: RunCount.Gated }, () => {
-        harness.within(null, () => {});
+        harness.within({}, async () => {});
       }),
     );
     expect(harness.resolve().runs).toBe(RunCount.BuiltIn);
@@ -149,12 +148,21 @@ describe('GroupSettings — inheritance', () => {
     const harness = new GroupSettingsHarness();
     const options = { runs: RunCount.Smaller };
     let resolved: ResolvedRunOptions | undefined;
-    const collect = harness.groups.declare(options, () => {
+    const collect = harness.declare(options, () => {
       resolved = harness.resolve();
     });
     options.runs = RunCount.Hundred;
     collect();
     expect(resolved?.runs).toBe(RunCount.Smaller);
+  });
+
+  it('passes the runner arguments, such as describe.each row values, to the callback', () => {
+    const harness = new GroupSettingsHarness();
+    let received: unknown[] = [];
+    harness.declare({}, (...row: unknown[]) => {
+      received = row;
+    })(RowValue.Apples, RowValue.Pears);
+    expect(received).toEqual([RowValue.Apples, RowValue.Pears]);
   });
 });
 
@@ -212,41 +220,6 @@ describe('GroupSettings — test timeout', () => {
 });
 
 describe('GroupSettings — validation', () => {
-  it.each<[unknown]>([
-    [{ runs: InvalidTestDefault.Zero }],
-    [{ runs: InvalidTestDefault.Fractional }],
-    [{ threshold: InvalidTestDefault.Zero }],
-    [{ threshold: InvalidTestDefault.AboveOne }],
-    [{ testTimeout: InvalidTimeout.Zero }],
-    [{ inferenceTimeout: InvalidTimeout.AboveTimerMax }],
-    [{ strict: String(true) }],
-    [{ run: RunCount.Smaller }],
-    [null],
-    [undefined],
-    [[]],
-  ])('rejects group options %j as usage without running the callback', (options) => {
-    const harness = new GroupSettingsHarness();
-    let ran = false;
-    const error = GroupSettingsHarness.errorFrom(() =>
-      harness.groups.declare(options, () => {
-        ran = true;
-      }),
-    );
-    expect(error.kind).toBe('usage');
-    expect(ran).toBe(false);
-  });
-
-  it.each<[string, unknown]>([
-    ['a missing callback', undefined],
-    ['a string', GroupBodyResult.Value],
-    ['an object', {}],
-  ])('rejects %s in place of the callback as usage', (_label, body) => {
-    const error = GroupSettingsHarness.errorFrom(() =>
-      new GroupSettingsHarness().groups.declare({}, body),
-    );
-    expect(error.kind).toBe('usage');
-  });
-
   it('rejects an async callback as usage and leaves no settings behind', () => {
     const harness = new GroupSettingsHarness();
     const error = GroupSettingsHarness.errorFrom(() =>

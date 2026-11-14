@@ -367,3 +367,15 @@
 
 - **Gate on Jest's default 5 s timeout.** The gate's default deadline is 39 s; on a plain `it` without a timeout argument Jest cuts the test off with no Crucible report. Docs-only for now (README, api.md, gotchas, runs-and-threshold). Revisit in 7.2/7.3: e.g. a one-time warning when the runner's per-test timeout is known to be shorter than the gate's deadline (Vitest exposes it on the test context; Jest does not).
 - **`TestBody` now `(t: RunContext) => unknown`.** Listed under Added with a note; not marked Breaking (only code that invokes a TestBody itself is affected).
+
+## Deferred from: code review of 7-2-generic-runner-wrapper.md (2026-11-14)
+
+- Proxy has no `ownKeys`/`getOwnPropertyDescriptor` traps, so `Object.keys(crucible.it)` is empty and REPL autocomplete shows no variants. Evidence: `src/core/runner-wrapper.ts`.
+- The runtime variant tree (`JestBinding` nodes) and the public `CrucibleIt`/`CrucibleDescribe` types are tied only by type tests; a cast bridges them. Evidence: `src/api/crucible.ts`.
+- A trailing timeout of `null` is a `usage` error; Jest treats it as the default (pre-existing). Evidence: `src/core/declaration-forms.util.ts`.
+- Binding tests repeat `TestName` templates in expected row names. Evidence: `src/bindings/jest.test.ts`.
+
+## From Story 7.2 review decisions (2026-11-14) — do in Story 7.3
+
+- Add `src/core/runner-wrapper.test.ts` with a runner-neutral fake spec (tests beside code); keep `src/bindings/jest.test.ts` as the Jest-spec suite.
+- Move the `failing`/`concurrent` block reasons from the Jest adapter to a core constant so the Vitest spec maps onto the same reasons.

@@ -1,15 +1,22 @@
 import type { CrucibleError } from '../errors.js';
+import type { GroupBody } from '../declaration-forms.util.js';
 import { GroupSettings } from '../group-settings.js';
+import type { GroupCallback } from '../group-settings.js';
 import { RunOptionsResolver } from '../run-options-resolver.util.js';
 import type { ResolvedRunOptions, RunOptions } from '../run-options.js';
 import { Capture } from './capture.util.js';
+import { DeclarationSubject } from './declaration-subject.enum.js';
 
 class GroupSettingsHarness {
   groups = new GroupSettings();
   private resolver = new RunOptionsResolver();
 
-  within(options: unknown, body: unknown): void {
-    this.groups.declare(options, body)();
+  declare(options: RunOptions, body: GroupBody): GroupCallback {
+    return this.groups.declare(DeclarationSubject.Describe, options, body);
+  }
+
+  within(options: RunOptions, body: GroupBody): void {
+    this.declare(options, body)();
   }
 
   resolve(own: RunOptions = {}, defaults: RunOptions = {}): ResolvedRunOptions {

@@ -9,6 +9,7 @@ import { RunScope } from '../state.js';
 import { TimeBudget } from '../time-budget.util.js';
 import { Capture } from './capture.util.js';
 import { ClaimText } from './claim-text.enum.js';
+import { DeclarationSubject } from './declaration-subject.enum.js';
 import { ExtractorHarness } from './extractor-harness.util.js';
 import { ExtractTarget } from './extract-target.enum.js';
 import { ExtractText } from './extract-text.enum.js';
@@ -57,7 +58,7 @@ class GateHarness {
 
   wrapInGroup(groupOptions: RunOptions, ...args: unknown[]): GatedTest {
     let test: GatedTest | undefined;
-    this.groups.declare(groupOptions, () => {
+    this.groups.declare(DeclarationSubject.Describe, groupOptions, () => {
       test = this.wrap(...args);
     })();
     return test!;

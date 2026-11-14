@@ -12,6 +12,7 @@ import { Capture } from '../../core/test/capture.util.js';
 import { ManualTimer } from '../../core/test/manual-timer.fake.js';
 import { RunnerHarness } from '../../core/test/runner-harness.util.js';
 import { TimeBudget } from '../../core/time-budget.util.js';
+import { RunnerWrapper } from '../../core/runner-wrapper.js';
 import { JestBinding } from '../jest.js';
 import type { ExtractedValue } from '../../core/extract-type.js';
 import { ExtractTarget } from '../../core/test/extract-target.enum.js';
@@ -20,8 +21,16 @@ import { ExtractorHarness } from '../../core/test/extractor-harness.util.js';
 import { ModeAwareJudge } from '../../core/test/mode-aware-judge.fake.js';
 import { RunCount } from '../../core/test/run-count.enum.js';
 import { DescribeRegistrarFake } from './describe-registrar.fake.js';
+import { FakeRunner } from './fake-runner.fake.js';
 import { GroupName } from './group-name.enum.js';
 import { RegistrarFake } from './registrar.fake.js';
+
+type Variant = {
+  (...args: unknown[]): Variant;
+  [key: string]: Variant;
+};
+type BindingUnderTest = { register: Variant; group: Variant };
+type WrappedRunner = { it: Variant; describe: Variant };
 
 class JestBindingHarness {
   static binding(
@@ -30,7 +39,7 @@ class JestBindingHarness {
     defaults: RunOptions = {},
     timer: ManualTimer = new ManualTimer(),
     describes: DescribeRegistrarFake = new DescribeRegistrarFake(),
-  ): JestBinding {
+  ): BindingUnderTest {
     return JestBindingHarness.over(
       RunnerHarness.runner(scope, timer, defaults),
       registrar,
@@ -40,7 +49,7 @@ class JestBindingHarness {
   }
 
   static registeredTimeout(
-    declare: (binding: JestBinding) => void,
+    declare: (binding: BindingUnderTest) => void,
     defaults: RunOptions = {},
   ): number | undefined {
     const registrar = new RegistrarFake();
@@ -53,8 +62,42 @@ class JestBindingHarness {
     registrar: RegistrarFake,
     describes: DescribeRegistrarFake = new DescribeRegistrarFake(),
     assertions: RunAssertions = JestBindingHarness.assertions(new RunScope()),
-  ): JestBinding {
-    return new JestBinding(new Gate(runner, assertions), registrar.register, describes.register);
+  ): BindingUnderTest {
+    const wrapped = JestBindingHarness.wrap(
+      { it: registrar.register, describe: describes.register },
+      runner,
+      assertions,
+    );
+    return { register: wrapped.it, group: wrapped.describe };
+  }
+
+  static variants(
+    runner: FakeRunner,
+    scope: RunScope = new RunScope(),
+    defaults: RunOptions = {},
+  ): WrappedRunner {
+    return JestBindingHarness.wrap(
+      runner.globals,
+      RunnerHarness.runner(scope, new ManualTimer(), defaults),
+      JestBindingHarness.assertions(scope),
+    );
+  }
+
+  static wrapOver(globals: object): WrappedRunner {
+    const scope = new RunScope();
+    return JestBindingHarness.wrap(
+      globals,
+      RunnerHarness.runner(scope, new ManualTimer(), {}),
+      JestBindingHarness.assertions(scope),
+    );
+  }
+
+  static wrap(globals: object, runner: Runner, assertions: RunAssertions): WrappedRunner {
+    const wrapper = new RunnerWrapper(
+      new Gate(runner, assertions),
+      new JestBinding(globals).spec(),
+    );
+    return { it: wrapper.test() as Variant, describe: wrapper.group() as Variant };
   }
 
   static assertions(scope: RunScope): RunAssertions {
@@ -98,3 +141,4 @@ class JestBindingHarness {
 }
 
 export { JestBindingHarness };
+export type { BindingUnderTest, Variant, WrappedRunner };
