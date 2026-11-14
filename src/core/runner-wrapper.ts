@@ -1,7 +1,7 @@
 import { DeclarationForms } from './declaration-forms.util.js';
 import { CrucibleError } from './errors.js';
 import type { Gate } from './gate.js';
-import type { RunnerFamily, RunnerSpec, VariantNode } from './runner-spec.js';
+import type { ForwardedArguments, RunnerFamily, RunnerSpec, VariantNode } from './runner-spec.js';
 
 type Family = 'test' | 'group';
 type Located = { readonly fn: (...args: unknown[]) => unknown; readonly owner: unknown };
@@ -119,23 +119,39 @@ class RunnerWrapper {
     const { fn, owner } = position.locate();
     const registrar = Reflect.apply(fn, owner, args);
     const located = RunnerWrapper.located(registrar, undefined, position.subject);
-    return this.wrapped({ ...position, node: RunnerWrapper.REGISTRAR, locate: () => located });
+    const node = position.node.returns ?? RunnerWrapper.REGISTRAR;
+    return this.wrapped({ ...position, node, locate: () => located });
   }
 
   private registerTest(position: Position, args: unknown[]): void {
     const [name, ...rest] = args;
     const { opts, body } = this.forms.test(position.subject, rest);
     const { test, timeout } = this.gate.declare(opts, body);
+    const forwarded = RunnerWrapper.forwarding(position.node.forward, test);
     const { fn, owner } = position.locate();
-    Reflect.apply(fn, owner, this.spec.testArguments(name, test, timeout));
+    Reflect.apply(fn, owner, this.spec.testArguments(name, forwarded, timeout));
   }
 
   private registerGroup(position: Position, args: unknown[]): void {
     const [name, ...rest] = args;
     const { options, callback } = this.forms.group(position.subject, rest);
     const scoped = this.gate.group(position.subject, options, callback);
+    const forwarded = RunnerWrapper.forwarding(position.node.forward, scoped);
     const { fn, owner } = position.locate();
-    Reflect.apply(fn, owner, this.spec.groupArguments(name, scoped));
+    Reflect.apply(fn, owner, this.spec.groupArguments(name, forwarded));
+  }
+
+  private static forwarding<R>(
+    forward: ForwardedArguments = 'all',
+    target: (...args: unknown[]) => R,
+  ): (...args: unknown[]) => R {
+    if (forward === 'none') {
+      return () => target();
+    }
+    if (forward === 'first') {
+      return (...args) => target(...args.slice(0, 1));
+    }
+    return target;
   }
 
   private static variantOf(position: Position, key: string | symbol): VariantNode | undefined {

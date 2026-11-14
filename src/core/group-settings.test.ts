@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import type { ResolvedRunOptions } from './run-options.js';
 import { CustomTimeout } from './test/custom-timeout.enum.js';
+import { DeferredGroupsFake } from './test/deferred-groups.fake.js';
 import { GroupSettingsHarness } from './test/group-settings-harness.util.js';
 import { GroupBodyResult } from './test/group-body-result.enum.js';
 import { InferenceTimeout } from './test/inference-timeout.enum.js';
@@ -246,6 +247,73 @@ describe('GroupSettings — validation', () => {
   it('rejects a callback returning a value as usage', () => {
     const error = GroupSettingsHarness.errorFrom(() =>
       new GroupSettingsHarness().within({}, () => GroupBodyResult.Value),
+    );
+    expect(error.kind).toBe('usage');
+  });
+});
+
+describe('GroupSettings — runners that collect groups later', () => {
+  it('a nested group collected after its parent returns inherits the parent settings', () => {
+    const runner = new DeferredGroupsFake();
+    const harness = new GroupSettingsHarness(runner.path);
+    let resolved: ResolvedRunOptions | undefined;
+    runner.register(
+      harness.declare({ runs: RunCount.Gated, threshold: Threshold.Half }, () => {
+        runner.register(
+          harness.declare({ threshold: Threshold.Lenient }, () => {
+            resolved = harness.resolve();
+          }),
+        );
+      }),
+    );
+    runner.collect();
+    expect(resolved).toMatchObject({ runs: RunCount.Gated, threshold: Threshold.Lenient });
+  });
+
+  it('a plain runner group between keeps the inheritance', () => {
+    const runner = new DeferredGroupsFake();
+    const harness = new GroupSettingsHarness(runner.path);
+    let resolved: ResolvedRunOptions | undefined;
+    runner.register(
+      harness.declare({ runs: RunCount.Smaller }, () => {
+        runner.register(() => {
+          resolved = harness.resolve();
+        });
+      }),
+    );
+    runner.collect();
+    expect(resolved).toMatchObject({ runs: RunCount.Smaller });
+  });
+
+  it('settings do not reach a sibling group collected later', () => {
+    const runner = new DeferredGroupsFake();
+    const harness = new GroupSettingsHarness(runner.path);
+    let resolved: ResolvedRunOptions | undefined;
+    runner.register(harness.declare({ runs: RunCount.Smaller }, () => {}));
+    runner.register(() => {
+      resolved = harness.resolve();
+    });
+    runner.collect();
+    expect(resolved).toMatchObject({ runs: RunCount.BuiltIn });
+  });
+
+  it('a test outside every group keeps only its own options', () => {
+    const runner = new DeferredGroupsFake();
+    const harness = new GroupSettingsHarness(runner.path);
+    runner.register(harness.declare({ runs: RunCount.Smaller }, () => {}));
+    runner.collect();
+    expect(harness.resolve({ threshold: Threshold.Half })).toMatchObject({
+      runs: RunCount.BuiltIn,
+      threshold: Threshold.Half,
+    });
+  });
+});
+
+describe('GroupSettings — runners whose group path loses the group', () => {
+  it('a group callback the runner places in no group is a usage error', () => {
+    const harness = new GroupSettingsHarness(new DeferredGroupsFake().path);
+    const error = GroupSettingsHarness.errorFrom(() =>
+      harness.within({ runs: RunCount.Smaller }, () => {}),
     );
     expect(error.kind).toBe('usage');
   });

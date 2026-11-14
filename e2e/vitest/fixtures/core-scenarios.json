@@ -1,0 +1,35 @@
+{
+  "description": "The core scenarios on Vitest through crucible-ai/vitest: crucible.it with t.facts, crucible.it.each with extract, a crucible.describe group whose test inherits runs and threshold, and Vitest's own test with crucible.gate. One run at threshold 1 everywhere keeps the live cost to five judge calls.",
+  "runs": 1,
+  "threshold": 1,
+  "timeout": 60000,
+  "single": {
+    "name": "judges a reply against the run's facts with crucible.it on Vitest",
+    "facts": ["The library closes at 18:00 on weekdays."],
+    "response": "Sorry, it's 19:30 on a Tuesday, so the library is already closed.",
+    "claim": "The reply is consistent with the library's weekday opening hours."
+  },
+  "rows": {
+    "name": "extracts the count from %s with crucible.it.each on Vitest",
+    "table": [
+      ["I bought three apples and nothing else.", 3],
+      ["Just the two apples, thanks.", 2]
+    ],
+    "target": "how many apples were bought"
+  },
+  "group": {
+    "around": "Vitest describe around a crucible.describe group",
+    "name": "a crucible.describe group on Vitest",
+    "probe": "inherits one run from the group before any judge call",
+    "test": "inherits one run at threshold 1 from the group",
+    "facts": ["The library is closed all day on Sundays."],
+    "response": "It's Sunday, so the library won't open today.",
+    "claim": "The reply is consistent with the library's Sunday hours."
+  },
+  "gate": {
+    "name": "judges a reply through crucible.gate on Vitest's own test",
+    "facts": ["The museum is free on the first Sunday of every month."],
+    "response": "Entry is free this Sunday because it's the first Sunday of the month.",
+    "claim": "The reply is consistent with the museum's free-entry rule."
+  }
+}

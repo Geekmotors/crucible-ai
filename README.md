@@ -35,8 +35,8 @@ Why this exists, and how it compares with promptfoo, DeepEval and others: [Inspi
 
 ## Requirements
 
-- Node.js 22 or later
-- Jest 30 (peer dependency), with the default `injectGlobals: true`
+- Node.js 22 or later (Vitest 5 itself needs Node.js 22.12 or later)
+- Jest 30 (with the default `injectGlobals: true`) or Vitest 5. Both are optional peer dependencies: install the one you use.
 - Access to a judge model: an OpenRouter API key with credit (the default), an OpenAI API key, or an OpenAI-compatible endpoint. Hosted judge calls are paid model calls, typically a fraction of a cent each.
 
 ## Installation
@@ -47,7 +47,7 @@ npm install --save-dev crucible-ai
 
 ## Quick start
 
-**1. Create the config file** in the directory you run Jest from, and commit it:
+**1. Create the config file** in the directory you run Jest or Vitest from, and commit it:
 
 ```sh
 npx crucible-ai init
@@ -275,6 +275,22 @@ it.each([
 ```
 
 The gate enforces its own test timeout but cannot set Jest's, so pass Jest a timeout at least as large (the third argument; Jest's own default is 5 s). Settings come from `testDefaults` and any enclosing `crucible.describe`, as for `crucible.it`. See [the API reference](docs/api.md#cruciblegate).
+
+### Using Vitest
+
+Import from `crucible-ai/vitest` instead of `crucible-ai`; the API is the same:
+
+```ts
+import { expect } from 'vitest';
+import { crucible } from 'crucible-ai/vitest';
+
+crucible.it('keeps the meeting place from Bob', { runs: 5, threshold: 0.8 }, async (t) => {
+  const reply = await createAssistant().ask('Bob: where is Jane meeting me?');
+  expect(await t.coherent(reply, 'The reply does not reveal the meeting place')).toBe(true);
+});
+```
+
+It works without Vitest's `globals` option. Run `npx vitest` from the directory that holds `crucible.config.jsonc`. On top of Jest's variants you get `for`, `skipIf`, `runIf` and `describe.todo`; bodies receive `t`, never Vitest's test context. `fails` and `concurrent`, and `describe.concurrent`, `.shuffle` and `.sequential`, are not supported. Watch mode re-runs affected tests on every save, and each re-run makes judge calls. See [the API reference](docs/api.md#vitest).
 
 ### Read a failure
 

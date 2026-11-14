@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 class PackVerifier {
@@ -22,10 +23,19 @@ class PackVerifier {
     'dist/index.d.ts',
     'dist/index.d.cts',
     'dist/cli.js',
+    'dist/vitest.js',
+    'dist/vitest.cjs',
+    'dist/vitest.d.ts',
+    'dist/vitest.d.cts',
     'schemas/coherent.md',
     'schemas/extract.md',
     'schemas/crucible.config.schema.json',
   ];
+
+  static vitestEntries = ['dist/vitest.js', 'dist/vitest.cjs'];
+
+  static vitestImport =
+    /(from\s*["']vitest["'])|(\bimport\s*\(?\s*["']vitest["'])|(require\(\s*["']vitest["']\s*\))/;
 
   packedFiles() {
     const output = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
@@ -42,7 +52,22 @@ class PackVerifier {
     const missing = PackVerifier.required
       .filter((file) => !files.includes(file))
       .map((file) => `required file missing from tarball: ${file}`);
-    return [...unexpected, ...missing];
+    return [...unexpected, ...missing, ...this.vitestProblems(files)];
+  }
+
+  vitestProblems(files) {
+    const bundles = files.filter((file) => /^dist\/[\w.-]+\.(js|cjs)$/.test(file));
+    return bundles.flatMap((file) => {
+      const importsVitest = PackVerifier.vitestImport.test(readFileSync(file, 'utf8'));
+      const isVitestEntry = PackVerifier.vitestEntries.includes(file);
+      if (isVitestEntry && !importsVitest) {
+        return [`${file} must import vitest as an external`];
+      }
+      if (!isVitestEntry && importsVitest) {
+        return [`${file} must not import vitest; only the crucible-ai/vitest entry may`];
+      }
+      return [];
+    });
   }
 
   run() {

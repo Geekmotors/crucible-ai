@@ -15,6 +15,7 @@
     "llm",
     "testing",
     "jest",
+    "vitest",
     "semantic-assertion",
     "llm-as-a-judge",
     "evals",
@@ -42,6 +43,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./vitest": {
+      "import": {
+        "types": "./dist/vitest.d.ts",
+        "default": "./dist/vitest.js"
+      },
+      "require": {
+        "types": "./dist/vitest.d.cts",
+        "default": "./dist/vitest.cjs"
+      }
     }
   },
   "files": [
@@ -66,7 +77,16 @@
     "verify:pack": "node scripts/verify-pack.mjs"
   },
   "peerDependencies": {
-    "jest": "^30.0.0"
+    "jest": "^30.0.0",
+    "vitest": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "jest": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
@@ -79,6 +99,7 @@
     "ts-jest": "^29.4.12",
     "tsdown": "^0.22.14",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^5.1.0"
   }
 }

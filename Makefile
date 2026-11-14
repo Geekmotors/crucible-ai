@@ -1,4 +1,4 @@
-.PHONY: e2e-core e2e-ext e2e e2e-key e2e-build conformance conformance-image
+.PHONY: e2e-core e2e-ext e2e-vitest e2e e2e-key e2e-build conformance conformance-image
 
 E2E_NODE_OPTIONS ?= --experimental-vm-modules --use-system-ca
 CONFORMANCE_IMAGE ?= crucible-ai-conformance
@@ -9,6 +9,7 @@ CONFORMANCE_CONFIG ?= e2e/crucible.config.json
 MACOS_CA_KEYCHAINS = /Library/Keychains/System.keychain /System/Library/Keychains/SystemRootCertificates.keychain
 
 E2E_JEST = cd e2e && NODE_OPTIONS="$(E2E_NODE_OPTIONS)" ../node_modules/.bin/jest --config jest.config.mjs --ci
+E2E_VITEST = cd e2e && NODE_OPTIONS="--use-system-ca" ../node_modules/.bin/vitest run --config vitest/vitest.config.ts
 
 e2e-key:
 	@if [ -z "$$(printf '%s' "$$CRUCIBLE_JUDGE_KEY" | tr -d '[:space:]')" ]; then \
@@ -27,7 +28,10 @@ e2e-core: e2e-build
 e2e-ext: e2e-build
 	$(E2E_JEST) --testPathPatterns 'e2e/ext/'
 
-e2e: e2e-core e2e-ext
+e2e-vitest: e2e-build
+	$(E2E_VITEST)
+
+e2e: e2e-core e2e-ext e2e-vitest
 
 conformance-image:
 	docker build --file e2e/ext/conformance/Dockerfile --tag $(CONFORMANCE_IMAGE) .
