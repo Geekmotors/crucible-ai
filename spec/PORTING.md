@@ -144,6 +144,7 @@ Any other field is a `config` error, and so is a key-like field (`apiKey`,
 
 Contracts: [`provider/request`](README.md#provider--request),
 [`provider/response`](README.md#provider--response),
+[`provider/usage`](README.md#provider--usage),
 [`provider/plain-http-warning`](README.md#provider--plain-http-warning).
 
 | Environment variable | Meaning |
@@ -177,6 +178,10 @@ passing report (`full` and `debug` only) and the debug trace (stdout,
 ([`report/render`](README.md#report--render),
 [`report/trace`](README.md#report--trace)); `surface.json` lists every
 headline variant, section, field and trace line with a case that prints it.
+Every report ends with the [judge stamp](README.md#judge-stamp): the judge
+(configured and served model), the package version, the schema hashes and
+the judge's spend, from one [`provider/usage`](README.md#provider--usage)
+entry recorded per successful provider response.
 
 ## 2. Engine and runner adapter
 
@@ -333,9 +338,10 @@ current Microsoft docs):
 | `judge/reply` | reply unwrapping, strict JSON plus trailing-comma repair, shapes, the re-ask |
 | `provider/request` | URL, headers, body, key rules, per provider |
 | `provider/response` | envelopes, status classes, retries, fatal vs retryable |
+| `provider/usage` | served model, tokens and cost read from a successful response body |
 | `provider/plain-http-warning` | when the plain-http key warning is written |
 | `jsonc/parse`, `config/load` | the config file, rule by rule, secrets never echoed |
-| `report/render`, `report/trace` | every report and trace text |
+| `report/render`, `report/trace` | every report and trace text, the judge stamp included |
 
 What each port still tests itself, with its own unit tests (fake clock,
 fake HTTP, fake runner):
@@ -423,6 +429,7 @@ Story 9.4.
 | [Fencing](README.md#payload--coherent) | invisible code points and padding are matched by **code point** (some are astral) | iterate code points by hand (`char.IsSurrogatePair`, `char.ConvertToUtf32`): `EnumerateRunes` yields U+FFFD for a lone surrogate | native | `codePoints()` |
 | [JSON values in reports](README.md#text-rules) | `JSON.stringify` escaping: only `"`, `\`, controls (`\u00xx` lowercase), lone surrogates; everything else raw | the default `System.Text.Json` encoder escapes every non-ASCII character and `<>&'+`; `UnsafeRelaxedJsonEscaping` leaves most of the BMP raw but still escapes astral characters as surrogate pairs, U+007F and U+2028/U+2029, with uppercase hex (`\uD83D\uDE00`, `\u001B`); a lone surrogate becomes `\uFFFD`: write your own | `json.dumps(ensure_ascii=False)` writes lone surrogates raw: write your own | write your own |
 | [Numbers in text](README.md#text-rules) | ECMAScript `Number.toString`: shortest round-trip, no `.0` | `double.ToString("R", CultureInfo.InvariantCulture)` gives the shortest round-trip digits (.NET Core 3.0+) but not the layout: it switches to `E` notation from 1E+17 and below 1E-04 (`1E+17`, `1E-05`: uppercase, sign, two-digit exponent) where ECMAScript waits until 1e21 and 1e-7 (`1e+21`, `1e-7`), and prints negative zero as `-0`: take the digits from `"R"` and lay them out as ECMAScript `Number::toString` does | `repr`, strip `.0`; `repr` switches to exponent form from `1e+16` and below `0.0001` (ECMAScript: from 1e21 and below 0.000001) | `Double.toString` prints `1.0`, uses `E` outside [10⁻³, 10⁷), and is shortest only from JDK 19: format yourself |
+| [Cost in the stamp](README.md#judge-stamp) | the double sum rounded to exactly 6 decimals, fixed notation | `ToString("F6", CultureInfo.InvariantCulture)` | `f"{s:.6f}"` | `new BigDecimal(s).setScale(6, RoundingMode.HALF_EVEN).toPlainString()` (exact value; `%.6f` rounds the shortest decimal form instead) |
 | [`Math.round`](README.md#report--trace) | ties toward +∞ (`-2.5` → `-2`) | `Math.Round(x)` defaults to `MidpointRounding.ToEven` (banker's: `2.5` → `2`); `AwayFromZero` gives `-2.5` → `-3`; `ToPositiveInfinity` is a ceiling, not round-half-up (`999.4` → `1000`): use `f = Math.Floor(x)`, then `f + 1` when `x - f >= 0.5`, else `f` (`Math.Floor(x + 0.5)` gives 1 for 0.49999999999999994) | `round` is banker's: as C#, with `math.floor` | `Math.round` matches (Java 7 and later) |
 | [`need`, pass rate](README.md#verdict--compute) | IEEE 754 doubles, in the order given, no FMA, no `decimal` | `double`, not `decimal` | `float` | `double`, no `StrictMath.fma` |
 | [Test timeout](README.md#run-options--resolve) | `30000 + (runs − 1) × 1000` overflows 32 bits from about 2.1 million runs | `long` | native | `long` |
@@ -452,7 +459,7 @@ the one before and leaves the runner for last.
    then `assertion/call`.
 4. **Judge reply**: `judge/reply`.
 5. **Provider**: `provider/request`, `provider/response`,
-   `provider/plain-http-warning`.
+   `provider/usage`, `provider/plain-http-warning`.
 6. **Config**: `jsonc/parse`, `config/load`.
 7. **Report**: `report/render`, `report/trace`.
 8. **Gate**: the engine of §2, with the port's own timing tests.

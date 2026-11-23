@@ -1,3 +1,4 @@
+import type { ProviderUsage } from '../../providers/types.js';
 import type { ExtractedValue, ExtractMode, ExtractType } from '../extract-type.js';
 import type { RunResult, RunStatus } from '../run-result.js';
 import type { ErrorRecord, ExtractionRecord, RunLedger, VerdictRecord } from '../state.js';
@@ -19,7 +20,12 @@ type NeutralCall =
     }
   | { error: { cause: NeutralCause; attempts: number } };
 
-type NeutralRunRecord = { status: RunStatus; cause?: NeutralCause; calls?: NeutralCall[] };
+type NeutralRunRecord = {
+  status: RunStatus;
+  cause?: NeutralCause;
+  calls?: NeutralCall[];
+  usage?: ProviderUsage[];
+};
 
 class NeutralRun {
   static cause(cause: NeutralCause | undefined): Error | undefined {
@@ -31,8 +37,8 @@ class NeutralRun {
     return error;
   }
 
-  static result({ status, cause, calls = [] }: NeutralRunRecord): RunResult {
-    return { status, cause: NeutralRun.cause(cause), context: NeutralRun.ledger(calls) };
+  static result({ status, cause, calls = [], usage = [] }: NeutralRunRecord): RunResult {
+    return { status, cause: NeutralRun.cause(cause), context: NeutralRun.ledger(calls, usage) };
   }
 
   static record(call: NeutralCall, seq: number): VerdictRecord | ExtractionRecord | ErrorRecord {
@@ -45,8 +51,8 @@ class NeutralRun {
     return { cause: NeutralRun.cause(call.error.cause), attempts: call.error.attempts, seq };
   }
 
-  private static ledger(calls: NeutralCall[]): RunLedger {
-    const ledger: RunLedger = { state: [], verdicts: [], extractions: [], errors: [] };
+  private static ledger(calls: NeutralCall[], usage: ProviderUsage[]): RunLedger {
+    const ledger: RunLedger = { state: [], verdicts: [], extractions: [], errors: [], usage };
     calls.forEach((call, seq) => {
       if ('verdict' in call) {
         ledger.verdicts.push(NeutralRun.record(call, seq) as VerdictRecord);

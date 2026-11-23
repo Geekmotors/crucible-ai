@@ -9,15 +9,16 @@ import { TraceHarness } from './trace-harness.util.js';
 class RetryHarness {
   static request: CompletionRequest = { model: TestModel.Generic, prompt: 'p' };
 
-  static run(
+  static async run(
     adapter: ProviderAdapter,
     recorder: SleepRecorder = new SleepRecorder(),
   ): Promise<string> {
-    return new RetryingCompleter(new TraceReporter(), recorder.sleep).complete(
+    const completion = await new RetryingCompleter(new TraceReporter(), recorder.sleep).complete(
       adapter,
       RetryHarness.request,
       new AbortController().signal,
     );
+    return completion.reply;
   }
 
   static async tracedOutput(adapter: ProviderAdapter, traced: TraceHarness): Promise<string> {

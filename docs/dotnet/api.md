@@ -332,6 +332,11 @@ NUnit: a `[SetUpFixture]` with `[OneTimeSetUp]`; MSTest:
 - **Debug trace.** With `verbosity: debug` the provider lines name
   `"chat-client"` and the model: `options.ModelId`, else the client's
   `ChatClientMetadata.DefaultModelId`, else `(client default)`.
+- **Report stamp.** The `Judge:` line of every report names the judge
+  `IChatClient` (no configured model). The served model is each
+  `ChatResponse.ModelId`, tokens are `Usage.TotalTokenCount` (else
+  `InputTokenCount + OutputTokenCount`), and cost is always
+  `cost not reported`.
 
 ### Response caching defeats repeated runs
 

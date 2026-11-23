@@ -1,4 +1,5 @@
 using CrucibleAI.Providers;
+using CrucibleAI.Runs;
 using CrucibleAI.Tracing;
 
 namespace CrucibleAI.Assertions;
@@ -17,4 +18,6 @@ internal sealed class AttemptCounter(IJudgeObserver observer) : IJudgeObserver
         }
         observer.Observe(traced);
     }
+
+    public void Spent(JudgeUsage usage) => observer.Spent(usage);
 }

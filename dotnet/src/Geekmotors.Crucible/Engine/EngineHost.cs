@@ -1,6 +1,7 @@
 using CrucibleAI.ChatClients;
 using CrucibleAI.Config;
 using CrucibleAI.Providers;
+using CrucibleAI.Reports;
 using CrucibleAI.Tracing;
 using Microsoft.Extensions.AI;
 
@@ -80,6 +81,14 @@ internal sealed class EngineHost(ConfigLoader configs, IWarningSink warnings, IT
     private EngineSession ChatClientSession(IChatClient client, ChatOptions? options)
     {
         var judge = new ChatClientJudge(client, options);
-        return new EngineSession(configs.LoadRunSettings(warnings), ChatClientJudge.Name, judge.Model, null, judge, time, output);
+        return new EngineSession(
+            configs.LoadRunSettings(warnings),
+            ChatClientJudge.Name,
+            judge.Model,
+            null,
+            new JudgeStampFactory().For(ChatClientJudge.StampedProvider, null),
+            judge,
+            time,
+            output);
     }
 }

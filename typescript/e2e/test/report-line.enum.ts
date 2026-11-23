@@ -4,6 +4,8 @@ enum ReportLine {
   FirstStrictExtraction = 'Extraction 1 of 1 (strict):',
   JudgeReasoning = 'Judge reasoning:',
   Facts = 'Facts:',
+  JudgeStamp = 'Judge: openai-compatible "stub-judge"; served as "stub-judge-2026-11-19", ',
+  CrucibleStamp = 'Crucible: crucible-ai ',
 }
 
 export { ReportLine };

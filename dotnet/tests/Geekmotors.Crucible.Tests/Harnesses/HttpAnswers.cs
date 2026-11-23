@@ -20,6 +20,14 @@ internal static class HttpAnswers
     public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> Reply(string reply) =>
         Json(200, Envelope(reply));
 
+    public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> Served(string reply, string model, int tokens, double cost)
+    {
+        var envelope = Envelope(reply);
+        envelope["model"] = model;
+        envelope["usage"] = new JsonObject { ["total_tokens"] = tokens, ["cost"] = cost };
+        return Json(200, envelope);
+    }
+
     public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> ServedOnlyAt(string url, string reply) =>
         (request, cancellation) => request.RequestUri!.AbsoluteUri == url
             ? Reply(reply)(request, cancellation)

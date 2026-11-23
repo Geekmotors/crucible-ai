@@ -1,4 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+} from '../../providers/types.js';
 
 class FactAwareJudge implements ProviderAdapter {
   name = 'fact-aware';
@@ -10,11 +15,10 @@ class FactAwareJudge implements ProviderAdapter {
     private unseenReply: string,
   ) {}
 
-  complete(request: CompletionRequest): Promise<string> {
+  complete(request: CompletionRequest): Promise<Completion> {
     const stateSection = `STATE\n<<<\n${this.facts.join('\n')}\n>>>\n\nRESPONSE\n`;
-    return Promise.resolve(
-      request.prompt.startsWith(stateSection) ? this.seenReply : this.unseenReply,
-    );
+    const reply = request.prompt.startsWith(stateSection) ? this.seenReply : this.unseenReply;
+    return Promise.resolve({ reply, usage: {} });
   }
 
   classifyFailure(): FailureClass {

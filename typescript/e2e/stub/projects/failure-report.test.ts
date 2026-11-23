@@ -37,6 +37,11 @@ describe('a deliberately failing inference test', () => {
     );
   });
 
+  it('ends with the judge that judged it, the model it served and the package version', () => {
+    expect(outcome.output).toContain(ReportLine.JudgeStamp);
+    expect(outcome.output).toContain(ReportLine.CrucibleStamp);
+  });
+
   it('cuts the response excerpt at the project excerptChars', () => {
     expect(outcome.output).toContain(
       `${ReportLine.ExcerptBound} ${scenario.response.length} chars)`,

@@ -18,7 +18,7 @@ internal sealed class RunState
         _options = options;
         _session = session;
         _cancellation = cancellation;
-        _observer = new RunObserver(session.Trace, number);
+        _observer = new RunObserver(session.Trace, number, Record);
         Context = new CrucibleContext(this);
     }
 

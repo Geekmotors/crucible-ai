@@ -43,8 +43,9 @@ internal sealed class ChatCompletionsClient(JudgeConfig config, HttpClient http,
                 using var message = Message(key, body);
                 using var response = await http.SendAsync(message, cancellation).ConfigureAwait(false);
                 var reply = await _responses.ReadAsync(response, cancellation).ConfigureAwait(false);
-                observer.Observe(new ProviderResponseEvent(attempt, reply));
-                return reply;
+                observer.Observe(new ProviderResponseEvent(attempt, reply.Text));
+                observer.Spent(reply.Usage);
+                return reply.Text;
             }
             catch (Exception failure) when (cancellation.IsCancellationRequested && IsAttemptFailure(failure))
             {

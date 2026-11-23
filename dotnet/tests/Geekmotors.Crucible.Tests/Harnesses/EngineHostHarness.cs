@@ -40,6 +40,16 @@ internal sealed class EngineHostHarness
             },
             TestContext.Current.CancellationToken);
 
+    public Task JudgedThenFailingGateAsync() =>
+        Host.Engine.GateAsync(
+            new RunOptions { Runs = 1, Threshold = 1 },
+            async context =>
+            {
+                await context.CoherentAsync(EngineTexts.Response, EngineTexts.Claim);
+                throw new InvalidOperationException(EngineTexts.Problem);
+            },
+            TestContext.Current.CancellationToken);
+
     public static IChatClient Caching(IChatClient inner) =>
         new ChatClientBuilder(inner)
             .ConfigureOptions(_ => { })

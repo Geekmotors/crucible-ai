@@ -337,6 +337,9 @@ Failing claims (first failure of each of the 5 failed runs):
 [ERRORED] Run #5 (infrastructure, not a semantic failure)
   Cause: CrucibleError: Provider "openrouter" kept failing after 3 attempts.
   Judge attempts: 3
+
+Judge: openrouter "anthropic/claude-haiku-5.5"; served as "anthropic/claude-haiku-5.5", 41 response(s), 33292 tokens, cost $0.010250
+Crucible: crucible-ai 0.6.0; schemas coherent 2ecbb5d8, extract 1e09070c
 ```
 
 - **Headline.** `FAILED:` is a semantic failure; `ERRORED, not failed:` means
@@ -389,6 +392,21 @@ Failing claims (first failure of each of the 5 failed runs):
   Lengths are counted in UTF-16 code units, and the cut never splits an emoji
   or other surrogate pair, so the excerpt can differ from the limit by one;
   the header states the length actually shown.
+- **Judge stamp.** The last two lines say who judged and what it cost, so a
+  report pasted into an issue or a CI log is never ambiguous. `Judge:` names
+  the configured provider and model (a C# judge set with `Crucible.UseJudge`
+  shows as `IChatClient`, with no model), the model the provider says actually
+  served the calls (`served as …`; a router such as `openrouter/auto` or a
+  dated snapshot can differ from the configured name), how many successful
+  judge responses the test received (every ask counts, a re-asked unusable
+  reply and the responses of discarded runs included), their total tokens and
+  their cost in USD. A provider that does not report a figure gets
+  `not reported` (only OpenRouter reports cost); when only some responses
+  report it, the sum says `from k of n responses`. `Crucible:` names the
+  package version and the first 8 hex digits of the SHA-256 of each judge
+  instruction schema sent as the system prompt, so two reports judged by
+  different schema text are told apart. The passing report at `full` and
+  `debug` ends with the same two lines.
 - **Need more?** The bound and the tally are the `default` verbosity. Turn the
   volume up with [`full` or `debug`](#verbosity) to see every run.
 

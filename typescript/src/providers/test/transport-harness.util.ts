@@ -36,11 +36,12 @@ class TransportHarness {
     ).create(provider, settings);
   }
 
-  static reply(adapter: ProviderAdapter): Promise<string> {
-    return adapter.complete(
+  static async reply(adapter: ProviderAdapter): Promise<string> {
+    const { reply } = await adapter.complete(
       { model: TestModel.Generic, prompt: TransportReply.Chosen },
       new AbortController().signal,
     );
+    return reply;
   }
 }
 

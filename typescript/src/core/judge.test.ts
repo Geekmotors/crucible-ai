@@ -18,6 +18,9 @@ import { FactsHarness } from './test/facts-harness.util.js';
 import { OptionsHarness } from './test/options-harness.util.js';
 import { StateFact } from './test/state-fact.enum.js';
 import type { CoherentOptions } from './assertion-options.js';
+import { TestModel } from '../providers/test/test-model.enum.js';
+import { UsageFigure } from '../providers/test/usage-figure.enum.js';
+import { VerdictReply } from './test/verdict-reply.enum.js';
 
 describe('Judge', () => {
   it('an unparseable reply after the re-ask leaves an ErrorRecord readable within the run', async () => {
@@ -108,6 +111,49 @@ describe('Judge', () => {
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('infra');
     expect((error as CrucibleError).retryable).toBe(true);
+  });
+});
+
+describe('Judge — usage', () => {
+  it('records the usage of every successful response on the run, a re-asked reply included', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(
+      new ScriptedAdapter(
+        [
+          { resolve: 'not json', usage: { model: TestModel.Served, tokens: UsageFigure.Tokens } },
+          { resolve: VerdictReply.Coherent, usage: { cost: UsageFigure.Cost } },
+        ],
+        'retryable',
+      ),
+      scope,
+    );
+    const usage = await scope.enterRun(async () => {
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      return scope.context().usage;
+    });
+    expect(usage).toEqual([
+      { model: TestModel.Served, tokens: UsageFigure.Tokens },
+      { cost: UsageFigure.Cost },
+    ]);
+  });
+
+  it('records nothing for an attempt that got no successful response', async () => {
+    const scope = new RunScope();
+    const judge = JudgeHarness.judge(
+      new ScriptedAdapter(
+        [
+          { reject: new Error('provider down') },
+          { resolve: VerdictReply.Coherent, usage: { model: TestModel.Served } },
+        ],
+        'retryable',
+      ),
+      scope,
+    );
+    const usage = await scope.enterRun(async () => {
+      await judge.judgeCoherent(JudgedResponse.Default, ClaimText.Default);
+      return scope.context().usage;
+    });
+    expect(usage).toEqual([{ model: TestModel.Served }]);
   });
 });
 

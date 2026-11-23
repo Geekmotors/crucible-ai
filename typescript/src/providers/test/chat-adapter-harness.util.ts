@@ -1,6 +1,6 @@
 import { ChatCompletionsAdapter } from '../chat-completions-adapter.js';
 import type { ChatEndpoint } from '../chat-completions-adapter.js';
-import type { ProviderAdapter } from '../types.js';
+import type { Completion, ProviderAdapter } from '../types.js';
 import { ApiKey } from './api-key.enum.js';
 import { BaseUrl } from './base-url.enum.js';
 import { FakeEnvironment } from './environment.fake.js';
@@ -32,11 +32,15 @@ class ChatAdapterHarness {
     return new ChatCompletionsAdapter(endpoint, boundary.fetchLike, environment.read);
   }
 
-  static complete(adapter: ProviderAdapter): Promise<string> {
+  static completion(adapter: ProviderAdapter): Promise<Completion> {
     return adapter.complete(
       { model: TestModel.Generic, prompt: ChatAdapterHarness.judgePrompt },
       new AbortController().signal,
     );
+  }
+
+  static async complete(adapter: ProviderAdapter): Promise<string> {
+    return (await ChatAdapterHarness.completion(adapter)).reply;
   }
 }
 

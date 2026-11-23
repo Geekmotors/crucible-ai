@@ -1,4 +1,4 @@
-import type { CompletionRequest, ProviderAdapter } from '../providers/types.js';
+import type { Completion, CompletionRequest, ProviderAdapter } from '../providers/types.js';
 import { CrucibleError } from './errors.js';
 import { JsoncReader } from './jsonc-reader.util.js';
 import { RetryingCompleter } from './retry.js';
@@ -74,7 +74,8 @@ class JudgeExchange {
   ): Promise<T> {
     let lastFailure: CrucibleError | undefined;
     for (let attempt = 1; attempt <= JudgeExchange.MAX_REPLY_ATTEMPTS; attempt += 1) {
-      const reply = await this.completeBeforeDeadline(adapter, request, runSignal);
+      const { reply, usage } = await this.completeBeforeDeadline(adapter, request, runSignal);
+      this.scope.recordUsage(usage);
       try {
         return this.parsed(reply, question);
       } catch (failure) {
@@ -89,7 +90,7 @@ class JudgeExchange {
     adapter: ProviderAdapter,
     request: CompletionRequest,
     runSignal: AbortSignal,
-  ): Promise<string> {
+  ): Promise<Completion> {
     const timeoutMs = this.scope.inferenceTimeout();
     const deadline = this.deadline(timeoutMs);
     try {

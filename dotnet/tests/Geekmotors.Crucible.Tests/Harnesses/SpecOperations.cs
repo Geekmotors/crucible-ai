@@ -9,6 +9,7 @@ internal static class SpecOperations
     public const string ConfigLoad = "config/load";
     public const string ProviderRequest = "provider/request";
     public const string ProviderResponse = "provider/response";
+    public const string ProviderUsage = "provider/usage";
     public const string ProviderPlainHttpWarning = "provider/plain-http-warning";
     public const string JudgeReply = "judge/reply";
     public const string PayloadCoherent = "payload/coherent";
@@ -57,6 +58,7 @@ internal static class SpecOperations
             [ConfigLoad] = SpecOperation.Value(ConfigFixtureHarness.Load),
             [ProviderRequest] = SpecOperation.Value(ProviderFixtureHarness.RequestAsync),
             [ProviderResponse] = SpecOperation.Text(ProviderFixtureHarness.ResponseAsync),
+            [ProviderUsage] = SpecOperation.Value(ProviderFixtureHarness.Usage),
             [ProviderPlainHttpWarning] = SpecOperation.Value(PlainHttpFixtureHarness.Decide),
             [JudgeReply] = SpecOperation.Value(JudgeReplyFixtureHarness.AskAsync),
             [PayloadCoherent] = SpecOperation.Text(PayloadFixtureHarness.CoherentAsync),

@@ -6,6 +6,24 @@ of `Geekmotors.Crucible`. The project follows [Semantic Versioning](https://semv
 may contain breaking changes, and they are marked **Breaking** below. The TypeScript package `crucible-ai` has its own
 [changelog](https://github.com/Geekmotors/crucible-ai/blob/main/typescript/CHANGELOG.md).
 
+## 0.2.0
+
+### Added
+
+- Every report (the `CrucibleVerdictException` message, and the passing report at `full` and `debug`) now ends with
+  a judge stamp: the configured provider and model (`IChatClient`, with no model, for a judge set with
+  `Crucible.UseJudge`), the model the provider says served the calls, how many judge responses the test received,
+  their tokens and their cost (OpenRouter reports cost; other providers and `IChatClient` judges show
+  `cost not reported`), the `Geekmotors.Crucible` version and a short SHA-256 of each judge instruction schema. For
+  example:
+
+  ```text
+  Judge: openrouter "anthropic/claude-haiku-5.5"; served as "anthropic/claude-haiku-5.5", 1 response(s), 812 tokens, cost $0.000250
+  Crucible: Geekmotors.Crucible 0.2.0; schemas coherent 2ecbb5d8, extract 1e09070c
+  ```
+
+  See [Reading the failure report](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md#reading-the-failure-report).
+
 ## 0.1.0
 
 First release of the C# port, for `net8.0` and `net10.0`. Every type lives in the `CrucibleAI` namespace. It passes the

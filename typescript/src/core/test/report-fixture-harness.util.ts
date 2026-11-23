@@ -1,4 +1,5 @@
 import { Aggregator } from '../aggregator.util.js';
+import type { JudgeStamp } from '../judge-stamp.js';
 import { Reporter } from '../reporter.util.js';
 import type { ReportSettings } from '../report-settings.js';
 import type { RunGate } from '../run-options.js';
@@ -17,12 +18,16 @@ type RenderInput = RunGate & {
   settings: ReportSettings;
   ending: Ending;
   results: NeutralRunRecord[];
+  stamp?: JudgeStamp;
 };
 
 class ReportFixtureHarness {
   static render(input: unknown): Promise<ObservedOutcome> {
-    const { settings, runs, threshold, ending, results: records } = input as RenderInput;
-    const reporter = new Reporter(() => settings);
+    const { settings, runs, threshold, ending, results: records, stamp } = input as RenderInput;
+    const reporter = new Reporter(
+      () => settings,
+      () => stamp,
+    );
     const results = records.map((record) => NeutralRun.result(record));
     return FixtureOutcome.rendered(() =>
       ReportFixtureHarness.rendered(reporter, results, { runs, threshold }, ending),

@@ -49,7 +49,7 @@ the config file's provider or any `Microsoft.Extensions.AI` `IChatClient`.
 | Language | Package | Docs |
 | --- | --- | --- |
 | TypeScript (Jest, Vitest) | [`crucible-ai`](https://www.npmjs.com/package/crucible-ai) on npm | [typescript/README.md](typescript/README.md), [API reference](docs/typescript/api.md) |
-| .NET (xUnit v3; NUnit, MSTest via `Crucible.Gate`) | [`Geekmotors.Crucible`](https://www.nuget.org/packages/Geekmotors.Crucible), [`Geekmotors.Crucible.Xunit`](https://www.nuget.org/packages/Geekmotors.Crucible.Xunit) 0.1.0 on NuGet (namespace `CrucibleAI`) | [dotnet/README.md](dotnet/README.md), [API reference](docs/dotnet/api.md) |
+| .NET (xUnit v3; NUnit, MSTest via `Crucible.Gate`) | [`Geekmotors.Crucible`](https://www.nuget.org/packages/Geekmotors.Crucible), [`Geekmotors.Crucible.Xunit`](https://www.nuget.org/packages/Geekmotors.Crucible.Xunit) 0.2.0 on NuGet (namespace `CrucibleAI`) | [dotnet/README.md](dotnet/README.md), [API reference](docs/dotnet/api.md) |
 
 ## Shared documentation
 

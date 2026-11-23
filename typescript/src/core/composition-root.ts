@@ -6,6 +6,9 @@ import { Gate } from './gate.js';
 import { GroupSettings } from './group-settings.js';
 import { Judge } from './judge.js';
 import { JudgeExchange } from './judge-exchange.js';
+import type { JudgeStamp } from './judge-stamp.js';
+import { JudgeStampAssembler } from './judge-stamp-assembler.util.js';
+import { PackageManifest } from './package-manifest.js';
 import type { CompletionTarget } from './judge-exchange.js';
 import { RetryingCompleter } from './retry.js';
 import { Reporter } from './reporter.util.js';
@@ -27,6 +30,8 @@ class CompositionRoot {
   private testGate?: Gate;
   private scopedAssertions?: ScopedAssertions;
   private schemaSource?: SchemaSource;
+  private packageManifest?: PackageManifest;
+  private readonly stampAssembler = new JudgeStampAssembler();
   private readonly trace = new TraceReporter(CompositionRoot.traceSettings, runScope);
 
   constructor(
@@ -55,9 +60,26 @@ class CompositionRoot {
   }
 
   private schemaSupplier(name: string): () => string {
+    return () => this.schemas().load(name);
+  }
+
+  private schemas(): SchemaSource {
     this.schemaSource ??= new SchemaSource();
-    const source = this.schemaSource;
-    return () => source.load(name);
+    return this.schemaSource;
+  }
+
+  private judgeStamp(): JudgeStamp {
+    this.packageManifest ??= new PackageManifest();
+    const { name, version } = this.packageManifest.identity();
+    const { provider, model } = config.get();
+    return this.stampAssembler.assemble({
+      package: name,
+      version,
+      provider: provider.name,
+      model,
+      coherentSchema: this.schemas().load('coherent'),
+      extractSchema: this.schemas().load('extract'),
+    });
   }
 
   private exchange(): JudgeExchange {
@@ -82,7 +104,7 @@ class CompositionRoot {
     this.testGate ??= new Gate(
       new Runner(
         runScope,
-        new Reporter(CompositionRoot.reportSettings),
+        new Reporter(CompositionRoot.reportSettings, () => this.judgeStamp()),
         CompositionRoot.testDefaults,
         this.trace,
         undefined,

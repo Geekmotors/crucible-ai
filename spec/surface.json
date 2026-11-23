@@ -13,6 +13,7 @@
     { "name": "config/load", "docs": "spec/README.md#config--load" },
     { "name": "provider/request", "docs": "spec/README.md#provider--request" },
     { "name": "provider/response", "docs": "spec/README.md#provider--response" },
+    { "name": "provider/usage", "docs": "spec/README.md#provider--usage" },
     {
       "name": "provider/plain-http-warning",
       "docs": "spec/README.md#provider--plain-http-warning"
@@ -703,6 +704,75 @@
       "operation": "report/render",
       "text": ": errored after ",
       "fixtures": ["report-render-full-judge-calls-in-order"]
+    },
+    {
+      "name": "stamp: judge line",
+      "operation": "report/render",
+      "text": "\nJudge: ",
+      "fixtures": [
+        "report-render-stamp-failed-smoke",
+        "report-render-stamp-chat-client-without-model"
+      ]
+    },
+    {
+      "name": "stamp: no judge responses",
+      "operation": "report/render",
+      "text": "; no judge responses received",
+      "fixtures": ["report-render-stamp-no-responses"]
+    },
+    {
+      "name": "stamp: served models",
+      "operation": "report/render",
+      "text": "; served as \"",
+      "fixtures": ["report-render-stamp-failed-smoke", "report-render-stamp-two-served-models"]
+    },
+    {
+      "name": "stamp: served model not reported",
+      "operation": "report/render",
+      "text": "; served model not reported, ",
+      "fixtures": ["report-render-stamp-none-reported"]
+    },
+    {
+      "name": "stamp: responses counted",
+      "operation": "report/render",
+      "text": " response(s), ",
+      "fixtures": ["report-render-stamp-failed-smoke", "report-render-stamp-expired"]
+    },
+    {
+      "name": "stamp: partial tokens",
+      "operation": "report/render",
+      "text": " tokens from 2 of 3 responses",
+      "fixtures": ["report-render-stamp-mixed-reporting"]
+    },
+    {
+      "name": "stamp: tokens not reported",
+      "operation": "report/render",
+      "text": ", tokens not reported",
+      "fixtures": ["report-render-stamp-none-reported"]
+    },
+    {
+      "name": "stamp: cost",
+      "operation": "report/render",
+      "text": ", cost $",
+      "fixtures": ["report-render-stamp-failed-smoke", "report-render-stamp-cost-sum"]
+    },
+    {
+      "name": "stamp: partial cost",
+      "operation": "report/render",
+      "text": "cost $0.000250 from 1 of 3 responses",
+      "fixtures": ["report-render-stamp-mixed-reporting"]
+    },
+    {
+      "name": "stamp: cost not reported",
+      "operation": "report/render",
+      "text": ", cost not reported",
+      "fixtures": ["report-render-stamp-none-reported", "report-render-stamp-passed-default"]
+    },
+    {
+      "name": "stamp: Crucible line",
+      "operation": "report/render",
+      "text": "\nCrucible: ",
+      "fixtures": ["report-render-stamp-failed-smoke", "report-render-stamp-passed-default"]
     },
     {
       "name": "trace: engine init",

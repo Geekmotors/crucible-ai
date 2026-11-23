@@ -57,7 +57,7 @@ describe('RetryingCompleter', () => {
     });
     await expect(
       completer.complete(adapter, RetryHarness.request, new AbortController().signal),
-    ).resolves.toBe('verdict');
+    ).resolves.toEqual({ reply: 'verdict', usage: {} });
     expect(recorder.waits[0]).toBeGreaterThanOrEqual(0);
   });
 

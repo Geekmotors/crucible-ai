@@ -1,0 +1,220 @@
+{
+  "area": "provider",
+  "operation": "usage",
+  "description": "Reads the served model, token count and cost from one successful chat-completions response body.",
+  "cases": [
+    {
+      "id": "provider-usage-openrouter-body",
+      "description": "An OpenRouter body gives the served model, total tokens and the cost in USD; other usage members are ignored.",
+      "input": {
+        "json": {
+          "id": "gen-1",
+          "provider": "Anthropic",
+          "model": "anthropic/claude-haiku-5.5",
+          "object": "chat.completion",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"verdict\": true, \"reasoning\": \"consistent\"}"
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 700,
+            "completion_tokens": 112,
+            "total_tokens": 812,
+            "cost": 0.00025,
+            "is_byok": false,
+            "prompt_tokens_details": { "cached_tokens": 0 },
+            "cost_details": { "upstream_inference_cost": null }
+          }
+        }
+      },
+      "expect": {
+        "value": { "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }
+      }
+    },
+    {
+      "id": "provider-usage-openai-body",
+      "description": "An OpenAI body gives the dated served model and total tokens, and no cost.",
+      "input": {
+        "json": {
+          "id": "chatcmpl-1",
+          "object": "chat.completion",
+          "model": "gpt-5-mini-2025-08-07",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"verdict\": true, \"reasoning\": \"consistent\"}"
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1200,
+            "completion_tokens": 340,
+            "total_tokens": 1540,
+            "completion_tokens_details": { "reasoning_tokens": 256 }
+          }
+        }
+      },
+      "expect": { "value": { "model": "gpt-5-mini-2025-08-07", "tokens": 1540 } }
+    },
+    {
+      "id": "provider-usage-prompt-completion-fallback",
+      "description": "Without total_tokens, tokens are prompt_tokens plus completion_tokens.",
+      "input": {
+        "json": {
+          "model": "local-judge",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"verdict\": true, \"reasoning\": \"consistent\"}"
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": { "prompt_tokens": 40, "completion_tokens": 10 }
+        }
+      },
+      "expect": { "value": { "model": "local-judge", "tokens": 50 } }
+    },
+    {
+      "id": "provider-usage-invalid-total-falls-back",
+      "description": "A total_tokens that is not a non-negative integer falls back to prompt_tokens plus completion_tokens.",
+      "input": {
+        "json": { "usage": { "total_tokens": "50", "prompt_tokens": 40, "completion_tokens": 10 } }
+      },
+      "expect": { "value": { "tokens": 50 } }
+    },
+    {
+      "id": "provider-usage-prompt-only",
+      "description": "prompt_tokens alone, without completion_tokens or total_tokens, gives no tokens.",
+      "input": { "json": { "usage": { "prompt_tokens": 40 } } },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-zero-tokens-kept",
+      "description": "Zero total tokens are reported as zero, not left out.",
+      "input": { "json": { "usage": { "total_tokens": 0 } } },
+      "expect": { "value": { "tokens": 0 } }
+    },
+    {
+      "id": "provider-usage-empty-object",
+      "description": "An empty body object reports nothing.",
+      "input": { "json": {} },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-model-empty-string",
+      "description": "An empty model string is left out.",
+      "input": { "json": { "model": "", "usage": { "total_tokens": 12 } } },
+      "expect": { "value": { "tokens": 12 } }
+    },
+    {
+      "id": "provider-usage-model-not-string",
+      "description": "A model that is not a string is left out.",
+      "input": { "json": { "model": 42, "usage": { "total_tokens": 12 } } },
+      "expect": { "value": { "tokens": 12 } }
+    },
+    {
+      "id": "provider-usage-tokens-fractional",
+      "description": "Fractional token counts are left out, in total_tokens and in the fallback alike.",
+      "input": {
+        "json": { "usage": { "total_tokens": 12.5, "prompt_tokens": 10.5, "completion_tokens": 2 } }
+      },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-tokens-negative",
+      "description": "Negative token counts are left out, in total_tokens and in the fallback alike.",
+      "input": {
+        "json": { "usage": { "total_tokens": -1, "prompt_tokens": -1, "completion_tokens": 13 } }
+      },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-tokens-string",
+      "description": "Token counts written as strings are left out, in total_tokens and in the fallback alike.",
+      "input": {
+        "json": {
+          "usage": { "total_tokens": "812", "prompt_tokens": "700", "completion_tokens": "112" }
+        }
+      },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-cost-negative",
+      "description": "A negative cost is left out.",
+      "input": { "json": { "usage": { "total_tokens": 12, "cost": -0.0001 } } },
+      "expect": { "value": { "tokens": 12 } }
+    },
+    {
+      "id": "provider-usage-cost-string",
+      "description": "A cost written as a string is left out.",
+      "input": { "json": { "usage": { "total_tokens": 12, "cost": "0.00025" } } },
+      "expect": { "value": { "tokens": 12 } }
+    },
+    {
+      "id": "provider-usage-cost-zero-kept",
+      "description": "A zero cost is reported as zero, not left out.",
+      "input": { "json": { "usage": { "total_tokens": 12, "cost": 0 } } },
+      "expect": { "value": { "tokens": 12, "cost": 0 } }
+    },
+    {
+      "id": "provider-usage-usage-null",
+      "description": "A null usage leaves only the model.",
+      "input": {
+        "json": {
+          "model": "anthropic/claude-haiku-5.5",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"verdict\": true, \"reasoning\": \"consistent\"}"
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": null
+        }
+      },
+      "expect": { "value": { "model": "anthropic/claude-haiku-5.5" } }
+    },
+    {
+      "id": "provider-usage-usage-not-object",
+      "description": "A usage that is not an object (an array here) leaves only the model.",
+      "input": {
+        "json": {
+          "model": "anthropic/claude-haiku-5.5",
+          "usage": [{ "total_tokens": 12, "cost": 0.0001 }]
+        }
+      },
+      "expect": { "value": { "model": "anthropic/claude-haiku-5.5" } }
+    },
+    {
+      "id": "provider-usage-root-array",
+      "description": "A root that is not an object (an array here) reports nothing.",
+      "input": {
+        "json": [
+          { "model": "anthropic/claude-haiku-5.5", "usage": { "total_tokens": 12, "cost": 0.0001 } }
+        ]
+      },
+      "expect": { "value": {} }
+    },
+    {
+      "id": "provider-usage-root-null",
+      "description": "A null root reports nothing.",
+      "input": { "json": null },
+      "expect": { "value": {} }
+    }
+  ]
+}

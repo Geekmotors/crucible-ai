@@ -1,3 +1,5 @@
+import type { JudgeStamp, JudgeStampSupplier } from './judge-stamp.js';
+import { StampFormatter } from './stamp-formatter.util.js';
 import { TextFormat } from './text-format.util.js';
 import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
 import type { ReportSettings, ReportSettingsSupplier } from './report-settings.js';
@@ -42,6 +44,7 @@ class Reporter {
   private static readonly ERRORED = 'ERRORED, not failed:';
   private static readonly PASSED = 'PASSED:';
   private static readonly SMOKE = 'the smoke run (runs: 1)';
+  private static readonly STAMP_INDENT = '';
   private static readonly FIELD_INDENT = '  ';
   private static readonly CONTINUATION_INDENT = '    ';
   private static readonly NESTED_INDENT = '    ';
@@ -56,9 +59,17 @@ class Reporter {
     return DEFAULT_REPORT_SETTINGS;
   }
 
-  private readonly text = new TextFormat();
+  private static unstamped(): JudgeStamp | undefined {
+    return undefined;
+  }
 
-  constructor(private readonly settings: ReportSettingsSupplier = Reporter.defaultSettings) {}
+  private readonly text = new TextFormat();
+  private readonly stampText = new StampFormatter();
+
+  constructor(
+    private readonly settings: ReportSettingsSupplier = Reporter.defaultSettings,
+    private readonly stamp: JudgeStampSupplier = Reporter.unstamped,
+  ) {}
 
   renderPassed(summary: VerdictSummary): string {
     return this.compose(this.passHeadline(summary), summary);
@@ -78,7 +89,29 @@ class Reporter {
 
   private compose(headline: string, { results, options }: AbortSummary, fatal?: unknown): string {
     const top = this.isSmoke(options.runs) ? headline : `${headline}\n${this.countsLine(results)}`;
-    return [top, ...this.runSections(results, fatal)].join('\n\n');
+    return [top, ...this.runSections(results, fatal), ...this.stampSection(results)].join('\n\n');
+  }
+
+  private stampSection(results: readonly RunResult[]): string[] {
+    const stamp = this.buildableStamp();
+    if (stamp === undefined) {
+      return [];
+    }
+    const entries = results.flatMap((result) => result.context.usage);
+    return [
+      [
+        this.field('Judge', this.stampText.judge(stamp, entries), Reporter.STAMP_INDENT),
+        this.field('Crucible', this.stampText.crucible(stamp), Reporter.STAMP_INDENT),
+      ].join('\n'),
+    ];
+  }
+
+  private buildableStamp(): JudgeStamp | undefined {
+    try {
+      return this.stamp();
+    } catch {
+      return undefined;
+    }
   }
 
   private passHeadline({ tally, options }: VerdictSummary): string {

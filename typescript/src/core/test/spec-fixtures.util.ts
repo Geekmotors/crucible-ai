@@ -6,6 +6,7 @@ import providerPlainHttpWarning from '../../../../spec/provider/plain-http-warni
 import providerRequest from '../../../../spec/provider/request.json' with { type: 'json' };
 import providerRequestConformance from '../../../../spec/provider/request-conformance.json' with { type: 'json' };
 import providerResponse from '../../../../spec/provider/response.json' with { type: 'json' };
+import providerUsage from '../../../../spec/provider/usage.json' with { type: 'json' };
 import extractConformance from '../../../../spec/payload/extract-conformance.json' with { type: 'json' };
 import render from '../../../../spec/report/render.json' with { type: 'json' };
 import trace from '../../../../spec/report/trace.json' with { type: 'json' };
@@ -47,6 +48,7 @@ class SpecFixtures {
   static providerRequest: FixtureFile = providerRequest;
   static providerRequestConformance: FixtureFile = providerRequestConformance;
   static providerResponse: FixtureFile = providerResponse;
+  static providerUsage: FixtureFile = providerUsage;
   static providerPlainHttpWarning: FixtureFile = providerPlainHttpWarning;
   static judgeReply: FixtureFile = judgeReply;
   static assertionCall: FixtureFile = assertionCall;
@@ -67,6 +69,7 @@ class SpecFixtures {
       SpecFixtures.providerRequest,
       SpecFixtures.providerRequestConformance,
       SpecFixtures.providerResponse,
+      SpecFixtures.providerUsage,
       SpecFixtures.providerPlainHttpWarning,
       SpecFixtures.judgeReply,
       SpecFixtures.assertionCall,

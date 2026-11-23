@@ -38,6 +38,8 @@ internal static class ProviderFixtureHarness
         return JsonValue.Create(reply);
     }
 
+    public static JsonNode? Usage(JsonNode? input) => RunRecordJson.Json(new ChatUsageReader().Read(input!["json"]));
+
     private static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> Answer(JsonNode? response)
     {
         var entry = response!.AsObject();

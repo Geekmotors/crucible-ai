@@ -135,6 +135,7 @@ class StubJudgeServer {
     return {
       id: 'stub-judge',
       object: 'chat.completion',
+      model: StubJudge.ServedModel,
       choices: [
         {
           index: 0,
@@ -142,6 +143,10 @@ class StubJudgeServer {
           finish_reason: 'stop',
         },
       ],
+      usage: {
+        prompt_tokens: StubJudge.PromptTokens,
+        completion_tokens: StubJudge.CompletionTokens,
+      },
     };
   }
 }

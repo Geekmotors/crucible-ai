@@ -2,7 +2,8 @@ import { CrucibleError } from '../core/errors.js';
 import type { EnvReader, FetchLike, ProviderHttpResponse } from './provider-boundary.js';
 import { ProviderEnvelopeError } from './provider-envelope-error.js';
 import { ProviderHttpError } from './provider-http-error.js';
-import type { CompletionRequest, FailureClass, ProviderAdapter } from './types.js';
+import type { Completion, CompletionRequest, FailureClass, ProviderAdapter } from './types.js';
+import { UsageReader } from './usage-reader.util.js';
 
 type ChatEndpoint = {
   readonly name: string;
@@ -21,6 +22,7 @@ class ChatCompletionsAdapter implements ProviderAdapter {
   readonly name: string;
   readonly envVar: string;
   private readonly url: string;
+  private readonly usage = new UsageReader();
 
   constructor(
     private readonly endpoint: ChatEndpoint,
@@ -32,7 +34,7 @@ class ChatCompletionsAdapter implements ProviderAdapter {
     this.url = `${endpoint.baseUrl}${ChatCompletionsAdapter.COMPLETIONS_PATH}`;
   }
 
-  async complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
+  async complete(request: CompletionRequest, signal: AbortSignal): Promise<Completion> {
     const body = this.serializeRequestBody(request);
     const headers = { ...this.authorization(), 'Content-Type': 'application/json' };
     const response = await this.fetchLike(this.url, { method: 'POST', headers, body, signal });
@@ -41,7 +43,7 @@ class ChatCompletionsAdapter implements ProviderAdapter {
     }
     const envelope = await this.parseEnvelope(response);
     this.rejectEmbeddedError(envelope);
-    return this.unwrapCompletionText(envelope);
+    return { reply: this.unwrapCompletionText(envelope), usage: this.usage.read(envelope) };
   }
 
   classifyFailure(error: unknown): FailureClass {

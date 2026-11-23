@@ -30,6 +30,15 @@ describe('Reporter — causes that are not errors', () => {
   });
 });
 
+describe('Reporter — judge stamp', () => {
+  it('still renders the report, without the stamp, when the stamp cannot be built', () => {
+    const cause = new Error(ClaimText.Default);
+    expect(ReportHarness.renderedFailureWithBrokenStamp(cause)).toBe(
+      ReportHarness.renderedFailure(cause),
+    );
+  });
+});
+
 describe('Reporter — records held out of recording order', () => {
   it('names the earliest false verdict as the first failure', () => {
     const message = ReportHarness.renderedLedger('failed', {

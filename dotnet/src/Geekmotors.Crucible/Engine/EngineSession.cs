@@ -14,12 +14,27 @@ internal sealed class EngineSession
     private readonly Verbosity _verbosity;
 
     public EngineSession(JudgeConfig config, IJudgeClient judge, TimeProvider time, ITraceOutput output)
-        : this(config.Run, ChatEndpoint.For(config).Name, config.Model, config.Meta, judge, time, output)
+        : this(
+            config.Run,
+            ChatEndpoint.For(config).Name,
+            config.Model,
+            config.Meta,
+            new JudgeStampFactory().For(ChatEndpoint.For(config).Name, config.Model),
+            judge,
+            time,
+            output)
     {
     }
 
     public EngineSession(
-        RunSettings settings, string provider, string model, JsonObject? meta, IJudgeClient judge, TimeProvider time, ITraceOutput output)
+        RunSettings settings,
+        string provider,
+        string model,
+        JsonObject? meta,
+        JudgeStamp stamp,
+        IJudgeClient judge,
+        TimeProvider time,
+        ITraceOutput output)
     {
         var exchange = new JudgeExchange(judge, time);
         _output = output;
@@ -27,7 +42,7 @@ internal sealed class EngineSession
         TestDefaults = settings.TestDefaults;
         Coherent = new CoherentAssertion(exchange);
         Extract = new ExtractAssertion(exchange);
-        Reports = new ReportRenderer(new ReportSettings(settings.ExcerptChars, settings.Verbosity));
+        Reports = new ReportRenderer(new ReportSettings(settings.ExcerptChars, settings.Verbosity, stamp));
         Trace = new DebugTrace(
             new TraceSettings(settings.Verbosity, provider, model, meta, settings.TestDefaultsNode, settings.ExcerptChars),
             output);

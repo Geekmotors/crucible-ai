@@ -1,4 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+} from '../../providers/types.js';
 import { StartGate } from './start-gate.util.js';
 
 class BlockingAdapter implements ProviderAdapter {
@@ -10,12 +15,12 @@ class BlockingAdapter implements ProviderAdapter {
     private leadingFailures: Error[] = [],
   ) {}
 
-  complete(_request: CompletionRequest, signal: AbortSignal): Promise<string> {
+  complete(_request: CompletionRequest, signal: AbortSignal): Promise<Completion> {
     const failure = this.leadingFailures.shift();
     if (failure !== undefined) {
       return Promise.reject(failure);
     }
-    return new Promise<string>((_resolve, reject) => {
+    return new Promise<Completion>((_resolve, reject) => {
       const cancel = (): void => {
         void this.cancelled.arrive();
         reject(signal.reason);

@@ -1,4 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+} from '../../providers/types.js';
 
 class EchoJudge implements ProviderAdapter {
   name = 'echo';
@@ -6,8 +11,11 @@ class EchoJudge implements ProviderAdapter {
 
   constructor(private answer: Record<string, unknown>) {}
 
-  complete(request: CompletionRequest): Promise<string> {
-    return Promise.resolve(JSON.stringify({ ...this.answer, reasoning: request.prompt }));
+  complete(request: CompletionRequest): Promise<Completion> {
+    return Promise.resolve({
+      reply: JSON.stringify({ ...this.answer, reasoning: request.prompt }),
+      usage: {},
+    });
   }
 
   classifyFailure(): FailureClass {

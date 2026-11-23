@@ -45,7 +45,7 @@ internal sealed class RunBatch
                 _ => RunStatus.Errored,
             };
             var cause = thrown is null ? null : RunCause.Of(thrown);
-            _settled[run.Number - 1] = new SettledRun(new RunResult(status, cause, run.Record.Calls), thrown);
+            _settled[run.Number - 1] = new SettledRun(new RunResult(status, cause, run.Record.Calls, run.Record.Usage), thrown);
             _trace.Write(new RunSettledEvent(run.Number, status, cause));
             if (settlement == RunSettlement.Fatal)
             {
@@ -98,7 +98,7 @@ internal sealed class RunBatch
                 continue;
             }
             discarded++;
-            results[index] = new SettledRun(new RunResult(RunStatus.Discarded, null, _runs[index].Record.Calls), null);
+            results[index] = new SettledRun(new RunResult(RunStatus.Discarded, null, _runs[index].Record.Calls, _runs[index].Record.Usage), null);
         }
         return results;
     }

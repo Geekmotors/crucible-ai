@@ -1,6 +1,12 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+  ProviderUsage,
+} from '../../providers/types.js';
 
-type Attempt = { resolve: string } | { reject: Error };
+type Attempt = { resolve: string; usage?: ProviderUsage } | { reject: Error };
 
 class ScriptedAdapter implements ProviderAdapter {
   name = 'scripted';
@@ -13,7 +19,7 @@ class ScriptedAdapter implements ProviderAdapter {
     private classification: FailureClass,
   ) {}
 
-  complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
+  complete(request: CompletionRequest, signal: AbortSignal): Promise<Completion> {
     if (signal.aborted) {
       return Promise.reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'));
     }
@@ -23,7 +29,9 @@ class ScriptedAdapter implements ProviderAdapter {
       return Promise.reject(new Error('scripted adapter called past its script'));
     }
     this.calls += 1;
-    return 'resolve' in attempt ? Promise.resolve(attempt.resolve) : Promise.reject(attempt.reject);
+    return 'resolve' in attempt
+      ? Promise.resolve({ reply: attempt.resolve, usage: attempt.usage ?? {} })
+      : Promise.reject(attempt.reject);
   }
 
   classifyFailure(): FailureClass {

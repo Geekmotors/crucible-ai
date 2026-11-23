@@ -51,6 +51,7 @@ spec/
     request.json                operation "request"
     request-conformance.json    operation "request", generated (see below)
     response.json               operation "response"
+    usage.json                  operation "usage"
     plain-http-warning.json     operation "plain-http-warning"
   judge/
     reply.json                  operation "reply"
@@ -234,6 +235,7 @@ TypeScript runners: `typescript/src/core/run-options.spec-fixtures.test.ts`,
 `typescript/src/core/jsonc-reader.util.spec-fixtures.test.ts`,
 `typescript/src/core/config.spec-fixtures.test.ts`,
 `typescript/src/providers/chat-completions-adapter.spec-fixtures.test.ts`,
+`typescript/src/providers/usage-reader.util.spec-fixtures.test.ts`,
 `typescript/src/providers/transport-security.util.spec-fixtures.test.ts`,
 `typescript/src/core/judge-exchange.spec-fixtures.test.ts`,
 `typescript/src/core/scoped-assertions.spec-fixtures.test.ts`,
@@ -520,9 +522,17 @@ test, which is written followed by one `\n`.
         { "verdict": { "claim": "…", "verdict": false, "reasoning": "…", "response": "…", "facts": ["…"] } },
         { "extraction": { "description": "…", "type": "number", "mode": "strict", "value": null, "reasoning": "…", "response": "…" } },
         { "error": { "cause": { "name": "…", "message": "…" }, "attempts": 2 } }
-      ]
+      ],
+      "usage": [{ "model": "…", "tokens": 812, "cost": 0.00025 }]
     }
-  ]
+  ],
+  "stamp": {
+    "package": "crucible-ai",
+    "version": "0.5.0",
+    "provider": "openrouter",
+    "model": "…",
+    "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+  }
 }
 ```
 
@@ -538,7 +548,12 @@ test, which is written followed by one `\n`.
 - `results`: the runs in run-number order (the first is run #1). A `failed`
   or `errored` run has a `cause`; `passed` and `discarded` runs have none.
   `calls` (default empty): the run's judge calls in the order they were
-  recorded. A missing `facts` is empty.
+  recorded. A missing `facts` is empty. `usage` (default empty): one
+  [`provider` / `usage`](#provider--usage) output per successful provider
+  response the run received, in the order received (see
+  [Judge stamp](#judge-stamp)).
+- `stamp` (optional): who judged the test and with what. Absent, the report
+  is rendered without a stamp and `usage` changes nothing.
 
 **Verdict.** For `ending.kind: "verdict"`, `need`, `passed`, `failed`,
 `errored` and the zone come from `verdict` / `compute` over the statuses of
@@ -654,6 +669,78 @@ none, else for each call `i` of `t`, in order:
   then nested facts field, `Judge reasoning`, excerpt field;
 - error: `field("Judge call <i> of <t>", "errored after <attempts> attempt(s)")`,
   then nested `field("Judge error", describe(cause))`.
+
+#### Judge stamp
+
+With `stamp` present, one more section comes **last**, after every other
+section (joined by `\n\n` like the others), at every verbosity and for every
+ending, passing report included. It is two lines, each a `field` with no
+indent (the label at column 0, so later lines of a multi-line value are
+prefixed with 2 spaces unless blank, and trailing spaces and tabs at line
+ends are removed):
+
+```
+field("Judge", "<who>; <spend>", "")
+field("Crucible", "<package> <version>; schemas coherent <coherent>, extract <extract>", "")
+```
+
+A port that cannot build the stamp (its package manifest or a schema cannot
+be read) renders the report without it, never an error in its place: the
+stamp must not hide the report it belongs to.
+
+`stamp` holds:
+
+- `package`, `version`: the port's package name and version
+  (`crucible-ai` and its npm version; C#: `Geekmotors.Crucible` and its
+  NuGet version).
+- `provider`: the config's provider name; for a C# judge set with
+  `Crucible.UseJudge` (an `IChatClient`), the literal `IChatClient`.
+- `model` (optional): the config's model; absent for `IChatClient`.
+- `schemas.coherent`, `schemas.extract`: for each instruction schema, the
+  first 8 lowercase hex digits of the SHA-256 of the schema text exactly as
+  sent as the system prompt, as UTF-8 bytes.
+
+`<who>` is `<provider> "<model>"` with a model, else `<provider>`. Quoted
+values are written as is, not escaped.
+
+Let E be every `usage` entry of every result, results in order and each
+result's entries in order, and n its length. With n = 0, `<spend>` is
+`no judge responses received`. Otherwise it is
+`<served>, <n> response(s), <tokens>, <cost>`:
+
+- `<served>`: the distinct `model` values of E in first-seen order, each in
+  double quotes, joined by `, ` and prefixed `served as `
+  (`served as "openai/gpt-5-mini", "anthropic/claude-haiku-5.5"`); when no
+  entry has a model, `served model not reported`.
+- `<tokens>`: with k the entries that have `tokens` and s their sum (an
+  integer): k = n gives `<s> tokens`, k = 0 gives `tokens not reported`,
+  else `<s> tokens from <k> of <n> responses`.
+- `<cost>`: with k the entries that have `cost` and s their sum as an
+  IEEE 754 double (a left fold from 0, in E order): k = n gives
+  `cost $<f>`, k = 0 gives `cost not reported`, else
+  `cost $<f> from <k> of <n> responses`. `<f>` is s rounded to exactly 6
+  decimal places in fixed notation, never an exponent (`0.0000032` →
+  `0.000003`, `0.00025` → `0.000250`, `0` → `0.000000`). No double sits on a
+  tie at 6 decimals, so each port's fixed-6 formatter agrees (JavaScript
+  `toFixed(6)`, C# `ToString("F6", CultureInfo.InvariantCulture)`).
+
+Every run's entries count, discarded runs' included: that spend happened.
+For example, a failed smoke run with one OpenRouter response ends:
+
+```
+Judge: openrouter "anthropic/claude-haiku-5.5"; served as "anthropic/claude-haiku-5.5", 1 response(s), 812 tokens, cost $0.000250
+Crucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b
+```
+
+**Ports.** Every report a port renders (the failure message, and the
+passing report at `full` and `debug`) carries the stamp. A built-in
+chat-completions provider applies `provider` / `usage` to every successful
+response body and records the entry on the current run, also for a reply
+later rejected as unusable and re-asked; an attempt that got no successful
+response records nothing. A C# `IChatClient` judge records the model from
+`ChatResponse.ModelId` (when not empty) and the tokens from
+`Usage.TotalTokenCount` (when ≥ 0, else input plus output tokens when both
+are present), and never a cost. The debug trace does not change.
 
 ### `report` / `trace`
 
@@ -950,6 +1037,33 @@ rest are never fetched. The rules are the same for every provider.
    test reports the run as errored, not failed). The wait between attempts
    is timing, not part of this operation.
 
+### `provider` / `usage`
+
+Reads what one successful chat-completions response says about its own
+cost: the served model, the token count and the price. It applies to a body
+that `provider` / `response` accepted as a success (it yielded a reply), and
+feeds the [judge stamp](#judge-stamp) of the report.
+
+**Input.** `{ "json": <any JSON> }`: the parsed response body.
+
+**Output.** An object with up to three members, each present only when
+found. Never an error.
+
+**Rules.**
+
+1. `model`: the root `model` member when it is a non-empty string, exactly
+   as given.
+2. `tokens`: `usage.total_tokens` when it is a JSON number whose value is an
+   integer ≥ 0. Otherwise, when `usage.prompt_tokens` and
+   `usage.completion_tokens` are both integers ≥ 0, their sum. Otherwise
+   absent.
+3. `cost`: `usage.cost` when it is a finite number ≥ 0 (OpenRouter reports
+   it in USD; other providers do not). Otherwise absent. Zero is kept.
+4. Anything else leaves the member absent: a root that is not an object,
+   `usage` that is not an object (`null`, an array), numbers written as
+   strings, negative values, fractional token counts. Other members
+   (`cost_details`, `is_byok`, `prompt_tokens_details`, …) are ignored.
+
 ### `provider` / `plain-http-warning`
 
 Decides whether a judge call writes the warning that the key travels
@@ -1109,7 +1223,11 @@ the clock or object identity:
   fixture cannot hold. The [porting guide](PORTING.md#3-what-the-fixtures-cover-and-what-a-port-tests-itself)
   lists them;
 - reading the files themselves (where the working directory is, which file
-  system errors mean "missing" rather than "unreadable").
+  system errors mean "missing" rather than "unreadable");
+- the judge stamp's inputs: that a port records one `provider` / `usage`
+  entry per successful response on the right run (re-asks included), its
+  own package name and version, and the schema hashes of the text it really
+  sends.
 
 ## Known limits
 

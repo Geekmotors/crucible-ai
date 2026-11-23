@@ -1,4 +1,4 @@
-import type { CompletionRequest, ProviderAdapter } from '../providers/types.js';
+import type { Completion, CompletionRequest, ProviderAdapter } from '../providers/types.js';
 import { CrucibleError } from './errors.js';
 import { TraceReporter } from './trace-reporter.js';
 
@@ -32,15 +32,15 @@ class RetryingCompleter {
     adapter: ProviderAdapter,
     request: CompletionRequest,
     signal: AbortSignal,
-  ): Promise<string> {
+  ): Promise<Completion> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       this.throwIfAborted(signal);
       try {
         this.trace.providerRequest(adapter.name, request, attempt);
-        const reply = await adapter.complete(request, signal);
-        this.trace.providerResponse(attempt, reply);
-        return reply;
+        const completion = await adapter.complete(request, signal);
+        this.trace.providerResponse(attempt, completion.reply);
+        return completion;
       } catch (error) {
         if (signal.aborted) {
           this.trace.providerFailure(attempt, error, { next: 'aborted' });

@@ -1,4 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+} from '../../providers/types.js';
 import { ManualTimer } from './manual-timer.fake.js';
 
 class DelayedReplyAdapter implements ProviderAdapter {
@@ -17,9 +22,9 @@ class DelayedReplyAdapter implements ProviderAdapter {
     });
   }
 
-  complete(_request: CompletionRequest, signal: AbortSignal): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      const disarm = this.timer.arm(this.delayMs, () => resolve(this.reply));
+  complete(_request: CompletionRequest, signal: AbortSignal): Promise<Completion> {
+    return new Promise<Completion>((resolve, reject) => {
+      const disarm = this.timer.arm(this.delayMs, () => resolve({ reply: this.reply, usage: {} }));
       signal.addEventListener(
         'abort',
         () => {

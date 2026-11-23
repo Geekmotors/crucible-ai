@@ -4,6 +4,7 @@ import { Capture } from '../core/test/capture.util.js';
 import { ChatAdapterHarness } from './test/chat-adapter-harness.util.js';
 import { FakeFetchBoundary } from './test/fetch-boundary.fake.js';
 import { TestModel } from './test/test-model.enum.js';
+import { UsageFigure } from './test/usage-figure.enum.js';
 
 const RAW_JUDGE_REPLY = ChatAdapterHarness.rawJudgeReply;
 
@@ -43,6 +44,22 @@ describe('ChatCompletionsAdapter classification of crucible errors', () => {
     const adapter = ChatAdapterHarness.adapter(FakeFetchBoundary.respondingWith(200, {}));
     expect(adapter.classifyFailure(new CrucibleError('config', 'm'))).toBe('fatal');
     expect(adapter.classifyFailure(new CrucibleError('usage', 'm'))).toBe('fatal');
+  });
+});
+
+describe('ChatCompletionsAdapter usage', () => {
+  it('reports the served model, tokens and cost of a successful response', async () => {
+    const boundary = FakeFetchBoundary.respondingWith(200, {
+      ...(FakeFetchBoundary.successEnvelope(RAW_JUDGE_REPLY) as object),
+      model: TestModel.Served,
+      usage: { total_tokens: UsageFigure.Tokens, cost: UsageFigure.Cost },
+    });
+    const completion = await ChatAdapterHarness.completion(ChatAdapterHarness.adapter(boundary));
+    expect(completion.usage).toEqual({
+      model: TestModel.Served,
+      tokens: UsageFigure.Tokens,
+      cost: UsageFigure.Cost,
+    });
   });
 });
 

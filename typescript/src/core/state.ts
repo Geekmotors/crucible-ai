@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { ProviderUsage } from '../providers/types.js';
 import { CrucibleError } from './errors.js';
 import type { ExtractedValue, ExtractMode, ExtractType } from './extract-type.js';
 import { FactList } from './fact-list.util.js';
@@ -36,6 +37,7 @@ type RunLedger = {
   readonly verdicts: VerdictRecord[];
   readonly extractions: ExtractionRecord[];
   readonly errors: ErrorRecord[];
+  readonly usage: ProviderUsage[];
 };
 
 type RunStore = {
@@ -60,7 +62,7 @@ class RunScope {
   ): T {
     return this.storage.run(
       {
-        context: { state: [], verdicts: [], extractions: [], errors: [] },
+        context: { state: [], verdicts: [], extractions: [], errors: [], usage: [] },
         signal,
         run,
         inferenceTimeout,
@@ -121,6 +123,10 @@ class RunScope {
     const record = { ...error, seq: this.takeSeq(store) };
     store.context.errors.push(record);
     return record;
+  }
+
+  recordUsage(usage: ProviderUsage): void {
+    this.store().context.usage.push(usage);
   }
 
   private takeSeq(store: RunStore): number {

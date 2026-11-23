@@ -53,11 +53,28 @@ class ReportHarness {
   }
 
   static run(status: RunStatus, cause?: unknown): RunResult {
-    return { status, cause, context: { state: [], verdicts: [], extractions: [], errors: [] } };
+    return {
+      status,
+      cause,
+      context: { state: [], verdicts: [], extractions: [], errors: [], usage: [] },
+    };
   }
 
   static renderedFailure(cause: unknown): string {
     return ReportHarness.rendered(ReportHarness.run('failed', cause));
+  }
+
+  static renderedFailureWithBrokenStamp(cause: unknown): string {
+    const reporter = new Reporter(ReportHarness.defaultSettings, ReportHarness.brokenStamp);
+    return ReportHarness.verdictOf(reporter, ReportHarness.run('failed', cause));
+  }
+
+  private static defaultSettings(): typeof DEFAULT_REPORT_SETTINGS {
+    return DEFAULT_REPORT_SETTINGS;
+  }
+
+  private static brokenStamp(): never {
+    throw new Error(ProviderFault.InvalidKey);
   }
 
   static renderedLedger(
@@ -67,7 +84,7 @@ class ReportHarness {
   ): string {
     const result = {
       ...ReportHarness.run(status, new Error(ClaimText.Default)),
-      context: { state: [], verdicts: [], extractions: [], errors: [], ...ledger },
+      context: { state: [], verdicts: [], extractions: [], errors: [], usage: [], ...ledger },
     };
     return ReportHarness.rendered(result, verbosity);
   }
@@ -76,13 +93,20 @@ class ReportHarness {
     result: RunResult,
     verbosity: Verbosity = DEFAULT_REPORT_SETTINGS.verbosity,
   ): string {
+    return ReportHarness.verdictOf(
+      ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, verbosity),
+      result,
+    );
+  }
+
+  private static verdictOf(reporter: Reporter, result: RunResult): string {
     const results = [result];
     const options = { runs: results.length, threshold: Threshold.Certain };
     const tally = new Aggregator().tally(
       results.map(({ status }) => status),
       options,
     );
-    return ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, verbosity).renderVerdict({
+    return reporter.renderVerdict({
       results,
       tally,
       options,

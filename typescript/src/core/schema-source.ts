@@ -1,32 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { CrucibleError } from './errors.js';
+import { PackageRoot } from './package-root.js';
 
 type SchemaFileReader = (path: string) => string;
 
 class SchemaSource {
-  private static readSchemaFile(path: string): string {
-    return readFileSync(path, 'utf8');
-  }
-
-  private static packageRootDir(): string {
-    let dir = dirname(fileURLToPath(import.meta.url));
-    while (!existsSync(join(dir, 'package.json'))) {
-      const parent = dirname(dir);
-      if (parent === dir) {
-        throw new CrucibleError('config', 'Could not locate the crucible-ai package root.');
-      }
-      dir = parent;
-    }
-    return dir;
-  }
-
   private readonly cache = new Map<string, string>();
 
   constructor(
-    private readonly rootDir: string = SchemaSource.packageRootDir(),
-    private readonly readFile: SchemaFileReader = SchemaSource.readSchemaFile,
+    private readonly rootDir: string = PackageRoot.dir(),
+    private readonly readFile: SchemaFileReader = PackageRoot.readText,
   ) {}
 
   load(name: string): string {

@@ -9,10 +9,13 @@ namespace CrucibleAI.ChatClients;
 internal sealed class ChatClientJudge(IChatClient client, ChatOptions? options, IRetryBackoff backoff) : IJudgeClient
 {
     public const string Name = "chat-client";
+    public const string StampedProvider = "IChatClient";
 
     private const int MaxAttempts = 3;
     private const string ClientDefaultModel = "(client default)";
     private const string StatusProperty = "Status";
+
+    private readonly ChatClientUsageReader _usage = new();
 
     public ChatClientJudge(IChatClient client, ChatOptions? options)
         : this(client, options, new ExponentialBackoff())
@@ -34,6 +37,7 @@ internal sealed class ChatClientJudge(IChatClient client, ChatOptions? options, 
                 var response = await client.GetResponseAsync(Messages(request), CallOptions(), cancellation).ConfigureAwait(false);
                 var reply = response?.Text ?? string.Empty;
                 observer.Observe(new ProviderResponseEvent(attempt, reply));
+                observer.Spent(_usage.Read(response));
                 return reply;
             }
             catch (Exception failure) when (cancellation.IsCancellationRequested && failure is not OutOfMemoryException)

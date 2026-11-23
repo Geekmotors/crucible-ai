@@ -30,7 +30,12 @@ internal sealed class ReportRenderer(ReportSettings settings)
     {
         var headline = Headline(test);
         var top = IsSmoke(test.Runs) ? headline : headline + "\n" + CountsLine(test.Results);
-        return string.Join("\n\n", Sections(test).Prepend(top));
+        var sections = Sections(test).Prepend(top);
+        if (settings.Stamp is { } stamp)
+        {
+            sections = sections.Append(new StampSection(stamp, _fields).Render(test.Results));
+        }
+        return string.Join("\n\n", sections);
     }
 
     private string Headline(TestRecord test) => test.Ending switch

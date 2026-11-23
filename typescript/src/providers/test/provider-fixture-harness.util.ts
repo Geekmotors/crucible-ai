@@ -67,13 +67,17 @@ class ProviderFixtureHarness {
       new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }).read,
       new FakeWarningSink().write,
     ).create(ProviderName.OpenRouter, {});
-    const outcome = await FixtureOutcome.rendered(() =>
-      new RetryingCompleter(new TraceReporter(), new SleepRecorder().sleep).complete(
+    const outcome = await FixtureOutcome.rendered(async () => {
+      const completion = await new RetryingCompleter(
+        new TraceReporter(),
+        new SleepRecorder().sleep,
+      ).complete(
         adapter,
         { model: TestModel.Generic, prompt: ProviderFixtureHarness.CONTRACT },
         new AbortController().signal,
-      ),
-    );
+      );
+      return completion.reply;
+    });
     FixtureOutcome.requireEnoughScript(fetch.overran);
     return outcome;
   }

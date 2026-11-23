@@ -1,4 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
+import type {
+  Completion,
+  CompletionRequest,
+  FailureClass,
+  ProviderAdapter,
+} from '../../providers/types.js';
 import { ExtractModeName } from './extract-mode-name.enum.js';
 import { ExtractReply } from './extract-reply.enum.js';
 
@@ -10,14 +15,14 @@ class ModeAwareJudge implements ProviderAdapter {
     return `\n\nMODE\n<<<\n${mode}\n>>>`;
   }
 
-  complete(request: CompletionRequest): Promise<string> {
+  complete(request: CompletionRequest): Promise<Completion> {
     if (request.prompt.endsWith(ModeAwareJudge.modeSection(ExtractModeName.Lenient))) {
-      return Promise.resolve(ExtractReply.Two);
+      return Promise.resolve({ reply: ExtractReply.Two, usage: {} });
     }
     if (request.prompt.endsWith(ModeAwareJudge.modeSection(ExtractModeName.Strict))) {
-      return Promise.resolve(ExtractReply.Hedged);
+      return Promise.resolve({ reply: ExtractReply.Hedged, usage: {} });
     }
-    return Promise.resolve(ExtractReply.NotJson);
+    return Promise.resolve({ reply: ExtractReply.NotJson, usage: {} });
   }
 
   classifyFailure(): FailureClass {

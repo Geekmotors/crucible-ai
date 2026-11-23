@@ -322,6 +322,28 @@
           "enum": ["provider"]
         },
         "operation": {
+          "enum": ["usage"]
+        },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": {
+                "$ref": "#/definitions/providerUsageInput"
+              },
+              "expect": {
+                "$ref": "#/definitions/providerUsageOutcome"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": {
+          "enum": ["provider"]
+        },
+        "operation": {
           "enum": ["plain-http-warning"]
         },
         "cases": {
@@ -852,6 +874,12 @@
           "items": {
             "$ref": "#/definitions/judgeCall"
           }
+        },
+        "usage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/usageEntry"
+          }
         }
       }
     },
@@ -925,6 +953,62 @@
           "items": {
             "$ref": "#/definitions/runRecord"
           }
+        },
+        "stamp": {
+          "$ref": "#/definitions/judgeStamp"
+        }
+      }
+    },
+    "judgeStamp": {
+      "type": "object",
+      "required": ["package", "version", "provider", "schemas"],
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "schemas": {
+          "type": "object",
+          "required": ["coherent", "extract"],
+          "additionalProperties": false,
+          "properties": {
+            "coherent": {
+              "$ref": "#/definitions/schemaHash"
+            },
+            "extract": {
+              "$ref": "#/definitions/schemaHash"
+            }
+          }
+        }
+      }
+    },
+    "schemaHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}$"
+    },
+    "usageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tokens": {
+          "$ref": "#/definitions/count"
+        },
+        "cost": {
+          "type": "number",
+          "minimum": 0
         }
       }
     },
@@ -1340,6 +1424,24 @@
           "items": {
             "$ref": "#/definitions/httpResponse"
           }
+        }
+      }
+    },
+    "providerUsageInput": {
+      "type": "object",
+      "required": ["json"],
+      "additionalProperties": false,
+      "properties": {
+        "json": {}
+      }
+    },
+    "providerUsageOutcome": {
+      "type": "object",
+      "required": ["value"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "$ref": "#/definitions/usageEntry"
         }
       }
     },

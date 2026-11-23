@@ -11,6 +11,7 @@ internal sealed class ScriptedChatClient(params object[] script) : IChatClient
         _script.Dequeue() switch
         {
             Exception failure => Task.FromException<ChatResponse>(failure),
+            ChatResponse response => Task.FromResult(response),
             var reply => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, (string)reply))),
         };
 

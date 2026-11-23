@@ -72,7 +72,7 @@ describe('FakeAdapter port contract', () => {
       { model: TestModel.Generic, prompt: 'hello' },
       new AbortController().signal,
     );
-    expect(response).toBe(`fake:${TestModel.Generic}:hello`);
+    expect(response.reply).toBe(`fake:${TestModel.Generic}:hello`);
   });
 
   it('rejects when the signal is already aborted', async () => {

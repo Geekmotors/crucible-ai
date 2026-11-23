@@ -2484,6 +2484,684 @@
       "expect": {
         "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failure: no assertion returned false; the body threw\n  Thrown: Error: boom\n  Judge calls: none recorded"
       }
+    },
+    {
+      "id": "report-render-stamp-failed-smoke",
+      "description": "With a stamp, the judge and Crucible lines follow every other section: one OpenRouter response with its served model, tokens and cost.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 1 response(s), 812 tokens, cost $0.000250\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-passed-full",
+      "description": "A passing report at full verbosity ends with the stamp, summing the responses of every run.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The reply is polite.",
+                  "verdict": true,
+                  "reasoning": "It thanks the user.",
+                  "response": "Thank you!"
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "extraction": {
+                  "description": "the greeting",
+                  "type": "string",
+                  "mode": "lenient",
+                  "value": "Hi",
+                  "reasoning": "The response states it.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 640, "cost": 0.0002 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\n\n[PASSED] Run #1\n  Judge call 1 of 1: coherent verdict true\n    Claim: The reply is polite.\n    Judge reasoning: It thanks the user.\n    Response excerpt: Thank you!\n\n[PASSED] Run #2\n  Judge call 1 of 1: extract (lenient) \"the greeting\" as string → \"Hi\"\n    Judge reasoning: The response states it.\n    Response excerpt: The response text.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 2 response(s), 1452 tokens, cost $0.000450\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-passed-default",
+      "description": "A passing report at default verbosity gets the stamp too; an OpenAI judge serves a dated model and reports no cost.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "gpt-5-mini-2025-08-07", "tokens": 1540 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "gpt-5-mini-2025-08-07", "tokens": 1490 }]
+          }
+        ],
+        "stamp": {
+          "package": "Geekmotors.Crucible",
+          "version": "0.5.0",
+          "provider": "openai",
+          "model": "gpt-5-mini",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\n\nJudge: openai \"gpt-5-mini\"; served as \"gpt-5-mini-2025-08-07\", 2 response(s), 3030 tokens, cost not reported\nCrucible: Geekmotors.Crucible 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-aborted",
+      "description": "An aborted test ends with the stamp; the fatal run got no response, and a discarded run's response still counts.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 5,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 2 },
+        "results": [
+          {
+            "status": "passed",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          {
+            "status": "errored",
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" },
+            "usage": []
+          },
+          {
+            "status": "discarded",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 790, "cost": 0.00024 }]
+          },
+          { "status": "discarded" }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "ERRORED, not failed: aborted on a fatal error after 2/5 runs settled; 2 in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.\nRuns: 1 passed, 0 failed, 1 errored, 2 discarded.\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: ProviderError: 401 Unauthorized\n\n[DISCARDED] Run(s) #3-#4: still in flight when the test was cut off; counted in no zone.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 2 response(s), 1602 tokens, cost $0.000490\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-expired",
+      "description": "An expired test ends with the stamp; a re-asked unusable reply is a response of its own.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 1,
+        "ending": { "kind": "expired", "deadlineMs": 33000 },
+        "results": [
+          {
+            "status": "passed",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [
+              { "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 },
+              { "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }
+            ]
+          },
+          { "status": "discarded" },
+          { "status": "discarded" }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the test did not finish within its 33000 ms deadline; 2/4 runs settled; 2 in-flight run(s) discarded to stop spend. Check for a slow system under test or a throttled judge provider.\nRuns: 1 passed, 1 failed, 0 errored, 2 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[DISCARDED] Run(s) #3-#4: still in flight when the test was cut off; counted in no zone.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 3 response(s), 2436 tokens, cost $0.000750\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-no-responses",
+      "description": "With no successful judge response in any run, the judge line says so instead of the spend.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "ERRORED, not failed: the smoke run (runs: 1) hit an infrastructure problem, so there is no verdict.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; no judge responses received\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-chat-client-without-model",
+      "description": "A stamp without a model names the provider alone (a C# IChatClient judge); the served model comes from the responses.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": { "claim": "c", "verdict": true, "reasoning": "Fine.", "response": "r" }
+              }
+            ],
+            "usage": [{ "model": "gpt-4o-mini-2024-07-18", "tokens": 300 }]
+          }
+        ],
+        "stamp": {
+          "package": "Geekmotors.Crucible",
+          "version": "0.5.0",
+          "provider": "IChatClient",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "PASSED: the smoke run (runs: 1) passed.\n\n[PASSED] Run #1\n  Judge call 1 of 1: coherent verdict true\n    Claim: c\n    Judge reasoning: Fine.\n    Response excerpt: r\n\nJudge: IChatClient; served as \"gpt-4o-mini-2024-07-18\", 1 response(s), 300 tokens, cost not reported\nCrucible: Geekmotors.Crucible 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-mixed-reporting",
+      "description": "When only some responses report tokens or cost, each sum says how many of the responses it covers.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The capital is Paris.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 100 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5" }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: 2/3 runs passed (pass rate 0.666) against threshold 1 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The capital is Paris.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 3 response(s), 912 tokens from 2 of 3 responses, cost $0.000250 from 1 of 3 responses\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-none-reported",
+      "description": "Responses that report no model, tokens or cost are still counted, and each missing part says it was not reported.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{}, {}]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served model not reported, 2 response(s), tokens not reported, cost not reported\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-two-served-models",
+      "description": "Distinct served models are listed once each, in the order first seen across runs and responses.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "openai/gpt-5-mini", "tokens": 500, "cost": 0.0001 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The capital is Paris.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [
+              { "tokens": 400, "cost": 0.0001 },
+              { "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "openai/gpt-5-mini", "tokens": 450, "cost": 0.0001 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "openrouter/auto",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: 2/3 runs passed (pass rate 0.666) against threshold 1 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 0 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The capital is Paris.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openrouter \"openrouter/auto\"; served as \"openai/gpt-5-mini\", \"anthropic/claude-haiku-5.5\", 4 response(s), 2162 tokens, cost $0.000550\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-discarded-usage-counted",
+      "description": "Responses received by runs later discarded are counted: that spend happened.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 6,
+        "threshold": 0.5,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "A",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "discarded",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          },
+          { "status": "discarded" },
+          { "status": "passed" },
+          {
+            "status": "discarded",
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: 2/6 runs passed (pass rate 0.333) against threshold 0.5 (need 3).\nRuns: 2 passed, 1 failed, 0 errored, 3 discarded.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: A\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[DISCARDED] Run(s) #3-#4, #6: still in flight when the test was cut off; counted in no zone.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 3 response(s), 2436 tokens, cost $0.000750\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-cost-sum",
+      "description": "Costs are summed as doubles in order and printed with exactly six decimals: 0.0001 + 0.0002 prints 0.000300.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 400, "cost": 0.0001 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 800, "cost": 0.0002 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 2 response(s), 1200 tokens, cost $0.000300\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-cost-rounding",
+      "description": "A cost below a millionth is rounded to six decimals, and a zero cost and zero tokens print as numbers, not as unreported.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 30, "cost": 0.0000032 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "c",
+                  "verdict": true,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 0, "cost": 0 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "PASSED: 2/2 runs passed (pass rate 1) against threshold 1 (need 2).\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 2 response(s), 30 tokens, cost $0.000003\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-stamp-model-line-break",
+      "description": "A model holding line breaks continues on lines indented by two spaces, with trailing spaces removed, like any field.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "local\r\njudge", "tokens": 50 }]
+          }
+        ],
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.5.0",
+          "provider": "openai-compatible",
+          "model": "local \njudge",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openai-compatible \"local\n  judge\"; served as \"local\n  judge\", 1 response(s), 50 tokens, cost not reported\nCrucible: crucible-ai 0.5.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-usage-ignored-without-stamp",
+      "description": "Without a stamp the usage entries change nothing: the report is exactly as before.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 1,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The answer is correct.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 812, "cost": 0.00025 }]
+          }
+        ]
+      },
+      "expect": {
+        "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
     }
   ]
 }

@@ -14,7 +14,9 @@ internal sealed class ChatResponseReader
 
     private static ReadOnlySpan<byte> Utf8ByteOrderMark => [0xEF, 0xBB, 0xBF];
 
-    public async Task<string> ReadAsync(HttpResponseMessage response, CancellationToken cancellation)
+    private readonly ChatUsageReader _usage = new();
+
+    public async Task<ChatReply> ReadAsync(HttpResponseMessage response, CancellationToken cancellation)
     {
         var status = (int)response.StatusCode;
         if (status is < 200 or > 299)
@@ -33,7 +35,7 @@ internal sealed class ChatResponseReader
             && choice["message"] is JsonObject message
             && message["content"] is JsonValue content
             && content.TryGetValue<string>(out var reply)
-            ? reply
+            ? new ChatReply(reply, _usage.Read(root))
             : throw Malformed("The provider response holds no reply text.");
     }
 

@@ -4,10 +4,23 @@ All notable changes to `crucible-ai` are listed here. The project follows
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may
 contain breaking changes, and they are marked **Breaking** below.
 
-## Unreleased
+## 0.6.0
 
 ### Added
 
+- Every report (the failure message, and the passing report at `full` and
+  `debug`) now ends with a judge stamp: the configured provider and model,
+  the model the provider says served the calls, how many judge responses the
+  test received, their tokens and their cost (OpenRouter reports cost; other
+  providers show `cost not reported`), the `crucible-ai` version and a short
+  SHA-256 of each judge instruction schema. For example:
+
+  ```text
+  Judge: openrouter "anthropic/claude-haiku-5.5"; served as "anthropic/claude-haiku-5.5", 1 response(s), 812 tokens, cost $0.000250
+  Crucible: crucible-ai 0.6.0; schemas coherent 2ecbb5d8, extract 1e09070c
+  ```
+
+  See [Reading the failure report](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md#reading-the-failure-report).
 - `crucible.useFetch(fetch)` sets the `fetch` every judge HTTP call goes
   through, for every built-in provider and every attempt: a proxy
   dispatcher, logging, or a fake judge. Call it once, before the first

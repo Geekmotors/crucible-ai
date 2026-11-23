@@ -39,7 +39,32 @@ internal static class RunRecordJson
         cause is null ? null : new RunCause(cause["name"]!.GetValue<string>(), cause["message"]!.GetValue<string>());
 
     public static RunResult Result(JsonNode? result) =>
-        new(Status(result!["status"]), Cause(result["cause"]), (result["calls"]?.AsArray() ?? []).Select(Call).ToArray());
+        new(
+            Status(result!["status"]),
+            Cause(result["cause"]),
+            (result["calls"]?.AsArray() ?? []).Select(Call).ToArray(),
+            (result["usage"]?.AsArray() ?? []).Select(Usage).ToArray());
+
+    public static JudgeUsage Usage(JsonNode? usage) =>
+        new(usage!["model"]?.GetValue<string>(), usage["tokens"]?.GetValue<double>(), usage["cost"]?.GetValue<double>());
+
+    public static JsonObject Json(JudgeUsage usage)
+    {
+        var members = new JsonObject();
+        if (usage.Model is { } model)
+        {
+            members["model"] = model;
+        }
+        if (usage.Tokens is { } tokens)
+        {
+            members["tokens"] = tokens;
+        }
+        if (usage.Cost is { } cost)
+        {
+            members["cost"] = cost;
+        }
+        return members;
+    }
 
     public static JudgeCall Call(JsonNode? call)
     {
