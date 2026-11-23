@@ -4,7 +4,7 @@
 [![ci](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Geekmotors/crucible-ai/actions/workflows/ci.yml?query=branch%3Amain)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Semantic assertions for code that calls LLMs, inside the test framework you already use. Crucible asks an AI judge whether your system's reply means what it should, given the facts your system knew at the time. It re-runs the test many times (10 by default) and passes on a pass rate (90% by default), so a flaky model can't sneak through on one lucky run.
+Semantic assertions for code that calls LLMs, inside the test framework you already use, in unit, integration or end-to-end tests. Crucible asks an AI judge whether your system's reply means what it should, given the facts your system knew at the time. It re-runs the test many times (10 by default) and passes on a pass rate (90% by default), so a flaky model can't sneak through on one lucky run.
 
 ## TypeScript (Jest or Vitest)
 

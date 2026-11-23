@@ -367,6 +367,29 @@ CRUCIBLE_VERBOSE=debug npx jest confidentiality.test.ts   # plus a live trace of
 The environment variable wins over the config file. The trace never shows
 your API key or `meta` values. Details: [Verbosity](runs-and-threshold.md#verbosity).
 
+## 9. Beyond unit tests
+
+Crucible is an assertion library, so it goes wherever your test framework
+goes: unit tests against your engine in-process, integration tests against
+the real model, end-to-end tests against a deployed service. Nothing in it
+assumes a unit test. The body of `crucible.it` (or `[CrucibleFact]`) is
+ordinary test code; call whatever produces the reply, then assert on it.
+
+Two things change as the tests get bigger:
+
+- **Cost and time scale with every assertion.** Each `coherent` or
+  `extract` is a paid judge call, and the gate repeats the whole test body
+  for every run. A suite that calls a deployed service ten times per test
+  and judges each reply pays for both. The `Judge:` line at the end of every
+  report shows what the judge spent; see [Cost](runs-and-threshold.md#cost).
+- **Judge a sample, not the traffic.** In a load or soak test, keep the
+  judge out of the hot loop: its latency and rate limits would distort the
+  numbers you are measuring. Collect a sample of replies during the load,
+  then judge the sample in a separate test.
+
+What Crucible stays out of: it does not run your suite, store datasets or
+host results. It gives your existing runner one more kind of assertion.
+
 ## Next steps
 
 - [Configuration reference](configuration.md) — every field, validation
