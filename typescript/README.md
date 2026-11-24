@@ -53,7 +53,7 @@ npm install --save-dev crucible-ai
 npx crucible-ai init
 ```
 
-This writes `crucible.config.jsonc`: the provider and the recommended judge model (Claude Haiku 5.5 on OpenRouter), then every other setting as a commented line showing its default (trimmed here):
+This writes `crucible.config.jsonc`: the provider and the recommended judge model (Claude Haiku 5.5 on OpenRouter), then every other setting as a commented line showing its default (trimmed here). For another provider, use `npx crucible-ai init --provider openai` or `--provider openai-compatible` and fill in the model:
 
 ```jsonc
 {

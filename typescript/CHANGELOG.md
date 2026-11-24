@@ -4,6 +4,17 @@ All notable changes to `crucible-ai` are listed here. The project follows
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may
 contain breaking changes, and they are marked **Breaking** below.
 
+## Unreleased
+
+### Added
+
+- `npx crucible-ai init --provider <name>` (or `--provider=<name>`) writes
+  the config for `openrouter` (the default when the flag is left out),
+  `openai` or `openai-compatible`. For `openai` and `openai-compatible` it
+  leaves `"model"` (and `"baseUrl"`) empty for you to fill in, since no
+  model on those providers has been checked against the conformance cases
+  yet. See [Create it with `init`](https://github.com/Geekmotors/crucible-ai/blob/main/docs/configuration.md#create-it-with-init).
+
 ## 0.6.0
 
 ### Added

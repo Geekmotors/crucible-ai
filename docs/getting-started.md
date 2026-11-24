@@ -116,7 +116,10 @@ In the directory you run Jest from (normally your project root), run:
 npx crucible-ai init
 ```
 
-It writes `crucible.config.jsonc`. The top sets the judge:
+It writes `crucible.config.jsonc`, set up for OpenRouter. For OpenAI or
+your own OpenAI-compatible server, run `npx crucible-ai init --provider openai`
+or `--provider openai-compatible` instead, then fill in the model (and the
+server's `baseUrl`). The top sets the judge:
 
 ```jsonc
 {

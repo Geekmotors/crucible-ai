@@ -11,18 +11,15 @@ class InitCommand {
     private readonly template: ConfigTemplate = new ConfigTemplate(),
   ) {}
 
-  run(): ExitCode {
+  run(template: ConfigTemplate = this.template): ExitCode {
     const existing = CONFIG_FILE_NAMES.find((name) => this.files.exists(name));
     if (existing !== undefined) {
       return this.refuse(existing);
     }
     const name = ConfigTemplate.FILE_NAME;
-    const creation = this.files.create(name, this.template.render());
+    const creation = this.files.create(name, template.render());
     if (creation.created) {
-      this.output.out(
-        `Created ${this.files.describeLocation(name)}.\n` +
-          `Set CRUCIBLE_JUDGE_KEY to your judge provider's API key, then run your tests.\n`,
-      );
+      this.output.out(`Created ${this.files.describeLocation(name)}.\n${template.nextStep()}\n`);
       return ExitCode.Success;
     }
     if (creation.reason === 'exists') {
