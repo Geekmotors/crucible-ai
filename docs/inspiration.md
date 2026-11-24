@@ -1,5 +1,7 @@
 # Why Crucible exists
 
+> This page is Crucible's original inspiration and is no longer updated. Its code samples and API names, the C# ones especially, may not match the current release; the [TypeScript API reference](typescript/api.md) and [C# API reference](dotnet/api.md) are current.
+
 ## The problem
 
 While working on one of my AI side projects, a storytelling app I call Proscenium, I had trouble testing its inference.
