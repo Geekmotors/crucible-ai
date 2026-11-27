@@ -43,9 +43,9 @@ CRUCIBLE_MODE=measure CRUCIBLE_MEASURE_RUNS=50 npx jest tests/story
 #    Each test prints its pass rate, its likely range and a suggested gate.
 
 # 2a. Phase 1: copy the suggested thresholds into the tests by hand.
-# 2b. Phase 2: let Crucible write them into crucible.tests.json instead.
+# 2b. Phase 2: let Crucible write them into crucible.baseline.json instead.
 CRUCIBLE_MODE=baseline CRUCIBLE_MEASURE_RUNS=50 npx jest tests/story
-git diff crucible.tests.json    # review, then commit
+git diff crucible.baseline.json    # review, then commit
 
 # 3. Normal CI runs gate every test against its own baseline.
 npx jest
@@ -102,7 +102,7 @@ A measurement wants many runs; a gate wants few. So measure mode has its own run
 
 **Decision needed (D1): the default when `CRUCIBLE_MEASURE_RUNS` is unset.** Recommendation: the test's own `runs`,
 so measure mode never spends more than a normal run unless asked. The output then shows a wide range, and the
-suggestion line says to measure with more runs (4.5). The alternative, a fixed default such as 50, gives useful numbers
+suggestion line says to measure with more runs (4.6). The alternative, a fixed default such as 50, gives useful numbers
 immediately but makes the first `CRUCIBLE_MODE=measure` run cost 5× a normal one without warning.
 
 ### 4.3 Outcome of a measured test
@@ -169,10 +169,27 @@ each choice, and how often the suggested gate then catches a 10-point drop in th
   lucky measurement and keeps gates that catch something.
 
 The table's main lesson holds whatever rule is chosen: **at 10 gate runs, no threshold both avoids false reds and
-reliably catches a 10-point drop.** Gate runs, not threshold, buy detection. The output must make this visible (4.5)
+reliably catches a 10-point drop.** Gate runs, not threshold, buy detection. The output must make this visible (4.6)
 rather than let a suggested threshold look stronger than it is.
 
-### 4.5 Output
+### 4.5 Variability
+
+Verdicts are pass or fail per run; there is no per-run confidence score to average. "How much does this swing?" is
+answered three ways:
+
+- **Within one measurement:** the likely range (4.4). It is the spread you would see if you measured again, and it
+  narrows as runs increase.
+- **Per assertion:** each `coherent` expectation in the test gets its own pass count, so a flaky claim is visible
+  instead of being folded into the test's rate. Calls are grouped by expectation text. A run that stops early (its body
+  threw before a later assertion) doesn't count for the assertions it never reached, so each line shows how many runs
+  evaluated it. `extract` has no pass or fail and is not listed. The breakdown is shown only when the test has more
+  than one distinct expectation.
+- **Between measurements:** phase 2 keeps the previous measurement, and a baseline run prints it next to the new one
+  (5.4).
+
+A running pass rate at 5, 10, 15 runs is not shown (7.4).
+
+### 4.6 Output
 
 A measured test always prints, at every verbosity, when it finishes. It uses the same channel as today's `PASSED:`
 report (TypeScript: `process.stdout`; C#: the test output the passing report uses today).
@@ -184,6 +201,9 @@ MEASURED: keeps the meeting place secret: 44 of 50 runs passed (pass rate 0.88, 
   Suggested gate: runs 10, threshold 0.6. An unchanged system fails it on under 5% of builds; a drop to 0.78 fails it on 5%.
   Sharper gate: runs 50, threshold 0.74. A drop to 0.78 fails it on 19%.
   Errored runs: 0.
+  By assertion:
+    "never reveals the meeting place": 50 of 50 passed
+    "stays in the narrator's voice": 44 of 50 passed (0.88, likely 0.75–0.96)
 
 [FAILED] Run #3
   ...up to three failing runs, exactly as the failure report shows them today...
@@ -202,16 +222,19 @@ Crucible: crucible-ai 0.7.0; schemas coherent 2ecbb5d8, extract 1e09070c
 - The failing runs section follows the existing verbosity rules: up to three at `default`, all runs at `full` and
   `debug`.
 - The judge stamp comes last, as in every report.
+- Per-assertion lines show a range only when the assertion didn't pass every time it was evaluated. Expectation text
+  is truncated to `excerptChars`.
 
 The exact text is specified in `spec/report/render.json` fixtures, like every other report line.
 
-### 4.6 What changes where
+### 4.7 What changes where
 
 - **Spec:**
   - The `measure` run option in the run-option and `testDefaults` fixtures.
   - `CRUCIBLE_MODE` and `CRUCIBLE_MEASURE_RUNS` parsing.
   - New operation `verdict/measure`: settled counts plus gate runs, giving the pass rate, the range and the
     suggestions.
+  - New operation `verdict/by-assertion`: per-run assertion outcomes, giving the per-assertion counts.
   - New `report/render` cases for the `MEASURED:` report.
   - A spec README section on measure mode.
 - **TypeScript:** the run option on `crucible.it` and `crucible.describe`, environment parsing, the measured outcome in
@@ -223,43 +246,84 @@ The exact text is specified in `spec/report/render.json` fixtures, like every ot
   - Getting started: one step.
   - Both API references and both changelogs.
 
-## 5. Phase 2: the test settings file and baselines
+## 5. Phase 2: test overrides and baselines
 
-### 5.1 The file
+### 5.1 Two files
 
-`crucible.tests.json`, next to the config file, committed. Crucible reads it on every run if it exists. It holds
-per-test settings that override the test code, plus the measurement each baseline came from:
+Hand-written settings and measured values live in separate files, both next to the config file and both committed.
+Each has one writer, so neither writer gets in the other's way.
+
+| File | Written by | Holds | Format |
+| --- | --- | --- | --- |
+| Overrides | you; Crucible never writes it | `runs`, `threshold`, `measure` per test, with your comments | TypeScript: `crucible.tests.yml`; C#: `crucible.tests.json` |
+| Baseline | Crucible, in `baseline` and `rebaseline` mode | the measured `threshold` per test, with the measurement it came from | `crucible.baseline.json` in both |
+
+Overrides, TypeScript (`crucible.tests.yml`):
+
+```yaml
+tests:
+  # Tone is watched, never gated.
+  "story/tone.test.ts > stays in period voice":
+    measure: true
+  # Held at 0.8 until the new narrator prompt ships.
+  "story/omniscience.test.ts > narrator > keeps the meeting place secret":
+    threshold: 0.8
+```
+
+Overrides, C# (`crucible.tests.json`, comments and trailing commas allowed):
+
+```jsonc
+{
+  "tests": {
+    // Tone is watched, never gated.
+    "Story.ToneTests.StaysInPeriodVoice": { "measure": true },
+  }
+}
+```
+
+Baseline, both languages (`crucible.baseline.json`):
 
 ```json
 {
   "tests": {
     "story/omniscience.test.ts > narrator > keeps the meeting place secret": {
       "threshold": 0.6,
-      "baseline": {
+      "measured": {
         "passed": 44,
         "settled": 50,
         "measuredAt": "2026-11-27",
         "judge": "openrouter \"anthropic/claude-haiku-5.5\"",
         "schemas": { "coherent": "2ecbb5d8", "extract": "1e09070c" }
-      }
-    },
-    "story/tone.test.ts > stays in period voice": { "measure": true }
+      },
+      "previous": { "passed": 46, "settled": 50, "measuredAt": "2026-10-02" }
+    }
   }
 }
 ```
 
-- Settings an entry may hold: `runs`, `threshold`, `measure`. Other run options (`strict`, the timeouts) stay in code;
-  they describe how the test works, not how good it is. (Open to extending later.)
-- `baseline` is written by baseline runs and only read for the stale-judge warning (5.4). Hand edits to it change
-  nothing else.
-- `CRUCIBLE_TESTS=<path>` points at a different file, so CI can switch sets, for example a stricter file on `main`.
-  A path given and missing is a `config` error; the default path missing just means no overrides.
+- Overrides may set `runs`, `threshold` and `measure`. Other run options (`strict`, the timeouts) stay in code; they
+  describe how the test works, not how good it is. (Open to extending later.)
+- The baseline file holds only `threshold`, plus `measured` and `previous`, which are read for the stale-judge
+  warning and the between-measurements comparison (5.4). Hand edits to it work, but the next baseline run may replace
+  them; deliberate changes belong in the overrides file.
+- `CRUCIBLE_TESTS=<path>` and `CRUCIBLE_BASELINE=<path>` point at different files, so CI can switch sets, for example
+  a stricter overrides file on `main`. A path given and missing is a `config` error; a default path missing just means
+  that file is empty.
+- Crucible writes the baseline file with sorted keys and two-space indentation, so diffs stay small and reviewable.
 
-**Decision needed (D4): JSON, not JSONC or YAML.** Recommendation: plain JSON. Crucible rewrites this file, and
-rewriting JSONC while keeping the user's comments needs a comment-preserving editor in both languages (TypeScript has
-one in `jsonc-parser`; C# has none). Comments that silently disappear on the next baseline run are worse than no
-comments. YAML adds a dependency to both ports and a second syntax next to the JSONC config. Crucible writes the file
-with sorted keys and two-space indentation, so diffs stay small and reviewable.
+**Decision (D4): YAML overrides in TypeScript, JSON with comments in C#, JSON baseline in both.**
+
+- The overrides file is never rewritten, so comments are safe in any format. (A single rewritten file was the original
+  problem: C# has no comment-preserving JSONC or YAML editor, so comments would vanish on every baseline run.)
+- Each language follows its ecosystem: YAML is common in JavaScript projects; .NET projects expect JSON
+  (`appsettings.json`), and `System.Text.Json` already skips comments and trailing commas, so C# adds no dependency.
+- Entries never overlap between languages (5.2 keys differ), so a mixed repository loses nothing by having two
+  overrides files.
+- Cost on the TypeScript side: the first runtime dependency, `yaml` (which has none of its own), loaded only when the
+  overrides file exists. It is parsed as YAML 1.2, so `no`, `on` and `0.10` are not reinterpreted. Keys containing
+  `:` or ` > ` must be quoted; every docs example quotes keys.
+- The spec defines the overrides data model, not its syntax. Shared fixtures are JSON; the TypeScript port adds tests
+  that the YAML form loads into the same model.
 
 ### 5.2 Test identity
 
@@ -274,7 +338,7 @@ An entry's key must name the same test across runs and machines.
   the data row's display name (`Namespace.Class.Method(row: "a")`) wins over a method-level entry, so one entry can
   cover every row and individual rows can still differ.
 - **`Crucible.Gate` (NUnit, MSTest, others):** there is no ambient test identity, so `Gate` gains an optional `id`
-  parameter. Without it, the file doesn't apply to that test, and a baseline run prints a one-line notice that the
+  parameter. Without it, neither file applies to that test, and a baseline run prints a one-line notice that the
   test was measured but not saved.
 
 **Decision needed (D5): theory rows.** Recommendation as above: method-level entries apply to all rows, and row-level
@@ -289,16 +353,21 @@ From lowest to highest:
 2. `testDefaults` in the config file.
 3. `crucible.describe` / `[Crucible]` on a class or assembly.
 4. The test's own options.
-5. **The test's entry in `crucible.tests.json`.**
-6. **`CRUCIBLE_MODE` and `CRUCIBLE_MEASURE_RUNS`.**
+5. **The test's entry in the baseline file.**
+6. **The test's entry in the overrides file.**
+7. **`CRUCIBLE_MODE` and `CRUCIBLE_MEASURE_RUNS`.**
 
-Because the file overrides the code, a reader of the test can see `threshold: 0.9` while 0.6 applies. To keep that
+The overrides file beats the baseline file, so a deliberate human decision always wins over a measured one. The code
+is the author's intent, the baseline is what was measured, and the overrides are a decision about both.
+
+Because the files override the code, a reader of the test can see `threshold: 0.9` while 0.6 applies. To keep that
 visible, every report that shows a threshold names where it came from when it isn't the code:
-`threshold 0.6 (crucible.tests.json)`. The `debug` trace prints the resolved settings with their sources.
+`threshold 0.6 (crucible.baseline.json)` or `threshold 0.8 (crucible.tests.yml)`. The `debug` trace prints the
+resolved settings with their sources.
 
 ### 5.4 Baseline runs
 
-Two more `CRUCIBLE_MODE` values. Both measure exactly as in phase 1, then write to the file:
+Two more `CRUCIBLE_MODE` values. Both measure exactly as in phase 1, then write to the baseline file:
 
 | Mode | Writes `threshold` when the suggestion is... | Use it for |
 | --- | --- | --- |
@@ -308,13 +377,18 @@ Two more `CRUCIBLE_MODE` values. Both measure exactly as in phase 1, then write 
 - A `baseline` run that suggests a **lower** threshold leaves the entry alone and says so: `kept threshold 0.7;
   this measurement suggests 0.6. Use CRUCIBLE_MODE=rebaseline to lower it.` A lower suggestion is either noise or a
   real regression, and the ratchet must not quietly accept a regression.
-- Every write replaces the entry's `baseline` block with the new measurement.
+- Every run updates the entry's measurement, whether or not the threshold changed: the old `measured` block moves to
+  `previous`, and the new measurement replaces it.
+- The report compares the two: `Previous: 46 of 50 (2026-10-02). Now: 44 of 50.` When the two ranges don't overlap it
+  adds `The change is larger than run-to-run noise.` This is the between-measurements variability from 4.5.
+- When the overrides file sets this test's threshold, the baseline is still written, and the report notes that
+  `crucible.tests.yml` overrides it.
 - Only tests that ran are touched. A path- or name-filtered run updates only those entries; every other entry is kept
   byte-for-byte.
 - A test with no qualifying gate (4.4) gets no `threshold` written; the run reports it.
 - `measure: true` entries are never given a threshold; they stay informational.
 
-**Stale judge warning.** On a normal gating run, if a test's `baseline` was measured with a different judge (provider
+**Stale judge warning.** On a normal gating run, if a test's baseline was measured with a different judge (provider
 and model, or schema hashes) than the current one, the report adds:
 `Baseline measured with openrouter "deepseek/...", schemas coherent 1111aaaa; the judge has changed since. Re-run CRUCIBLE_MODE=rebaseline.`
 The judge stamp work already gives both values.
@@ -326,7 +400,9 @@ that always overwrites; simpler, but it turns "don't get worse" into "accept wha
 
 Jest and Vitest run test files in parallel worker processes, so several workers may update the file at once.
 
-- Each write takes an exclusive lock file (`crucible.tests.json.lock`, created with exclusive-create, retried with
+Only the baseline file is ever written.
+
+- Each write takes an exclusive lock file (`crucible.baseline.json.lock`, created with exclusive-create, retried with
   backoff for up to 10 seconds, removed in a `finally`). Under the lock: re-read the file, apply this test's change,
   write a temporary file in the same directory, rename it over the original. Renaming within a directory is atomic on
   POSIX and on Windows (`File.Replace` / `fs.rename`).
@@ -334,11 +410,11 @@ Jest and Vitest run test files in parallel worker processes, so several workers 
 - A file that fails to parse is never overwritten: the baseline run fails as a `config` error naming the file.
 
 This changes one documented promise: "crucible never writes files at any level" becomes "crucible writes only
-`crucible.tests.json`, and only in `baseline` and `rebaseline` mode".
+`crucible.baseline.json`, and only in `baseline` and `rebaseline` mode".
 
 ### 5.6 Stale entries
 
-When a test is renamed or deleted, its entry stays. In this version Crucible doesn't detect that: a filtered run can't
+When a test is renamed or deleted, its entries stay in both files. In this version Crucible doesn't detect that: a filtered run can't
 tell a deleted test from one it skipped, and there is no suite-end hook that sees every test. Entries are listed with
 the test name, so they are easy to delete by hand.
 
@@ -347,16 +423,17 @@ detect renamed tests inside a file that still exists.
 
 ### 5.7 What changes where
 
-- **Spec:** the file's JSON Schema, which is shared and ships in `schemas/`. New operations:
-  - `settings/file`: parse and validate an entry.
+- **Spec:** JSON Schemas for both files, shared and shipped in `schemas/` (the overrides schema also gives YAML
+  editors completion through `# yaml-language-server: $schema=...`). New operations:
+  - `settings/file`: validate an overrides or baseline entry.
   - `settings/resolve`: precedence across all levels, with sources.
   - `baseline/apply`: the current entry plus a measurement and a mode, giving the new entry (the ratchet rules).
-  - `report/render` cases for the provenance suffix and the stale-judge warning.
+  - `report/render` cases for the provenance suffix, the stale-judge warning and the previous-measurement line.
   - Key derivation is per runner and tested in each port, not in the spec.
 - **Ports:** file reading and resolution, locked atomic writes, the `Gate` `id` parameter (C#), and key derivation
-  per runner.
+  per runner. TypeScript adds the `yaml` dependency for the overrides file.
 - **Docs:** a "Baselines" page; the precedence table in `runs-and-threshold.md`; `configuration.md` for
-  `CRUCIBLE_TESTS`; the gotchas page on file-over-code precedence.
+  `CRUCIBLE_TESTS` and `CRUCIBLE_BASELINE`; the gotchas page on file-over-code precedence.
 
 ## 6. Decisions needed
 
@@ -364,15 +441,13 @@ detect renamed tests inside a file that still exists.
 | --- | --- | --- |
 | D1 | Default measurement runs when `CRUCIBLE_MEASURE_RUNS` is unset | the test's own `runs`; suggest 50 in the output |
 | D2 | Errored runs in measure mode | excluded from the rate and shown; red only when no run settled |
-| D3 | Planning rate for suggestions | one-sided 80% lower bound |
-| D4 | Settings file format | plain JSON, written with sorted keys |
+| D3 | Planning rate for suggestions | one-sided 80% lower bound; variability shown per assertion and between measurements, not as a running rate |
+| D4 | Settings file format | **decided:** overrides in `crucible.tests.yml` (TypeScript) or `crucible.tests.json` (C#), never written by Crucible; measured values in `crucible.baseline.json` |
 | D5 | Theory rows | method-level entries; row-level entries win; baseline writes the lowest row suggestion |
 | D6 | Baseline ratchet | `baseline` only raises; `rebaseline` overwrites |
 
 Also open, lower stakes:
 
-- The file name: `crucible.tests.json` or `crucible.baseline.json`. It holds hand-written overrides too, so I lean
-  towards the first.
 - A machine-readable results file (`CRUCIBLE_RESULTS=results.jsonl`, one line per test) for CI dashboards. It's
   useful but independent of both phases; I'd leave it until someone asks.
 
@@ -399,6 +474,18 @@ Jest and xUnit lack without extra user setup.
 
 Rejected: Jest and Vitest reject flags they don't know. Environment variables work the same in every runner and in
 CI, and match `CRUCIBLE_VERBOSE`.
+
+### 7.4 A running pass rate (at 5, 10, 15 runs)
+
+Rejected. Runs are independent and execute concurrently, so their order carries no information: a running rate only
+shows sampling noise settling, and shuffling the same results gives a different curve with the same conclusion. The
+likely range states the same uncertainty directly.
+
+### 7.5 One settings file that Crucible rewrites
+
+The first draft of this design. Rejected: hand edits and measured values would share one file, so comments couldn't
+survive a rewrite in C#, and a baseline run could clobber a deliberate override. Splitting the files removes both
+problems.
 
 ## 8. Rollout
 
