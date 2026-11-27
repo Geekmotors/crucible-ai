@@ -48,6 +48,14 @@ writes `crucible.config.jsonc` in the current directory:
 
 - The recommended model needs no extra request fields, so there is no
   [`meta`](#meta) line; add one for any parameter your provider accepts.
+- `init --provider <name>` (or `--provider=<name>`) picks another provider:
+  `openrouter` (the default, shown above), `openai` or `openai-compatible`.
+  For `openai` it writes `"model": ""`, and for `openai-compatible` also
+  `"baseUrl": ""`, because no model on those has been checked against
+  Crucible's conformance cases yet ([judge models](judge-models.md)). Fill
+  them in before your first test; until then loading the config is a
+  `config` error. Any other provider name prints usage and exits with
+  code 2, writing nothing.
 - Uncomment a line to change that setting; a commented line changes nothing.
   Uncomment `"testDefaults": {`, the fields you want and the closing `},`
   together.

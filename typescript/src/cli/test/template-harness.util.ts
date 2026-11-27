@@ -30,6 +30,34 @@ class TemplateHarness {
     );
   }
 
+  static generatedFor(provider: string): string {
+    const template = ConfigTemplate.forProvider(provider);
+    if (template === undefined) {
+      throw new Error(`no template for ${provider}`);
+    }
+    return template.render();
+  }
+
+  static filledIn(raw: string, field: string, value: string): string {
+    return raw.replace(`"${field}": ""`, `"${field}": "${value}"`);
+  }
+
+  static openAiStore(raw: string): ConfigStore {
+    return ConfigHarness.builtInJsoncStore(
+      raw,
+      FakeFetchBoundary.serving(EndpointUrl.OpenAi, ApiKey.Valid, TemplateHarness.reply),
+      new FakeEnvironment({ [KeyEnv.Default]: ApiKey.Valid }),
+    );
+  }
+
+  static localServerStore(raw: string): ConfigStore {
+    return ConfigHarness.builtInJsoncStore(
+      raw,
+      FakeFetchBoundary.servingWithoutCredentials(EndpointUrl.Local, TemplateHarness.reply),
+      new FakeEnvironment({}),
+    );
+  }
+
   static builtInsForRecommendedJudge(): Record<string, unknown> {
     return ConfigHarness.resolvedSettings(
       ConfigHarness.builtInStore({

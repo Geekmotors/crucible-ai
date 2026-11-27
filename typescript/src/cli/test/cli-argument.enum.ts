@@ -4,6 +4,8 @@ enum CliArgument {
   ShortHelp = '-h',
   HelpWord = 'help',
   Unknown = 'frobnicate',
+  Provider = '--provider',
+  UnknownFlag = '--frobnicate',
 }
 
 export { CliArgument };
