@@ -1,7 +1,6 @@
 # Measure mode and test baselines: design
 
-Status: **draft for review**. Nothing here is built yet. Decisions marked **Decision needed** have a recommendation and
-are open until reviewed.
+Status: **reviewed; decisions D1–D6 agreed (2026-11-27)**. Nothing here is built yet.
 
 ## 1. Problem
 
@@ -100,7 +99,7 @@ A measurement wants many runs; a gate wants few. So measure mode has its own run
   `CRUCIBLE_MEASURE_RUNS=50` doesn't trip a timeout sized for 10 runs.
 - Cost scales with the measurement runs. The docs will say so next to the variable.
 
-**Decision needed (D1): the default when `CRUCIBLE_MEASURE_RUNS` is unset.** Recommendation: the test's own `runs`,
+**Decision (D1): the default when `CRUCIBLE_MEASURE_RUNS` is unset.** Agreed: the test's own `runs`,
 so measure mode never spends more than a normal run unless asked. The output then shows a wide range, and the
 suggestion line says to measure with more runs (4.6). The alternative, a fixed default such as 50, gives useful numbers
 immediately but makes the first `CRUCIBLE_MODE=measure` run cost 5× a normal one without warning.
@@ -117,7 +116,7 @@ outcome, **measured**, instead of the three verdict zones:
 - Unchanged: a fatal provider error, a `config` or `usage` error, and the test deadline still stop the test and fail it
   as today. A measurement run with a broken judge must never look like a score.
 
-**Decision needed (D2): errored runs.** Recommendation as above: excluded from the rate and shown, red only when no run
+**Decision (D2): errored runs.** Agreed: excluded from the rate and shown, red only when no run
 settled. The stricter alternative is red when any run errored; that is simpler to explain but throws away a 50-run
 measurement over one provider blip, after retries.
 
@@ -148,7 +147,7 @@ The 5% is a constant, not a setting, in this version. One test with a 5% false-r
 such tests is red on about 64% of builds with nothing wrong, so the docs will say to keep the number of gated
 inference tests small or to raise their runs.
 
-**Decision needed (D3): the planning rate `p`.** This is the main judgement call. The table shows the suggestion for
+**Decision (D3): the planning rate `p`.** Agreed: the one-sided 80% lower bound (reasoning below). The table shows the suggestion for
 each choice, and how often the suggested gate then catches a 10-point drop in the true rate:
 
 | Measured | Planning rate | Gate at 10 runs | Gate at 20 runs | Gate at 50 runs |
@@ -165,7 +164,7 @@ each choice, and how often the suggested gate then catches a 10-point drop in th
 - The **point estimate** gives the most useful gates, but if the measurement was lucky, the real false-red rate is
   above 5%.
 - The **95% lower bound** almost never fails an unchanged system, but its gates catch almost nothing.
-- Recommendation: the **one-sided 80% lower bound** (`P(X ≥ x | n, p) = 0.20`). It still protects against a somewhat
+- Chosen: the **one-sided 80% lower bound** (`P(X ≥ x | n, p) = 0.20`). It still protects against a somewhat
   lucky measurement and keeps gates that catch something.
 
 The table's main lesson holds whatever rule is chosen: **at 10 gate runs, no threshold both avoids false reds and
@@ -341,7 +340,7 @@ An entry's key must name the same test across runs and machines.
   parameter. Without it, neither file applies to that test, and a baseline run prints a one-line notice that the
   test was measured but not saved.
 
-**Decision needed (D5): theory rows.** Recommendation as above: method-level entries apply to all rows, and row-level
+**Decision (D5): theory rows.** Agreed: method-level entries apply to all rows, and row-level
 entries win. Baseline runs write method-level entries from the lowest suggestion across the rows, so one weak row
 doesn't get hidden by an average.
 
@@ -393,7 +392,7 @@ and model, or schema hashes) than the current one, the report adds:
 `Baseline measured with openrouter "deepseek/...", schemas coherent 1111aaaa; the judge has changed since. Re-run CRUCIBLE_MODE=rebaseline.`
 The judge stamp work already gives both values.
 
-**Decision needed (D6): raise-only by default.** Recommendation as above. The alternative is a single `baseline` mode
+**Decision (D6): raise-only by default.** Agreed. The alternative is a single `baseline` mode
 that always overwrites; simpler, but it turns "don't get worse" into "accept whatever the last measurement said".
 
 ### 5.5 Writing safely
@@ -435,14 +434,14 @@ detect renamed tests inside a file that still exists.
 - **Docs:** a "Baselines" page; the precedence table in `runs-and-threshold.md`; `configuration.md` for
   `CRUCIBLE_TESTS` and `CRUCIBLE_BASELINE`; the gotchas page on file-over-code precedence.
 
-## 6. Decisions needed
+## 6. Decisions
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 | --- | --- | --- |
 | D1 | Default measurement runs when `CRUCIBLE_MEASURE_RUNS` is unset | the test's own `runs`; suggest 50 in the output |
 | D2 | Errored runs in measure mode | excluded from the rate and shown; red only when no run settled |
 | D3 | Planning rate for suggestions | one-sided 80% lower bound; variability shown per assertion and between measurements, not as a running rate |
-| D4 | Settings file format | **decided:** overrides in `crucible.tests.yml` (TypeScript) or `crucible.tests.json` (C#), never written by Crucible; measured values in `crucible.baseline.json` |
+| D4 | Settings file format | overrides in `crucible.tests.yml` (TypeScript) or `crucible.tests.json` (C#), never written by Crucible; measured values in `crucible.baseline.json` |
 | D5 | Theory rows | method-level entries; row-level entries win; baseline writes the lowest row suggestion |
 | D6 | Baseline ratchet | `baseline` only raises; `rebaseline` overwrites |
 
