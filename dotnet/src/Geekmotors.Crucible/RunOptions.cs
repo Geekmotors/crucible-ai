@@ -24,4 +24,11 @@ public sealed record RunOptions
 
     /// <summary>Whether extract calls use the strict mode unless the call says otherwise. Built-in: false.</summary>
     public bool? Strict { get; init; }
+
+    /// <summary>
+    /// Whether the test is measured instead of gated: it never fails on its pass rate and reports the rate, its likely range
+    /// and a suggested gate. <c>CRUCIBLE_MODE=measure</c> measures every test; <c>CRUCIBLE_MEASURE_RUNS</c> sets the runs a
+    /// measured test executes. Built-in: false.
+    /// </summary>
+    public bool? Measure { get; init; }
 }

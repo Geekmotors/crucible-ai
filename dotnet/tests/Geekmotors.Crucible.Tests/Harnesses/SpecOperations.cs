@@ -5,6 +5,8 @@ internal static class SpecOperations
     public const string RunOptionsResolve = "run-options/resolve";
     public const string RunOptionsValidate = "run-options/validate";
     public const string VerdictCompute = "verdict/compute";
+    public const string VerdictMeasure = "verdict/measure";
+    public const string VerdictByAssertion = "verdict/by-assertion";
     public const string JsoncParse = "jsonc/parse";
     public const string ConfigLoad = "config/load";
     public const string ProviderRequest = "provider/request";
@@ -54,6 +56,8 @@ internal static class SpecOperations
             [RunOptionsResolve] = SpecOperation.Value(RunOptionsFixtureHarness.Resolve),
             [RunOptionsValidate] = SpecOperation.Value(RunOptionsFixtureHarness.Validate),
             [VerdictCompute] = SpecOperation.Value(VerdictFixtureHarness.Compute),
+            [VerdictMeasure] = SpecOperation.Value(MeasureFixtureHarness.Measure),
+            [VerdictByAssertion] = SpecOperation.Value(MeasureFixtureHarness.ByAssertion),
             [JsoncParse] = SpecOperation.Value(JsoncFixtureHarness.Parse),
             [ConfigLoad] = SpecOperation.Value(ConfigFixtureHarness.Load),
             [ProviderRequest] = SpecOperation.Value(ProviderFixtureHarness.RequestAsync),

@@ -10,6 +10,11 @@ namespace CrucibleAI.Config;
 internal sealed class ConfigLoader(ConfigFileLocator files, IEnvironment environment)
 {
     public const string VerbosityVariable = "CRUCIBLE_VERBOSE";
+    public const string ModeVariable = "CRUCIBLE_MODE";
+    public const string MeasureRunsVariable = "CRUCIBLE_MEASURE_RUNS";
+
+    private const string MeasureMode = "measure";
+    private const int MaxMeasureRuns = 1000;
 
     private const string JsonFileName = "crucible.config.json";
     private const string JsoncFileName = "crucible.config.jsonc";
@@ -77,7 +82,8 @@ internal sealed class ConfigLoader(ConfigFileLocator files, IEnvironment environ
         var model = RequireName(root, ModelField);
         var meta = OptionalMeta(root);
         var run = Run(root);
-        return new JudgeConfig(provider, model, meta, run.Verbosity, run.TestDefaults, run.TestDefaultsNode, run.ExcerptChars, baseUrl, apiKeyEnv);
+        return new JudgeConfig(
+            provider, model, meta, run.Verbosity, run.TestDefaults, run.TestDefaultsNode, run.ExcerptChars, baseUrl, apiKeyEnv, run.Invocation);
     }
 
     public RunSettings LoadRunSettings(IWarningSink warnings)
@@ -102,7 +108,31 @@ internal sealed class ConfigLoader(ConfigFileLocator files, IEnvironment environ
             ? _runOptions.Read(defaults, RunOptionsSource.Config)
             : new RunOptions();
         var testDefaultsNode = defaults as JsonObject ?? [];
-        return new RunSettings(verbosity, testDefaults, testDefaultsNode, ExcerptChars(root));
+        var excerptChars = ExcerptChars(root);
+        return new RunSettings(verbosity, testDefaults, testDefaultsNode, excerptChars, ReadInvocation());
+    }
+
+    private Invocation ReadInvocation()
+    {
+        var mode = environment.Get(ModeVariable);
+        var measure = !string.IsNullOrEmpty(mode);
+        if (measure && !string.Equals(mode, MeasureMode, StringComparison.Ordinal))
+        {
+            throw CrucibleException.Usage($"Invalid {ModeVariable}. Set it to \"{MeasureMode}\" or leave it empty.");
+        }
+        var runs = environment.Get(MeasureRunsVariable);
+        return new Invocation(measure, string.IsNullOrEmpty(runs) ? null : MeasureRuns(runs));
+    }
+
+    private static int MeasureRuns(string text)
+    {
+        var digitsOnly = text.Length is >= 1 and <= 4 && text[0] != '0' && text.All(character => character is >= '0' and <= '9');
+        if (digitsOnly && int.Parse(text, System.Globalization.CultureInfo.InvariantCulture) is var runs and <= MaxMeasureRuns)
+        {
+            return runs;
+        }
+        throw CrucibleException.Usage(
+            $"Invalid {MeasureRunsVariable}. Set it to a whole number from 1 to {MaxMeasureRuns.ToString(System.Globalization.CultureInfo.InvariantCulture)}.");
     }
 
     private string? ReadFile()

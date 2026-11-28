@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.ExceptionServices;
 using CrucibleAI.Options;
+using CrucibleAI.Reports;
 using CrucibleAI.Runs;
 using CrucibleAI.Tracing;
 using CrucibleAI.Verdicts;
@@ -14,6 +15,7 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
     private readonly RunOptionsResolver _resolver = new();
     private readonly RunClassifier _classifier = new();
     private readonly VerdictCalculator _calculator = new();
+    private readonly Measurer _measurer = new();
     private readonly RunScope _scope = new();
 
     private const string NoTask = "A Crucible test body must return a Task, not null.";
@@ -25,17 +27,17 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
             throw CrucibleException.Usage("Crucible.Gate needs a test body.");
         }
         var declared = _validator.Validate(options, RunOptionsSource.Test);
-        return RunAsync(new GateRequest([], declared, _ => Task.FromResult(RunBody.Of(body)), false, cancellationToken));
+        return RunAsync(new GateRequest([], declared, _ => Task.FromResult(RunBody.Of(body)), false, Cancellation: cancellationToken));
     }
 
     public async Task RunAsync(GateRequest request)
     {
         request.Cancellation.ThrowIfCancellationRequested();
         var session = _session.Value;
-        var options = _resolver.Resolve([session.TestDefaults, .. request.Groups, request.Declared]);
-        session.Trace.Write(new TestStartedEvent(options.Runs, options.Threshold, options.TestTimeout));
+        var options = _resolver.Resolve([session.TestDefaults, .. request.Groups, request.Declared], session.Invocation);
+        session.Trace.Write(new TestStartedEvent(options.ExecutedRuns, options.Threshold, options.TestTimeout));
         var halt = new CancellationTokenSource();
-        var runs = Enumerable.Range(1, options.Runs).Select(number => new RunState(number, options, session, halt.Token)).ToArray();
+        var runs = Enumerable.Range(1, options.ExecutedRuns).Select(number => new RunState(number, options, session, halt.Token)).ToArray();
         var batch = new RunBatch(runs, session.Trace);
         BatchEnd end;
         using (time.CreateTimer(_ => batch.Expire(options.TestTimeout), null, TimeSpan.FromMilliseconds(options.TestTimeout), Timeout.InfiniteTimeSpan))
@@ -52,7 +54,7 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
             run.Close();
         }
         await halt.CancelAsync().ConfigureAwait(false);
-        Conclude(end, options, session);
+        Conclude(end, options, session, request.Name);
     }
 
     private void Start(GateRequest request, RunState[] runs, RunBatch batch)
@@ -117,13 +119,13 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
         }
     }
 
-    private void Conclude(BatchEnd end, ResolvedRunOptions options, EngineSession session)
+    private void Conclude(BatchEnd end, ResolvedRunOptions options, EngineSession session, string? name)
     {
         if (end.Rethrow is { } rethrow)
         {
             ExceptionDispatchInfo.Capture(rethrow).Throw();
         }
-        var record = new TestRecord(options.Runs, options.Threshold, end.Ending, end.Runs.Select(run => run.Result).ToArray());
+        var record = new TestRecord(options.ExecutedRuns, options.Threshold, end.Ending, end.Runs.Select(run => run.Result).ToArray());
         switch (end.Ending)
         {
             case ExpiredEnding expired:
@@ -134,6 +136,11 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
                         string.Create(CultureInfo.InvariantCulture, $"The test did not finish within {expired.DeadlineMs} ms."), true));
             case AbortedEnding:
                 throw new CrucibleVerdictException(VerdictOutcome.Errored, session.Reports.Render(record), end.Cause);
+        }
+        if (options.Measure)
+        {
+            Measure(end, options, session, record, name);
+            return;
         }
         var verdict = _calculator.Compute(options.Threshold, record.Results.Select(result => result.Status).ToArray());
         session.Trace.Write(new VerdictReachedEvent(verdict, options.Runs));
@@ -147,5 +154,17 @@ internal sealed class GateEngine(Func<EngineSession> session, TimeProvider time)
             : (VerdictOutcome.Errored, RunStatus.Errored);
         throw new CrucibleVerdictException(
             outcome, session.Reports.Render(record), end.Runs.FirstOrDefault(run => run.Result.Status == status)?.Thrown);
+    }
+
+    private void Measure(BatchEnd end, ResolvedRunOptions options, EngineSession session, TestRecord record, string? name)
+    {
+        var measurement = _measurer.Measure(record.Results.Select(result => result.Status).ToArray(), options.Threshold, options.Runs);
+        var report = session.Reports.RenderMeasured(record, measurement, new MeasuredTest(options.Runs, name));
+        if (measurement.NothingSettled)
+        {
+            throw new CrucibleVerdictException(
+                VerdictOutcome.Errored, report, end.Runs.FirstOrDefault(run => run.Result.Status == RunStatus.Errored)?.Thrown);
+        }
+        session.WriteReport(() => report);
     }
 }

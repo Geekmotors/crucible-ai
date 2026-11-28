@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrucibleAI.Assertions;
 using CrucibleAI.Config;
 using CrucibleAI.Judging;
+using CrucibleAI.Options;
 using CrucibleAI.Providers;
 using CrucibleAI.Reports;
 using CrucibleAI.Tracing;
@@ -40,6 +41,7 @@ internal sealed class EngineSession
         _output = output;
         _verbosity = settings.Verbosity;
         TestDefaults = settings.TestDefaults;
+        Invocation = settings.Invocation;
         Coherent = new CoherentAssertion(exchange);
         Extract = new ExtractAssertion(exchange);
         Reports = new ReportRenderer(new ReportSettings(settings.ExcerptChars, settings.Verbosity, stamp));
@@ -49,6 +51,8 @@ internal sealed class EngineSession
     }
 
     public RunOptions TestDefaults { get; }
+
+    public Invocation Invocation { get; }
 
     public CoherentAssertion Coherent { get; }
 
@@ -64,6 +68,11 @@ internal sealed class EngineSession
         {
             return;
         }
+        WriteReport(report);
+    }
+
+    public void WriteReport(Func<string> report)
+    {
         try
         {
             _output.Write(report() + "\n");

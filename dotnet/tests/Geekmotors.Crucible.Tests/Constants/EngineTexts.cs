@@ -17,6 +17,12 @@ internal static class EngineTexts
     public const string Claim = "The reply names a time";
     public const string Target = "the facts the judge received";
     public const string PassedHeadline = "PASSED:";
+    public const string MeasuredHeadline = "MEASURED: ";
+    public const string ModeVariable = "CRUCIBLE_MODE";
+    public const string MeasureRunsVariable = "CRUCIBLE_MEASURE_RUNS";
+    public const string Measure = "measure";
+    public const string TwentyRuns = "20";
+    public const string MeasuredTestName = "Story.Narrator.KeepsTheMeetingPlaceSecret";
     public const string ExpiredMarker = "deadline";
     public const string AbortedMarker = "aborted on a fatal error";
     public const string ProviderRetryLine = "provider attempt 1 failed (retryable, retrying in 0 ms)";

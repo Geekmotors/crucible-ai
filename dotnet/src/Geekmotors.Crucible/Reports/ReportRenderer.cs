@@ -23,6 +23,8 @@ internal sealed class ReportRenderer(ReportSettings settings)
 
     private readonly ReportFields _fields = new(settings.ExcerptChars);
     private readonly VerdictCalculator _calculator = new();
+    private readonly Measurer _measurer = new();
+    private readonly MeasuredReport _measured = new();
 
     private bool IsFull => settings.Verbosity != Verbosity.Default;
 
@@ -31,6 +33,25 @@ internal sealed class ReportRenderer(ReportSettings settings)
         var headline = Headline(test);
         var top = IsSmoke(test.Runs) ? headline : headline + "\n" + CountsLine(test.Results);
         var sections = Sections(test).Prepend(top);
+        if (settings.Stamp is { } stamp)
+        {
+            sections = sections.Append(new StampSection(stamp, _fields).Render(test.Results));
+        }
+        return string.Join("\n\n", sections);
+    }
+
+    public string RenderMeasured(TestRecord test, Measurement measurement, MeasuredTest measured)
+    {
+        if (test.Ending is not VerdictEnding)
+        {
+            return Render(test);
+        }
+        IEnumerable<string> sections =
+        [
+            _measured.Headline(measurement, test.Threshold, measured, CountsLine(test.Results)),
+            .. measurement.NothingSettled ? [] : _measured.Breakdown(_measurer.ByAssertion(test.Results)),
+            .. Sections(test),
+        ];
         if (settings.Stamp is { } stamp)
         {
             sections = sections.Append(new StampSection(stamp, _fields).Render(test.Results));

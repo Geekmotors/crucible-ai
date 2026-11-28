@@ -13,12 +13,21 @@ internal sealed class EngineHarness
     private static readonly CompositeFormat RunFact = CompositeFormat.Parse(EngineTexts.FactFormat);
     private static readonly CompositeFormat GateFact = CompositeFormat.Parse(EngineTexts.GateFactFormat);
 
-    public EngineHarness(IJudgeClient? client = null, string config = EngineTexts.Config, string? verbosity = null, ITraceOutput? output = null)
+    public EngineHarness(
+        IJudgeClient? client = null,
+        string config = EngineTexts.Config,
+        string? verbosity = null,
+        ITraceOutput? output = null,
+        IReadOnlyDictionary<string, string>? invocation = null)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal) { [JudgeSettings.KeyVariable] = JudgeSettings.Key };
         if (verbosity is not null)
         {
             variables[EngineTexts.VerbosityVariable] = verbosity;
+        }
+        foreach (var (name, value) in invocation ?? new Dictionary<string, string>())
+        {
+            variables[name] = value;
         }
         var environment = new FakeEnvironment(variables);
         var judge = client ?? new PromptJudgeClient();
