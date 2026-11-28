@@ -1,4 +1,5 @@
 import type { RunGate } from './run-options.js';
+import type { Measurement } from './measurement.js';
 import type { RunLedger } from './state.js';
 
 type RunStatus = 'passed' | 'failed' | 'errored' | 'discarded';
@@ -35,10 +36,17 @@ type ExpirySummary = AbortSummary & {
   readonly deadlineMs: number;
 };
 
+type MeasuredSummary = AbortSummary & {
+  readonly measurement: Measurement;
+  readonly gateRuns: number;
+  readonly name?: string;
+};
+
 export type {
   AbortSummary,
   ExpirySummary,
   FatalSummary,
+  MeasuredSummary,
   RunResult,
   RunStatus,
   RunTally,

@@ -1,4 +1,6 @@
 import type { JudgeStamp, JudgeStampSupplier } from './judge-stamp.js';
+import { MeasuredReport } from './measured-report.util.js';
+import { Measurer } from './measurer.util.js';
 import { StampFormatter } from './stamp-formatter.util.js';
 import { TextFormat } from './text-format.util.js';
 import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
@@ -7,6 +9,7 @@ import type {
   AbortSummary,
   ExpirySummary,
   FatalSummary,
+  MeasuredSummary,
   RunResult,
   RunStatus,
   RunTally,
@@ -65,6 +68,8 @@ class Reporter {
 
   private readonly text = new TextFormat();
   private readonly stampText = new StampFormatter();
+  private readonly measured = new MeasuredReport();
+  private readonly measurer = new Measurer();
 
   constructor(
     private readonly settings: ReportSettingsSupplier = Reporter.defaultSettings,
@@ -77,6 +82,33 @@ class Reporter {
 
   renderVerdict(summary: VerdictSummary): string {
     return this.compose(this.verdictHeadline(summary), summary);
+  }
+
+  renderMeasured({ results, options, measurement, gateRuns, name }: MeasuredSummary): string {
+    const headline = this.measured.headline({
+      measurement,
+      threshold: options.threshold,
+      gateRuns,
+      name,
+      countsLine: this.countsLine(results),
+    });
+    const breakdown =
+      measurement.outcome === 'measured'
+        ? this.measured.breakdown(
+            this.measurer.byAssertion(
+              results.map(({ status, context }) => ({
+                status,
+                verdicts: [...context.verdicts].sort((left, right) => left.seq - right.seq),
+              })),
+            ),
+          )
+        : [];
+    return [
+      headline,
+      ...breakdown,
+      ...this.runSections(results, undefined),
+      ...this.stampSection(results),
+    ].join('\n\n');
   }
 
   renderAborted(summary: FatalSummary): string {

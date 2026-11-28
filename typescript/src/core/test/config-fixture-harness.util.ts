@@ -17,7 +17,6 @@ type LoadInput = {
 };
 
 class ConfigFixtureHarness {
-  private static VERBOSITY_VARIABLE = 'CRUCIBLE_VERBOSE';
   private static UNREADABLE = 'unreadable';
 
   static load(input: unknown, concealed: string[]): Promise<ObservedOutcome> {
@@ -31,6 +30,7 @@ class ConfigFixtureHarness {
         verbosity: config.effectiveVerbosity,
         testDefaults: config.testDefaults,
         excerptChars: config.excerptChars,
+        ...config.invocation,
       };
     }, concealed);
   }
@@ -43,10 +43,7 @@ class ConfigFixtureHarness {
   ): ConfigStore {
     const environment = new FakeEnvironment(env);
     return new ConfigStore(
-      new FakeConfigBoundary(
-        ConfigFixtureHarness.reads(files),
-        environment.read(ConfigFixtureHarness.VERBOSITY_VARIABLE),
-      ),
+      new FakeConfigBoundary(ConfigFixtureHarness.reads(files), environment),
       ProviderRegistry.builtIn(fetchLike, environment.read, warnings.write),
     );
   }

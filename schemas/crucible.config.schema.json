@@ -86,6 +86,11 @@
           "description": "Extraction strictness for assertions that support it (today crucible.extract). false (lenient) takes the value a reply leans to (\"I think so\" → true, \"probably two\" → 2); true treats any hedge as no value (null). crucible.describe, crucible.it and the call's own options override it.",
           "type": "boolean",
           "default": false
+        },
+        "measure": {
+          "description": "Measure tests instead of gating them: each test runs, never fails on its pass rate, and prints its pass rate, likely range and a suggested gate. CRUCIBLE_MODE=measure does the same for one invocation; CRUCIBLE_MEASURE_RUNS sets how many runs a measured test executes. crucible.describe and crucible.it options override it.",
+          "type": "boolean",
+          "default": false
         }
       }
     }

@@ -46,7 +46,14 @@ class JestBinding {
       },
       testArguments: JestBinding.testArguments,
       groupArguments: JestBinding.groupArguments,
+      currentTestName: () => this.currentTestName(),
     };
+  }
+
+  private currentTestName(): string | undefined {
+    const expectation = (this.globals as { expect?: { getState?: () => unknown } }).expect;
+    const state = expectation?.getState?.() as { currentTestName?: unknown } | undefined;
+    return typeof state?.currentTestName === 'string' ? state.currentTestName : undefined;
   }
 
   private global(name: string, subject: string): unknown {

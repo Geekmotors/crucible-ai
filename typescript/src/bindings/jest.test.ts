@@ -17,6 +17,7 @@ import { CrucibleVerdictError } from '../core/verdict-error.js';
 import { CustomTimeout } from '../core/test/custom-timeout.enum.js';
 import { InvalidTimeout } from '../core/test/invalid-timeout.enum.js';
 import { ManualTimer } from '../core/test/manual-timer.fake.js';
+import { JestBinding } from './jest.js';
 import { DescribeRegistrarFake } from './test/describe-registrar.fake.js';
 import { GroupName } from './test/group-name.enum.js';
 import { InvalidOption } from './test/invalid-option.enum.js';
@@ -1024,5 +1025,18 @@ describe('runner lookup', () => {
     const variants = JestBindingHarness.wrapOver({});
     const error = Capture.thrown(() => variants.describe(TestName.Group, () => {}));
     expect((error as CrucibleError).kind).toBe('usage');
+  });
+});
+
+describe('JestBinding — test name', () => {
+  it("reads the running test's full name from Jest's expect state", () => {
+    const binding = new JestBinding({
+      expect: { getState: () => ({ currentTestName: TestName.Inside }) },
+    });
+    expect(binding.spec().currentTestName?.()).toBe(TestName.Inside);
+  });
+
+  it('reads no test name when Jest exposes no expect', () => {
+    expect(new JestBinding({}).spec().currentTestName?.()).toBeUndefined();
   });
 });

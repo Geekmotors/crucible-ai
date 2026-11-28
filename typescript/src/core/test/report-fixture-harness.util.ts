@@ -1,5 +1,6 @@
 import { Aggregator } from '../aggregator.util.js';
 import type { JudgeStamp } from '../judge-stamp.js';
+import { Measurer } from '../measurer.util.js';
 import { Reporter } from '../reporter.util.js';
 import type { ReportSettings } from '../report-settings.js';
 import type { RunGate } from '../run-options.js';
@@ -14,23 +15,34 @@ type Ending =
   | { kind: 'aborted'; fatalRun: number }
   | { kind: 'expired'; deadlineMs: number };
 
+type MeasureSettings = { gateRuns: number; name?: string };
+
 type RenderInput = RunGate & {
   settings: ReportSettings;
   ending: Ending;
   results: NeutralRunRecord[];
   stamp?: JudgeStamp;
+  measure?: MeasureSettings;
 };
 
 class ReportFixtureHarness {
   static render(input: unknown): Promise<ObservedOutcome> {
-    const { settings, runs, threshold, ending, results: records, stamp } = input as RenderInput;
+    const {
+      settings,
+      runs,
+      threshold,
+      ending,
+      results: records,
+      stamp,
+      measure,
+    } = input as RenderInput;
     const reporter = new Reporter(
       () => settings,
       () => stamp,
     );
     const results = records.map((record) => NeutralRun.result(record));
     return FixtureOutcome.rendered(() =>
-      ReportFixtureHarness.rendered(reporter, results, { runs, threshold }, ending),
+      ReportFixtureHarness.rendered(reporter, results, { runs, threshold }, ending, measure),
     );
   }
 
@@ -39,6 +51,7 @@ class ReportFixtureHarness {
     results: RunResult[],
     options: RunGate,
     ending: Ending,
+    measure?: MeasureSettings,
   ): string {
     if (ending.kind === 'aborted') {
       return reporter.renderAborted({
@@ -49,6 +62,15 @@ class ReportFixtureHarness {
     }
     if (ending.kind === 'expired') {
       return reporter.renderExpired({ results, options, deadlineMs: ending.deadlineMs });
+    }
+    const statuses = results.map((result) => result.status);
+    if (measure !== undefined) {
+      return reporter.renderMeasured({
+        results,
+        options,
+        measurement: new Measurer().measure(statuses, options.threshold, measure.gateRuns),
+        ...measure,
+      });
     }
     const tally = new Aggregator().tally(
       results.map((result) => result.status),

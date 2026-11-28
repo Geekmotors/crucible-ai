@@ -7,6 +7,7 @@ type VitestSource = {
   readonly test?: unknown;
   readonly describe?: unknown;
   readonly currentGroup: () => unknown;
+  readonly currentTestName?: () => string | undefined;
 };
 
 class VitestBinding {
@@ -44,6 +45,7 @@ class VitestBinding {
       testArguments: VitestBinding.testArguments,
       groupArguments: VitestBinding.groupArguments,
       groupPath: () => this.groupPath(),
+      currentTestName: () => this.source.currentTestName?.(),
     };
   }
 

@@ -19,6 +19,7 @@ import { VerbosityLevel } from './test/verbosity-level.enum.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 import { Capture } from './test/capture.util.js';
 import { CustomTimeout } from './test/custom-timeout.enum.js';
+import { MeasuredTestName } from './test/measured-test-name.enum.js';
 import { RegistryHarness } from '../providers/test/registry-harness.util.js';
 import { TransportHarness } from '../providers/test/transport-harness.util.js';
 import { TransportReply } from '../providers/test/transport-reply.enum.js';
@@ -456,5 +457,88 @@ describe('Runner — verbosity', () => {
         transport.use(TransportHarness.serving(TransportReply.Chosen)),
       ),
     ).toBe('usage');
+  });
+});
+
+describe('Runner — measure mode', () => {
+  it('passes a measured test below its threshold and writes its report at default verbosity', async () => {
+    const output = await RunnerHarness.measuredOutput(
+      new TraceHarness(VerbosityLevel.Default),
+      [RunnerHarness.pass, RunnerHarness.throwing(new Error('miss'))],
+      { runs: RunCount.Single + 1, threshold: Threshold.Certain, measure: true },
+    );
+    expect(output).toContain(ReportText.Measured);
+  });
+
+  it('measures a test that does not ask to be when CRUCIBLE_MODE is measure', async () => {
+    const output = await RunnerHarness.measuredOutput(
+      new TraceHarness(VerbosityLevel.Default),
+      [RunnerHarness.throwing(new Error('miss'))],
+      { runs: RunCount.Single, threshold: Threshold.Certain },
+      { mode: 'measure' },
+    );
+    expect(output).toContain(ReportText.Measured);
+  });
+
+  it('executes CRUCIBLE_MEASURE_RUNS runs for a measured test', async () => {
+    await expect(
+      RunnerHarness.measuredExecutions(
+        { runs: RunCount.Smaller },
+        { mode: 'measure', measureRuns: RunCount.Gated },
+      ),
+    ).resolves.toBe(RunCount.Gated);
+  });
+
+  it('executes the declared runs for a gated test even with CRUCIBLE_MEASURE_RUNS set', async () => {
+    await expect(
+      RunnerHarness.measuredExecutions({ runs: RunCount.Smaller }, { measureRuns: RunCount.Gated }),
+    ).resolves.toBe(RunCount.Smaller);
+  });
+
+  it('fails a measured test as errored when every run errored', async () => {
+    const error = await Capture.rejection(
+      RunnerHarness.measuredOutput(
+        new TraceHarness(VerbosityLevel.Default),
+        [RunnerHarness.throwing(new CrucibleError('infra', 'outage', { retryable: true }))],
+        { runs: RunCount.Single, measure: true },
+      ),
+    );
+    expect((error as CrucibleVerdictError).outcome).toBe('errored');
+  });
+
+  it('names the test in its measured report', async () => {
+    const output = await RunnerHarness.measuredOutput(
+      new TraceHarness(VerbosityLevel.Default),
+      [RunnerHarness.pass],
+      { runs: RunCount.Single, measure: true },
+      {},
+      MeasuredTestName.Secret,
+    );
+    expect(output).toContain(`${ReportText.Measured}${MeasuredTestName.Secret}: `);
+  });
+
+  it('gives a measured test the longest runner timeout even when it declares a testTimeout', () => {
+    expect(
+      RunnerHarness.measuringRunner(new TraceHarness()).ceilingFor({
+        testTimeout: CustomTimeout.Long,
+        measure: true,
+      }),
+    ).toBe(TimeBudget.TIMER_MAX_MS);
+  });
+
+  it('gives every test the longest runner timeout when CRUCIBLE_MODE is measure', () => {
+    expect(
+      RunnerHarness.measuringRunner(new TraceHarness(), { mode: 'measure' }).ceilingFor({
+        testTimeout: CustomTimeout.Long,
+      }),
+    ).toBe(TimeBudget.TIMER_MAX_MS);
+  });
+
+  it('gives every test the longest runner timeout when testDefaults sets measure', () => {
+    expect(
+      RunnerHarness.measuringRunner(new TraceHarness(), {}, undefined, {
+        measure: true,
+      }).ceilingFor({ testTimeout: CustomTimeout.Long }),
+    ).toBe(TimeBudget.TIMER_MAX_MS);
   });
 });

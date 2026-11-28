@@ -1,5 +1,5 @@
 import { DeclarationForms } from '../declaration-forms.util.js';
-import type { ResolvedRunOptions, RunOptions } from '../run-options.js';
+import type { Invocation, ResolvedRunOptions, RunOptions } from '../run-options.js';
 import { TestModel } from '../../providers/test/test-model.enum.js';
 import { ConfigHarness } from './config-harness.util.js';
 import { DeclarationFormsHarness } from './declaration-forms-harness.util.js';
@@ -16,6 +16,7 @@ type ResolveLayers = {
   groups?: RunOptions[];
   test?: RunOptions;
   call?: { strict?: boolean };
+  invocation?: Invocation;
 };
 
 type ValidationSource = 'test' | 'group' | 'config';
@@ -73,7 +74,7 @@ class RunOptionsFixtureHarness {
   ): ResolvedRunOptions {
     const [outer, ...inner] = groups;
     if (outer === undefined) {
-      return harness.resolve(layers.test, layers.testDefaults);
+      return harness.resolve(layers.test, layers.testDefaults, layers.invocation);
     }
     let resolved: ResolvedRunOptions | undefined;
     harness.within(outer, () => {

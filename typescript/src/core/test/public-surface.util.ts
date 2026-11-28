@@ -42,6 +42,7 @@ class PublicSurface {
     inferenceTimeout: true,
     testTimeout: true,
     strict: true,
+    measure: true,
   };
 
   static coherentOptions: Record<keyof CoherentOptions, true> = { facts: true };

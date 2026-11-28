@@ -2,7 +2,7 @@ import type { ProviderAdapter } from '../../providers/types.js';
 import { CrucibleError } from '../errors.js';
 import { Reporter } from '../reporter.util.js';
 import { Runner } from '../runner.js';
-import type { RunOptions } from '../run-options.js';
+import type { Invocation, RunOptions } from '../run-options.js';
 import { RunScope } from '../state.js';
 import type { VerdictRecord } from '../state.js';
 import { Capture } from './capture.util.js';
@@ -249,6 +249,46 @@ class RunnerHarness {
         throw new Error(`run ${claim} saw records of other runs: ${claims.join(', ')}`);
       }
     };
+  }
+
+  static measuringRunner(
+    traced: TraceHarness,
+    invocation: Invocation = {},
+    testName?: string,
+    defaults: RunOptions = {},
+  ): Runner {
+    return new Runner(
+      traced.scope,
+      ReportHarness.reporter(DEFAULT_REPORT_SETTINGS.excerptChars, traced.verbosity),
+      () => defaults,
+      traced.trace(),
+      new ManualTimer().arm,
+      undefined,
+      () => invocation,
+      () => testName,
+    );
+  }
+
+  static async measuredOutput(
+    traced: TraceHarness,
+    behaviors: RunBehavior[],
+    opts: RunOptions,
+    invocation: Invocation = {},
+    testName?: string,
+  ): Promise<string> {
+    await RunnerHarness.measuringRunner(traced, invocation, testName).execute(
+      RunnerHarness.sequence(behaviors, traced.scope),
+      opts,
+    );
+    return traced.output.text;
+  }
+
+  static async measuredExecutions(opts: RunOptions, invocation: Invocation): Promise<number> {
+    let executed = 0;
+    await RunnerHarness.measuringRunner(new TraceHarness(), invocation).execute(() => {
+      executed += 1;
+    }, opts);
+    return executed;
   }
 
   static async executions(opts: RunOptions, defaults: RunOptions = {}): Promise<number> {

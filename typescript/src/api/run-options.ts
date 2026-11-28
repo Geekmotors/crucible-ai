@@ -45,6 +45,18 @@ type RunOptions = {
    * @default the enclosing crucible.describe, else testDefaults.strict, else false (lenient)
    */
   readonly strict?: ResolvableRunOptions['strict'];
+  /**
+   * Measure this test instead of gating it: every run executes, the test
+   * never fails on its pass rate, and a report with the pass rate, its likely
+   * range and a suggested gate for `runs` prints at every verbosity. The test
+   * still fails if no run settles (every run errored), on a fatal provider
+   * error or at its deadline. `CRUCIBLE_MODE=measure` measures every test in
+   * an invocation without this option; `CRUCIBLE_MEASURE_RUNS` sets how many
+   * runs a measured test executes (default: `runs`).
+   *
+   * @default the enclosing crucible.describe, else testDefaults.measure, else false
+   */
+  readonly measure?: ResolvableRunOptions['measure'];
 };
 
 export type { RunOptions };
