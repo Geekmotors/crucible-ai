@@ -6,7 +6,7 @@ import { FileSystemConfigBoundary } from './file-system-config-boundary.js';
 import { JsoncReader } from './jsonc-reader.util.js';
 import { DEFAULT_REPORT_SETTINGS } from './report-settings.js';
 import { RunOptionsValidator } from './run-options-validator.util.js';
-import type { RunOptions } from './run-options.js';
+import type { Invocation, RunOptions } from './run-options.js';
 import { VERBOSITY_LEVELS } from './verbosity.js';
 import type { Verbosity } from './verbosity.js';
 import { DEFAULT_JUDGE_KEY_ENV } from '../providers/judge-key.js';
@@ -35,9 +35,17 @@ type CrucibleConfig = {
   readonly effectiveVerbosity: Verbosity;
   readonly testDefaults: RunOptions;
   readonly excerptChars: number;
+  readonly invocation: Invocation;
 };
 
 class ConfigStore {
+  private static readonly VERBOSITY_VARIABLE = 'CRUCIBLE_VERBOSE';
+  private static readonly MODE_VARIABLE = 'CRUCIBLE_MODE';
+  private static readonly MEASURE_RUNS_VARIABLE = 'CRUCIBLE_MEASURE_RUNS';
+  private static readonly MEASURE_MODE = 'measure';
+  private static readonly MEASURE_RUNS = /^[1-9][0-9]{0,3}$/;
+  private static readonly MAX_MEASURE_RUNS = 1000;
+
   private cached?: CrucibleConfig;
   private fileName: string = CONFIG_FILE_NAMES[0];
   private readonly validator = new RunOptionsValidator();
@@ -67,7 +75,40 @@ class ConfigStore {
       effectiveVerbosity: this.resolveEffectiveVerbosity(root.verbosity),
       testDefaults: this.requireTestDefaults(root.testDefaults),
       excerptChars: this.requireExcerptChars(root.excerptChars),
+      invocation: this.readInvocation(),
     });
+  }
+
+  private readInvocation(): Invocation {
+    const mode = this.readSet(ConfigStore.MODE_VARIABLE);
+    if (mode !== undefined && mode !== ConfigStore.MEASURE_MODE) {
+      throw new CrucibleError(
+        'usage',
+        `Invalid ${ConfigStore.MODE_VARIABLE} "${mode}". Set it to "${ConfigStore.MEASURE_MODE}" or leave it empty.`,
+      );
+    }
+    const runs = this.readSet(ConfigStore.MEASURE_RUNS_VARIABLE);
+    const measureRuns = runs === undefined ? undefined : this.requireMeasureRuns(runs);
+    return Object.freeze({
+      ...(mode === undefined ? {} : { mode: ConfigStore.MEASURE_MODE }),
+      ...(measureRuns === undefined ? {} : { measureRuns }),
+    });
+  }
+
+  private requireMeasureRuns(value: string): number {
+    const runs = ConfigStore.MEASURE_RUNS.test(value) ? Number(value) : Number.NaN;
+    if (!(runs <= ConfigStore.MAX_MEASURE_RUNS)) {
+      throw new CrucibleError(
+        'usage',
+        `Invalid ${ConfigStore.MEASURE_RUNS_VARIABLE} "${value}". Set it to a whole number from 1 to ${ConfigStore.MAX_MEASURE_RUNS}.`,
+      );
+    }
+    return runs;
+  }
+
+  private readSet(name: string): string | undefined {
+    const value = this.boundary.readVariable(name);
+    return value === '' ? undefined : value;
   }
 
   private readRaw(): string {
@@ -257,9 +298,13 @@ class ConfigStore {
       configured === undefined
         ? 'default'
         : this.requireVerbosity(configured, `"verbosity" in ${this.location()}`, 'config');
-    const override = this.boundary.readVerbosityOverride();
-    if (override !== undefined && override !== '') {
-      return this.requireVerbosity(override, 'the CRUCIBLE_VERBOSE environment variable', 'usage');
+    const override = this.readSet(ConfigStore.VERBOSITY_VARIABLE);
+    if (override !== undefined) {
+      return this.requireVerbosity(
+        override,
+        `the ${ConfigStore.VERBOSITY_VARIABLE} environment variable`,
+        'usage',
+      );
     }
     return fromConfig;
   }

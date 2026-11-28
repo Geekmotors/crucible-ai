@@ -2,7 +2,8 @@ import { Aggregator } from './aggregator.util.js';
 import { CrucibleError } from './errors.js';
 import { Reporter } from './reporter.util.js';
 import { RunOptionsResolver } from './run-options-resolver.util.js';
-import type { ResolvedRunOptions, RunOptions } from './run-options.js';
+import { Measurer } from './measurer.util.js';
+import type { Invocation, ResolvedRunOptions, RunOptions } from './run-options.js';
 import type { RunResult } from './run-result.js';
 import type { RunHandle } from './run-handle.js';
 import { RunScope, runScope } from './state.js';
@@ -30,6 +31,8 @@ type Batch =
   | { readonly halt: 'expired'; readonly results: RunResult[] };
 
 type TestDefaultsSupplier = () => RunOptions;
+type InvocationSupplier = () => Invocation;
+type TestNameSupplier = () => string | undefined;
 type DeadlineTimer = (ms: number, onExpire: () => void) => () => void;
 
 class Runner {
@@ -37,9 +40,18 @@ class Runner {
 
   private readonly resolver = new RunOptionsResolver();
   private readonly aggregator = new Aggregator();
+  private readonly measurer = new Measurer();
 
   private static noTestDefaults(): RunOptions {
     return {};
+  }
+
+  private static gating(): Invocation {
+    return {};
+  }
+
+  private static unnamed(): string | undefined {
+    return undefined;
   }
 
   private static ignoreStart(): void {}
@@ -56,18 +68,32 @@ class Runner {
     private readonly trace: TraceReporter = new TraceReporter(),
     private readonly timer: DeadlineTimer = Runner.startTimer,
     private readonly onStart: () => void = Runner.ignoreStart,
+    private readonly invocation: InvocationSupplier = Runner.gating,
+    private readonly testName: TestNameSupplier = Runner.unnamed,
   ) {}
 
   ceilingFor(declared: RunOptions): number {
-    if (declared.testTimeout === undefined) {
+    if (declared.testTimeout === undefined || this.mayMeasure(declared)) {
       return TimeBudget.TIMER_MAX_MS;
     }
     return Math.min(TimeBudget.TIMER_MAX_MS, declared.testTimeout + Runner.CEILING_MARGIN_MS);
   }
 
+  private mayMeasure(declared: RunOptions): boolean {
+    if (declared.measure === true) {
+      return true;
+    }
+    try {
+      return this.invocation().mode === 'measure' || this.testDefaults().measure === true;
+    } catch {
+      return true;
+    }
+  }
+
   async execute(body: RunBody, opts: RunOptions = {}): Promise<void> {
     this.onStart();
-    const options = this.resolver.resolve(opts, this.testDefaults());
+    const resolved = this.resolver.resolve(opts, this.testDefaults(), this.invocation());
+    const options = { ...resolved, runs: resolved.measureRuns ?? resolved.runs };
     const deadlineMs = options.testTimeout;
     this.trace.testStarted(options, deadlineMs);
     const batch = await this.runBatch(body, options);
@@ -90,7 +116,34 @@ class Runner {
         batch.cause,
       );
     }
+    if (resolved.measure) {
+      this.measure(batch.results, options, resolved.runs);
+      return;
+    }
     this.judge(batch.results, options);
+  }
+
+  private measure(results: RunResult[], options: ResolvedRunOptions, gateRuns: number): void {
+    const measurement = this.measurer.measure(
+      results.map((result) => result.status),
+      options.threshold,
+      gateRuns,
+    );
+    const report = this.reporter.renderMeasured({
+      results,
+      options,
+      measurement,
+      gateRuns,
+      name: this.testName(),
+    });
+    if (measurement.outcome === 'errored') {
+      throw new CrucibleVerdictError(
+        'errored',
+        report,
+        results.find((result) => result.status === 'errored')?.cause,
+      );
+    }
+    this.trace.reportMeasured(report);
   }
 
   private judge(results: RunResult[], options: ResolvedRunOptions): void {
@@ -243,4 +296,4 @@ class Runner {
 }
 
 export { Runner };
-export type { DeadlineTimer, RunBody, TestDefaultsSupplier };
+export type { DeadlineTimer, InvocationSupplier, RunBody, TestDefaultsSupplier, TestNameSupplier };

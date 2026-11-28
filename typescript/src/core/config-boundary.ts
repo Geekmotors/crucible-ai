@@ -7,7 +7,7 @@ type ConfigFileRead =
 type ConfigBoundary = {
   describeLocation(name: string): string;
   readConfigFile(name: string): ConfigFileRead;
-  readVerbosityOverride(): string | undefined;
+  readVariable(name: string): string | undefined;
 };
 
 export { CONFIG_FILE_NAMES };

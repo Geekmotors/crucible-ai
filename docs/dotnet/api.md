@@ -19,7 +19,7 @@ using CrucibleAI;
 | --- | --- |
 | [`Crucible`](#crucible) | static entry point: the ambient run API, `Gate`, `UseJudge` |
 | [`CrucibleContext`](#cruciblecontext-1) | one run of a test: its facts and judge calls |
-| [`RunOptions`](#runoptions) | `Runs`, `Threshold`, `InferenceTimeout`, `TestTimeout`, `Strict` |
+| [`RunOptions`](#runoptions) | `Runs`, `Threshold`, `InferenceTimeout`, `TestTimeout`, `Strict`, `Measure` |
 | [`CoherentOptions`](#coherentoptions-and-extractoptions), [`ExtractOptions`](#coherentoptions-and-extractoptions) | options of one judge call |
 | [`CrucibleException`](#crucibleexception), [`CrucibleErrorKind`](#crucibleexception) | usage, config and infrastructure errors |
 | [`CrucibleVerdictException`](#crucibleverdictexception), [`VerdictOutcome`](#crucibleverdictexception) | a test that did not pass |
@@ -82,6 +82,7 @@ public sealed class SupportBotTests(SupportBotFixture bot) : IClassFixture<Suppo
 | `InferenceTimeout` | `int` (ms) | How long each judge reply may take. Built-in 30000. |
 | `TestTimeout` | `int` (ms) | Crucible's deadline for all runs. Built-in `30000 + 1000 × (Runs − 1)`. |
 | `Strict` | `bool` | Default strict mode of every `ExtractAsync` call. Built-in `false`. |
+| `Measure` | `bool` | Measure the test instead of gating it: it never fails on its pass rate and writes its pass rate, likely range and a suggested gate to standard output ([measure mode](../runs-and-threshold.md#measure-mode)). `CRUCIBLE_MODE=measure` measures every test; `CRUCIBLE_MEASURE_RUNS` sets the runs a measured test executes. Built-in `false`. |
 | `Sequential` | `bool` | Run one after another instead of all at once. Built-in `false`. |
 
 - **Resolution, nearest wins, one setting at a time.** Built-in default →
@@ -389,6 +390,7 @@ public sealed record RunOptions
     public int? InferenceTimeout { get; init; }
     public int? TestTimeout { get; init; }
     public bool? Strict { get; init; }
+    public bool? Measure { get; init; }
 }
 ```
 

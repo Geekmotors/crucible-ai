@@ -37,6 +37,14 @@ internal static class ConfigFixtureHarness
         {
             output["meta"] = meta.DeepClone();
         }
+        if (config.Invocation.Measure)
+        {
+            output["mode"] = "measure";
+        }
+        if (config.Invocation.MeasureRuns is { } measureRuns)
+        {
+            output["measureRuns"] = measureRuns;
+        }
         return output;
     }
 

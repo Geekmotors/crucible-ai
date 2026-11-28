@@ -14,6 +14,7 @@ import { FakeWarningSink } from '../../providers/test/warning-sink.fake.js';
 
 class ConfigHarness {
   static fakeAdapter = new FakeAdapter('fake');
+  static VERBOSITY_VARIABLE = 'CRUCIBLE_VERBOSE';
 
   static registryWithFake(): ProviderRegistry {
     const registry = new ProviderRegistry();
@@ -24,7 +25,10 @@ class ConfigHarness {
   static store(configValue: unknown, verbosityOverride?: string): ConfigStore {
     const raw = typeof configValue === 'string' ? configValue : JSON.stringify(configValue);
     return new ConfigStore(
-      new FakeConfigBoundary({ [ConfigFileName.Json]: { found: true, raw } }, verbosityOverride),
+      new FakeConfigBoundary(
+        { [ConfigFileName.Json]: { found: true, raw } },
+        new FakeEnvironment({ [ConfigHarness.VERBOSITY_VARIABLE]: verbosityOverride }),
+      ),
       ConfigHarness.registryWithFake(),
     );
   }

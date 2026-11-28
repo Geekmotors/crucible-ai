@@ -105,4 +105,36 @@ public sealed class CrucibleSettingsResolverTests
 
         Assert.Equal(CrucibleErrorKind.Usage, error.Kind);
     }
+
+    [Fact]
+    public void TheFactAttributeMeasuresATest()
+    {
+        var options = _harness.Effective(typeof(UndecoratedSample), new CrucibleFactAttribute { Measure = true });
+
+        Assert.True(options.Measure);
+    }
+
+    [Fact]
+    public void TheTheoryAttributeMeasuresATest()
+    {
+        var options = _harness.Effective(typeof(UndecoratedSample), new CrucibleTheoryAttribute { Measure = true });
+
+        Assert.True(options.Measure);
+    }
+
+    [Fact]
+    public void TheClassAttributeMeasuresItsTests()
+    {
+        var options = _harness.Effective(typeof(MeasuredSample), new CrucibleFactAttribute());
+
+        Assert.True(options.Measure);
+    }
+
+    [Fact]
+    public void TheMethodAttributeGatesATestItsClassMeasures()
+    {
+        var options = _harness.Effective(typeof(MeasuredSample), new CrucibleFactAttribute { Measure = false });
+
+        Assert.False(options.Measure);
+    }
 }

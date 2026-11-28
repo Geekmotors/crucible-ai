@@ -42,7 +42,7 @@ On Vitest, import the same names from `crucible-ai/vitest` instead; see
 ```ts
 crucible.it(name, body);
 crucible.it(name, body, timeout);
-crucible.it(name, { runs, threshold, inferenceTimeout, testTimeout, strict }, body);
+crucible.it(name, { runs, threshold, inferenceTimeout, testTimeout, strict, measure }, body);
 crucible.it(name, { runs, threshold }, body, timeout);
 ```
 
@@ -73,6 +73,12 @@ Two time budgets, in milliseconds (integers from 1 to 2147483647):
 `false` takes the value it leans to, `true` makes any hedge `null`. A call's
 own `{ strict }` wins.
 
+`measure` (boolean, default `testDefaults.measure`, then `false`) reports the
+test's pass rate, its likely range and a suggested gate instead of gating it:
+the test never fails on its pass rate. `CRUCIBLE_MODE=measure` does the same
+for every test in an invocation, and `CRUCIBLE_MEASURE_RUNS` sets how many
+runs a measured test executes ([measure mode](../runs-and-threshold.md#measure-mode)).
+
 `testTimeout` caps everything: an `inferenceTimeout` above it is in effect
 bounded by it. Invalid options or timeouts throw a `CrucibleError` of kind
 `usage` when the file is collected — out-of-range values are rejected, never
@@ -96,7 +102,7 @@ re-entrancy contract — is in
 
 ```ts
 crucible.describe(name, fn);
-crucible.describe(name, { runs, threshold, inferenceTimeout, testTimeout, strict }, fn);
+crucible.describe(name, { runs, threshold, inferenceTimeout, testTimeout, strict, measure }, fn);
 ```
 
 Registers a Jest `describe` block named `name` and runs `fn` to collect its
@@ -290,7 +296,7 @@ Everything on this page applies, with these differences:
 
 ```ts
 it(name, crucible.gate(body), timeout);
-it(name, crucible.gate({ runs, threshold, inferenceTimeout, testTimeout, strict }, body), timeout);
+it(name, crucible.gate({ runs, threshold, inferenceTimeout, testTimeout, strict, measure }, body), timeout);
 it.each(table)(name, crucible.gate(options, async (t, ...row) => { ... }), timeout);
 ```
 
@@ -679,7 +685,7 @@ Thrown by a `crucible.it()` or `crucible.gate()` test that did not pass. Its `me
 
 | Type | Meaning |
 | --- | --- |
-| `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number; strict?: boolean }` |
+| `RunOptions` | `{ runs?: number; threshold?: number; inferenceTimeout?: number; testTimeout?: number; strict?: boolean; measure?: boolean }` |
 | `TestBody` | `(t: RunContext) => unknown` — the body passed to `crucible.it()`, usually `async`; a body without parameters fits too |
 | `RunContext` | `{ facts, coherent, extract }` — the [run context `t`](#the-run-context-t) each run receives |
 | `GateBody<A>` | `(t: RunContext, ...args: A) => unknown` — the body passed to `crucible.gate()` |

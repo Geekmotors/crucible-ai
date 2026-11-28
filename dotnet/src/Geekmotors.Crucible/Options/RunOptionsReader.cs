@@ -11,8 +11,9 @@ internal sealed class RunOptionsReader(RunOptionsValidator validator)
     private const string InferenceTimeoutKey = "inferenceTimeout";
     private const string TestTimeoutKey = "testTimeout";
     private const string StrictKey = "strict";
+    private const string MeasureKey = "measure";
 
-    private static readonly string[] KnownKeys = [RunsKey, ThresholdKey, InferenceTimeoutKey, TestTimeoutKey, StrictKey];
+    private static readonly string[] KnownKeys = [RunsKey, ThresholdKey, InferenceTimeoutKey, TestTimeoutKey, StrictKey, MeasureKey];
 
     public RunOptions Read(JsonNode? options, RunOptionsSource source)
     {
@@ -31,6 +32,7 @@ internal sealed class RunOptionsReader(RunOptionsValidator validator)
             InferenceTimeout = Whole(members, InferenceTimeoutKey, source),
             TestTimeout = Whole(members, TestTimeoutKey, source),
             Strict = Flag(members, StrictKey, source),
+            Measure = Flag(members, MeasureKey, source),
         };
         return validator.Validate(read, source);
     }

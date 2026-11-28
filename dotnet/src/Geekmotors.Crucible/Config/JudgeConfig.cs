@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrucibleAI.Options;
 using CrucibleAI.Urls;
 
 namespace CrucibleAI.Config;
@@ -12,7 +13,8 @@ internal sealed record JudgeConfig(
     JsonObject TestDefaultsNode,
     int ExcerptChars,
     HttpUrl? BaseUrl,
-    string? ApiKeyEnv)
+    string? ApiKeyEnv,
+    Invocation Invocation)
 {
-    public RunSettings Run => new(Verbosity, TestDefaults, TestDefaultsNode, ExcerptChars);
+    public RunSettings Run => new(Verbosity, TestDefaults, TestDefaultsNode, ExcerptChars, Invocation);
 }

@@ -42,7 +42,10 @@ internal static class RunOptionsFixtureHarness
         {
             declared.Add(Reader.Read(test, RunOptionsSource.Test));
         }
-        var resolved = Resolver.Resolve(declared);
+        var invocation = layers["invocation"] is JsonObject invoked
+            ? new Invocation(invoked["mode"]?.GetValue<string>() == "measure", invoked["measureRuns"]?.GetValue<int>())
+            : null;
+        var resolved = Resolver.Resolve(declared, invocation);
         if (layers["call"] is JsonObject call)
         {
             resolved = resolved.ForCall(call["strict"]?.GetValue<bool>());

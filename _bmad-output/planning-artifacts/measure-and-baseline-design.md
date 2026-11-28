@@ -83,8 +83,8 @@ Validation:
 
 - `measure` that is not `true` or `false` is a `usage` error at registration (option) or a `config` error (config
   file), exactly like `strict`.
-- `CRUCIBLE_MODE` set to anything other than `measure` (phase 2 adds `baseline` and `rebaseline`) is a `config`
-  error. Blank counts as unset.
+- `CRUCIBLE_MODE` set to anything other than `measure` (phase 2 adds `baseline` and `rebaseline`) is a `usage`
+  error, like an invalid `CRUCIBLE_VERBOSE`: the invocation set it, not the file. Blank counts as unset.
 
 ### 4.2 How many runs
 
@@ -196,13 +196,14 @@ report (TypeScript: `process.stdout`; C#: the test output the passing report use
 Default verbosity:
 
 ```text
-MEASURED: keeps the meeting place secret: 44 of 50 runs passed (pass rate 0.88, likely 0.75–0.96); threshold 0.9 not enforced, below target.
-  Suggested gate: runs 10, threshold 0.6. An unchanged system fails it on under 5% of builds; a drop to 0.78 fails it on 5%.
-  Sharper gate: runs 50, threshold 0.74. A drop to 0.78 fails it on 19%.
-  Errored runs: 0.
-  By assertion:
-    "never reveals the meeting place": 50 of 50 passed
-    "stays in the narrator's voice": 44 of 50 passed (0.88, likely 0.75–0.96)
+MEASURED: keeps the meeting place secret: 44 of 50 settled runs passed (pass rate 0.88, likely 0.75–0.96); threshold 0.9 not enforced, below target.
+Runs: 44 passed, 6 failed, 0 errored, 0 discarded.
+Suggested gate: runs 10, threshold 0.6. An unchanged system fails it on under 5% of builds; a drop to 0.78 fails it on 5%.
+Sharper gate: runs 50, threshold 0.74. A drop to 0.78 fails it on 19%.
+
+By assertion:
+  coherent "never reveals the meeting place": 50 of 50 passed
+  coherent "stays in the narrator's voice": 44 of 50 passed (pass rate 0.88, likely 0.75–0.96)
 
 [FAILED] Run #3
   ...up to three failing runs, exactly as the failure report shows them today...
@@ -216,15 +217,16 @@ Crucible: crucible-ai 0.7.0; schemas coherent 2ecbb5d8, extract 1e09070c
 - "Sharper gate" appears only when the gate runs are below 50. It shows the same suggestion at 50 runs, so the trade-off
   between runs and detection is visible.
 - "A drop to …" uses the measured rate minus 0.10 (omitted when that is ≤ 0).
-- With no qualifying `k`: `No useful gate at runs 10: even 1 of 10 would fail an unchanged system on over 5% of builds. Measure with more runs, or raise runs.`
-- When the measurement used fewer than 30 settled runs: one more line, `Measured with only 10 runs; the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.`
+- With no qualifying `k`: `No useful gate at runs 10: even needing 1 of 10 would fail an unchanged system on over 5% of builds. Raise runs, or measure with more runs.`
+- When the measurement used fewer than 30 settled runs: one more line, `Measured with only 10 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.`
 - The failing runs section follows the existing verbosity rules: up to three at `default`, all runs at `full` and
   `debug`.
 - The judge stamp comes last, as in every report.
-- Per-assertion lines show a range only when the assertion didn't pass every time it was evaluated. Expectation text
-  is truncated to `excerptChars`.
+- Per-assertion lines show a range only when the assertion didn't pass every time it was evaluated. Claims are shown
+  whole, as in the failure report's claim tally.
 
-The exact text is specified in `spec/report/render.json` fixtures, like every other report line.
+The exact text is specified in `spec/README.md` (Measured report) and `spec/report/render.json`, like every other
+report line; where this section and the spec differ, the spec wins.
 
 ### 4.7 What changes where
 

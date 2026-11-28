@@ -1,9 +1,10 @@
 import type { ConfigBoundary, ConfigFileRead } from '../config.js';
+import { FakeEnvironment } from '../../providers/test/environment.fake.js';
 
 class FakeConfigBoundary implements ConfigBoundary {
   constructor(
     private files: Record<string, ConfigFileRead>,
-    private verbosityOverride?: string,
+    private environment: FakeEnvironment = new FakeEnvironment(),
   ) {}
 
   describeLocation(name: string): string {
@@ -14,8 +15,8 @@ class FakeConfigBoundary implements ConfigBoundary {
     return this.files[name] ?? { found: false, reason: 'missing' };
   }
 
-  readVerbosityOverride(): string | undefined {
-    return this.verbosityOverride;
+  readVariable(name: string): string | undefined {
+    return this.environment.read(name);
   }
 }
 

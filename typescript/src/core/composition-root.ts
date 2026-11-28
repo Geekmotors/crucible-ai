@@ -16,7 +16,7 @@ import type { ReportSettings } from './report-settings.js';
 import { Runner } from './runner.js';
 import type { RunnerSpec } from './runner-spec.js';
 import { RunnerWrapper } from './runner-wrapper.js';
-import type { RunOptions } from './run-options.js';
+import type { Invocation, RunOptions } from './run-options.js';
 import { SchemaSource } from './schema-source.js';
 import { ScopedAssertions } from './scoped-assertions.js';
 import { runScope } from './state.js';
@@ -109,6 +109,8 @@ class CompositionRoot {
         this.trace,
         undefined,
         () => this.transport.seal(),
+        CompositionRoot.invocation,
+        () => this.spec.currentTestName?.(),
       ),
       this.assertions(),
       new GroupSettings(this.spec.groupPath),
@@ -131,6 +133,10 @@ class CompositionRoot {
       testDefaults,
       excerptChars,
     };
+  }
+
+  private static invocation(): Invocation {
+    return config.get().invocation;
   }
 
   private static testDefaults(): RunOptions {

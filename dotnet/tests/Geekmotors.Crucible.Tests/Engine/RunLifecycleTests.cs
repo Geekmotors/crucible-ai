@@ -150,7 +150,7 @@ public sealed class RunLifecycleTests
                 await Task.Delay(Timeout.Infinite, context.CancellationToken);
             })),
             false,
-            cancellation.Token));
+            Cancellation: cancellation.Token));
         var token = await runToken.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cancellation.CancelAsync();
 
@@ -174,7 +174,7 @@ public sealed class RunLifecycleTests
                 return Task.CompletedTask;
             })),
             false,
-            cancellation.Token)));
+            Cancellation: cancellation.Token)));
 
         Assert.Equal(0, runs);
     }

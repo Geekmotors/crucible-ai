@@ -5,4 +5,5 @@ internal sealed record GateRequest(
     RunOptions Declared,
     Func<int, Task<RunBody>> BodyFor,
     bool Sequential,
+    string? Name = null,
     CancellationToken Cancellation = default);

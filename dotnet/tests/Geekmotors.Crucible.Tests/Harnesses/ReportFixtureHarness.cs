@@ -1,11 +1,14 @@
 using System.Text.Json.Nodes;
 using CrucibleAI.Reports;
 using CrucibleAI.Runs;
+using CrucibleAI.Verdicts;
 
 namespace CrucibleAI.Tests.Harnesses;
 
 internal static class ReportFixtureHarness
 {
+    private static readonly Measurer Measurer = new();
+
     public static JsonNode? Render(JsonNode? input)
     {
         var settings = input!["settings"]!;
@@ -16,6 +19,12 @@ internal static class ReportFixtureHarness
             input["threshold"]!.GetValue<double>(),
             Ending(input["ending"]!),
             input["results"]!.AsArray().Select(RunRecordJson.Result).ToArray());
+        if (input["measure"] is JsonObject measure)
+        {
+            var gateRuns = measure["gateRuns"]!.GetValue<int>();
+            var measurement = Measurer.Measure(test.Results.Select(result => result.Status).ToArray(), test.Threshold, gateRuns);
+            return renderer.RenderMeasured(test, measurement, new MeasuredTest(gateRuns, measure["name"]?.GetValue<string>()));
+        }
         return renderer.Render(test);
     }
 

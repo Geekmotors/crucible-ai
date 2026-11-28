@@ -67,6 +67,7 @@ test.
 | `inferenceTimeout` | the enclosing `crucible.describe`, else `testDefaults.inferenceTimeout`, else `30000` | integer ms, 1 to 2147483647 | How long each `crucible.coherent()` or `crucible.extract()` judge reply attempt may take, provider retries included |
 | `testTimeout` | the trailing `timeout` argument, else the enclosing `crucible.describe`, else `testDefaults.testTimeout`, else `30000 + 1000 × (runs − 1)` | integer ms, 1 to 2147483647 | How long the whole test — every run, arrange, act and assert — may take |
 | `strict` | the enclosing `crucible.describe`, else `testDefaults.strict`, else `false` | `true` or `false` | How [`crucible.extract()`](typescript/api.md#crucibleextract) treats a hedged reply: `false` (lenient) takes the value it leans to ("probably two" → `2`), `true` makes any hedge `null`. A call's own `{ strict }` wins over it |
+| `measure` | the enclosing `crucible.describe`, else `testDefaults.measure`, else `false`; `CRUCIBLE_MODE=measure` makes it `true` for every test | `true` or `false` | Report the test's pass rate and a suggested gate instead of gating it ([Measure mode](#measure-mode)) |
 
 With `runs` and `threshold` omitted and no [project-wide defaults](#project-wide-defaults-testdefaults)
 the test is a reliability gate: 10 runs, and at least 9 must pass. Each run
@@ -92,12 +93,12 @@ kind `usage`:
 - `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
   2147483647 (`0`, `2.5`, `'50000'`, `2147483648`) — out-of-range values are
   rejected, never clamped
-- `strict` that is not `true` or `false` (`'true'`, `1`, `null`) — never
-  coerced
+- `strict` or `measure` that is not `true` or `false` (`'true'`, `1`,
+  `null`) — never coerced
 - a trailing `timeout` argument that breaks the same rule, or a trailing
   `timeout` together with a `testTimeout` option
 - any option key other than `runs`, `threshold`, `inferenceTimeout`,
-  `testTimeout` and `strict`
+  `testTimeout`, `strict` and `measure`
 - options that are not an object (including `null` or an array), a missing
   body, or two bodies
 
@@ -681,16 +682,82 @@ Two things to read off it:
   runs at 0.85 cuts false reds for a 0.95 system from 1.6% to 0.3% *and*
   raises the chance of catching a drop to 0.80 from 59% to 81%.
 
+## Measure mode
+
+Measure mode runs tests without gating them: each measured test executes,
+never fails on its pass rate, and prints how often it passed, how sure that
+number is, and a gate its own `runs` could hold. Switch it on for a whole
+invocation, with no change to the tests:
+
+```sh
+CRUCIBLE_MODE=measure CRUCIBLE_MEASURE_RUNS=50 npx jest tests/story
+```
+
+The runner's own filters (a path, `-t`, Vitest's name filter,
+`dotnet test --filter`) choose which tests are measured. Or mark a test, a
+group or the project as always measured with the `measure` option
+(`{ measure: true }`, `testDefaults.measure`; in C#
+`[CrucibleFact(Measure = true)]`, `[Crucible(Measure = true)]` or
+`RunOptions.Measure`), for a check you want to watch but never block on. In
+C# the report is written to standard output, as a passing report is.
+
+- `CRUCIBLE_MODE`: `measure`, or empty for normal gating. Anything else is a
+  `usage` error.
+- `CRUCIBLE_MEASURE_RUNS`: how many runs a measured test executes, from 1 to
+  1000 (digits only). Unset, a measured test executes its own `runs`. A test
+  that is not measured ignores it. Cost scales with it: 50 runs cost 5× a
+  10-run test (see [Cost](#cost)).
+- The test timeout grows with the measured runs: with no `testTimeout`, it is
+  `30000 + 1000 × (measured runs − 1)`; a declared `testTimeout` below that is
+  raised to it.
+
+A measured test prints its report at every verbosity:
+
+```text
+MEASURED: narrator keeps the meeting place secret: 44 of 50 settled runs passed (pass rate 0.88, likely 0.75–0.96); threshold 0.9 not enforced, below target.
+Runs: 44 passed, 6 failed, 0 errored, 0 discarded.
+Suggested gate: runs 10, threshold 0.6. An unchanged system fails it on under 5% of builds; a drop to 0.78 fails it on 5%.
+Sharper gate: runs 50, threshold 0.74. A drop to 0.78 fails it on 19%.
+
+By assertion:
+  coherent "The narrator never reveals the meeting place.": 50 of 50 passed
+  coherent "The narrator stays in period voice.": 44 of 50 passed (pass rate 0.88, likely 0.75–0.96)
+```
+
+followed by the failed runs and the judge stamp, as in a failure report.
+
+- **Pass rate and range.** Errored runs are left out: the rate is passed of
+  settled (passed + failed) runs. "Likely" is the 95% Clopper-Pearson
+  interval, the range the true rate probably lies in.
+- **Target.** "meets target" when the measured count would pass the test's
+  own threshold; "below target" otherwise. Nothing fails either way.
+- **Suggested gate.** The highest threshold for the test's own `runs` that an
+  unchanged system fails on at most 5% of builds, allowing for a somewhat
+  lucky measurement (it plans for the one-sided 80% lower bound of the
+  rate). "A drop to …" says how often that gate catches a fall of 0.1 in the
+  pass rate. With no such threshold: `No useful gate at runs 10`.
+- **Sharper gate.** The same at 50 runs, shown while `runs` is below 50. At
+  10 runs no threshold both avoids false reds and catches a 0.1 drop
+  reliably: runs, not threshold, buy detection ([pattern 3](#3-need-a-tighter-gate-add-runs-not-threshold)).
+- **By assertion.** With two or more `coherent` claims, each one's count, so
+  you can see which claim fails. A run that threw before a claim does not
+  count for it.
+- Fewer than 30 settled runs add a note that the range is wide.
+
+A measured test still fails, as `ERRORED, not failed`, when no run settled
+(every run errored), on a fatal provider error and at its deadline: a broken
+judge never looks like a score.
+
 ## Headroom patterns
 
 ### 1. Measure first, with many runs
 
-Before choosing a gate, measure how reliable the behaviour actually is. A
-measurement run with `threshold: 1` reports its count when any run fails:
+Before choosing a gate, measure how reliable the behaviour actually is, with
+[measure mode](#measure-mode):
 
-```ts
-crucible.it('Jane looks for Bob', { runs: 100, threshold: 1 }, body);
-// FAILED: 95/100 runs passed (pass rate 0.95) against threshold 1 (need 100).
+```sh
+CRUCIBLE_MODE=measure CRUCIBLE_MEASURE_RUNS=100 npx jest -t 'Jane looks for Bob'
+# MEASURED: Jane looks for Bob: 95 of 100 settled runs passed (pass rate 0.95, likely 0.88–0.99); ...
 ```
 
 Treat the result as a range, not a point: 95/100 gives a 95% interval of

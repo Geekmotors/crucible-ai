@@ -27,6 +27,7 @@ type RunnerSpec = {
   readonly testArguments: (name: unknown, test: GatedTest, timeout: number) => unknown[];
   readonly groupArguments: (name: unknown, callback: GroupCallback) => unknown[];
   readonly groupPath?: GroupPath;
+  readonly currentTestName?: () => string | undefined;
 };
 
 export type { ForwardedArguments, GroupPath, RunnerFamily, RunnerSpec, VariantCall, VariantNode };

@@ -32,8 +32,8 @@ class FileSystemConfigBoundary implements ConfigBoundary {
     }
   }
 
-  readVerbosityOverride(): string | undefined {
-    return process.env.CRUCIBLE_VERBOSE;
+  readVariable(name: string): string | undefined {
+    return process.env[name];
   }
 
   private isAbsent(path: string, cause: unknown): boolean {

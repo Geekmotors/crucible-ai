@@ -1,4 +1,4 @@
-import { describe, test, TestRunner } from 'vitest';
+import { describe, expect, test, TestRunner } from 'vitest';
 import { VitestBinding } from '../bindings/vitest.js';
 import { CrucibleError } from '../core/errors.js';
 import type { ExtractedValue, ExtractType } from '../core/extract-type.js';
@@ -14,7 +14,12 @@ import type { VitestCrucibleIt as CrucibleIt } from './vitest-crucible-it.js';
 import type { VitestCrucibleSurface } from './vitest-crucible-surface.js';
 
 const crucible: Readonly<VitestCrucibleSurface> = CrucibleApi.build<CrucibleIt, CrucibleDescribe>(
-  new VitestBinding({ test, describe, currentGroup: () => TestRunner.getCurrentSuite() }).spec(),
+  new VitestBinding({
+    test,
+    describe,
+    currentGroup: () => TestRunner.getCurrentSuite(),
+    currentTestName: () => expect.getState().currentTestName,
+  }).spec(),
 );
 
 export { crucible, CrucibleError, CrucibleVerdictError };

@@ -1,0 +1,530 @@
+{
+  "area": "verdict",
+  "operation": "measure",
+  "description": "Measure a test instead of gating it: its pass rate over settled runs, the likely range of the true rate, and the gate suggested for its own runs and for 50 runs.",
+  "cases": [
+    {
+      "id": "verdict-measure-design-example",
+      "description": "44 of 50 at gate 10 runs: range 0.75 to 0.96, below a 0.9 target; the suggested gate is 6 of 10, and a sharper 37 of 50 catches more of a drop.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 44,
+          "failed": 6
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 44,
+          "failed": 6,
+          "errored": 0,
+          "settled": 50,
+          "rate": 0.88,
+          "low": 0.75,
+          "high": 0.96,
+          "need": 45,
+          "meetsTarget": false,
+          "suggestion": {
+            "runs": 10,
+            "need": 6,
+            "threshold": 0.6,
+            "drop": 0.78,
+            "caught": 5
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 37,
+            "threshold": 0.74,
+            "drop": 0.78,
+            "caught": 19
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-meets-target",
+      "description": "95 of 100 meets a 0.9 target; suggestions at 10 and 50 gate runs.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 95,
+          "failed": 5
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 95,
+          "failed": 5,
+          "errored": 0,
+          "settled": 100,
+          "rate": 0.95,
+          "low": 0.88,
+          "high": 0.99,
+          "need": 90,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 10,
+            "need": 8,
+            "threshold": 0.8,
+            "drop": 0.85,
+            "caught": 18
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 43,
+            "threshold": 0.86,
+            "drop": 0.85,
+            "caught": 48
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-all-passed-few-runs",
+      "description": "10 of 10: the range reaches 1, and the suggestion allows for a lucky measurement.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 10
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 10,
+          "failed": 0,
+          "errored": 0,
+          "settled": 10,
+          "rate": 1,
+          "low": 0.69,
+          "high": 1,
+          "need": 9,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 10,
+            "need": 7,
+            "threshold": 0.7,
+            "drop": 0.9,
+            "caught": 1
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 38,
+            "threshold": 0.76,
+            "drop": 0.9,
+            "caught": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-all-passed-many-runs",
+      "description": "50 of 50 gives a high planning rate and a gate of 9 of 10.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 50
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 50,
+          "failed": 0,
+          "errored": 0,
+          "settled": 50,
+          "rate": 1,
+          "low": 0.92,
+          "high": 1,
+          "need": 45,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 10,
+            "need": 9,
+            "threshold": 0.9,
+            "drop": 0.9,
+            "caught": 26
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 46,
+            "threshold": 0.92,
+            "drop": 0.9,
+            "caught": 57
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-none-passed",
+      "description": "0 of 10: the range starts at 0 and there is no useful gate at any run count.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "failed": 10
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 0,
+          "failed": 10,
+          "errored": 0,
+          "settled": 10,
+          "rate": 0,
+          "low": 0,
+          "high": 0.31,
+          "need": 9,
+          "meetsTarget": false,
+          "suggestion": null,
+          "sharper": null
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-no-gate-at-ten-but-at-fifty",
+      "description": "3 of 10: no gate at 10 runs avoids false reds, but one at 50 does.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 3,
+          "failed": 7
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 3,
+          "failed": 7,
+          "errored": 0,
+          "settled": 10,
+          "rate": 0.3,
+          "low": 0.06,
+          "high": 0.66,
+          "need": 9,
+          "meetsTarget": false,
+          "suggestion": null,
+          "sharper": {
+            "runs": 50,
+            "need": 4,
+            "threshold": 0.08,
+            "drop": 0.2,
+            "caught": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-nothing-settled",
+      "description": "Every run errored: the outcome is errored and nothing is measured.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 10,
+        "statuses": {
+          "errored": 5
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "errored",
+          "passed": 0,
+          "failed": 0,
+          "errored": 5,
+          "settled": 0
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-errored-excluded",
+      "description": "Errored runs are counted but left out of the rate: 44 of 50 settled, 3 errored, at gate 20.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 20,
+        "statuses": {
+          "passed": 44,
+          "failed": 6,
+          "errored": 3
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 44,
+          "failed": 6,
+          "errored": 3,
+          "settled": 50,
+          "rate": 0.88,
+          "low": 0.75,
+          "high": 0.96,
+          "need": 45,
+          "meetsTarget": false,
+          "suggestion": {
+            "runs": 20,
+            "need": 14,
+            "threshold": 0.7,
+            "drop": 0.78,
+            "caught": 13
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 37,
+            "threshold": 0.74,
+            "drop": 0.78,
+            "caught": 19
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-discarded-ignored",
+      "description": "Discarded runs count toward nothing.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 20,
+        "statuses": {
+          "passed": 44,
+          "failed": 6,
+          "discarded": 2
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 44,
+          "failed": 6,
+          "errored": 0,
+          "settled": 50,
+          "rate": 0.88,
+          "low": 0.75,
+          "high": 0.96,
+          "need": 45,
+          "meetsTarget": false,
+          "suggestion": {
+            "runs": 20,
+            "need": 14,
+            "threshold": 0.7,
+            "drop": 0.78,
+            "caught": 13
+          },
+          "sharper": {
+            "runs": 50,
+            "need": 37,
+            "threshold": 0.74,
+            "drop": 0.78,
+            "caught": 19
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-gate-at-fifty-no-sharper",
+      "description": "At 50 gate runs there is no sharper suggestion.",
+      "input": {
+        "threshold": 0.8,
+        "gateRuns": 50,
+        "statuses": {
+          "passed": 44,
+          "failed": 6
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 44,
+          "failed": 6,
+          "errored": 0,
+          "settled": 50,
+          "rate": 0.88,
+          "low": 0.75,
+          "high": 0.96,
+          "need": 40,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 50,
+            "need": 37,
+            "threshold": 0.74,
+            "drop": 0.78,
+            "caught": 19
+          },
+          "sharper": null
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-gate-above-fifty-no-sharper",
+      "description": "Above 50 gate runs there is no sharper suggestion either.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 100,
+        "statuses": {
+          "passed": 95,
+          "failed": 5
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 95,
+          "failed": 5,
+          "errored": 0,
+          "settled": 100,
+          "rate": 0.95,
+          "low": 0.88,
+          "high": 0.99,
+          "need": 90,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 100,
+            "need": 88,
+            "threshold": 0.88,
+            "drop": 0.85,
+            "caught": 75
+          },
+          "sharper": null
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-drop-omitted",
+      "description": "At a pass rate of 0.1 a drop of 0.1 reaches 0, so the suggestion has no drop or caught.",
+      "input": {
+        "threshold": 0.5,
+        "gateRuns": 50,
+        "statuses": {
+          "passed": 10,
+          "failed": 90
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 10,
+          "failed": 90,
+          "errored": 0,
+          "settled": 100,
+          "rate": 0.1,
+          "low": 0.04,
+          "high": 0.18,
+          "need": 50,
+          "meetsTarget": false,
+          "suggestion": {
+            "runs": 50,
+            "need": 1,
+            "threshold": 0.02
+          },
+          "sharper": null
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-smoke-gate",
+      "description": "One run gating one run: a single pass is no evidence, so there is no useful gate at 1 run.",
+      "input": {
+        "threshold": 1,
+        "gateRuns": 1,
+        "statuses": {
+          "passed": 1
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 1,
+          "failed": 0,
+          "errored": 0,
+          "settled": 1,
+          "rate": 1,
+          "low": 0.02,
+          "high": 1,
+          "need": 1,
+          "meetsTarget": true,
+          "suggestion": null,
+          "sharper": {
+            "runs": 50,
+            "need": 6,
+            "threshold": 0.12,
+            "drop": 0.9,
+            "caught": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-three-decimals",
+      "description": "At 150 gate runs the suggested threshold needs three decimals to keep need at k: 133 of 150 is 0.886.",
+      "input": {
+        "threshold": 0.9,
+        "gateRuns": 150,
+        "statuses": {
+          "passed": 95,
+          "failed": 5
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 95,
+          "failed": 5,
+          "errored": 0,
+          "settled": 100,
+          "rate": 0.95,
+          "low": 0.88,
+          "high": 0.99,
+          "need": 90,
+          "meetsTarget": true,
+          "suggestion": {
+            "runs": 150,
+            "need": 133,
+            "threshold": 0.886,
+            "drop": 0.85,
+            "caught": 88
+          },
+          "sharper": null
+        }
+      }
+    },
+    {
+      "id": "verdict-measure-target-need-from-settled",
+      "description": "The target need is computed over settled runs: 0.28 of 25 needs 7, and 7 passed meets it.",
+      "input": {
+        "threshold": 0.28,
+        "gateRuns": 10,
+        "statuses": {
+          "passed": 7,
+          "failed": 18,
+          "errored": 5
+        }
+      },
+      "expect": {
+        "value": {
+          "outcome": "measured",
+          "passed": 7,
+          "failed": 18,
+          "errored": 5,
+          "settled": 25,
+          "rate": 0.28,
+          "low": 0.12,
+          "high": 0.5,
+          "need": 7,
+          "meetsTarget": true,
+          "suggestion": null,
+          "sharper": {
+            "runs": 50,
+            "need": 5,
+            "threshold": 0.1,
+            "drop": 0.18,
+            "caught": 4
+          }
+        }
+      }
+    }
+  ]
+}

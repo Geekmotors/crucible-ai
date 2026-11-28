@@ -13,7 +13,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -27,7 +28,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -41,7 +43,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -55,7 +58,8 @@
           "threshold": 1,
           "inferenceTimeout": 30000,
           "testTimeout": 30000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -69,7 +73,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -83,7 +88,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 30000,
           "testTimeout": 34000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -100,7 +106,8 @@
           "threshold": 0.5,
           "inferenceTimeout": 30000,
           "testTimeout": 34000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -114,7 +121,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -128,7 +136,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 50000,
           "testTimeout": 60000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -145,7 +154,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 50000,
           "testTimeout": 5000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -159,7 +169,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -173,7 +184,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -187,7 +199,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -201,7 +214,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 2147483647,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -215,7 +229,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 2147483647,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -229,7 +244,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 2147483000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -243,7 +259,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 30000,
           "testTimeout": 34000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -257,7 +274,8 @@
           "threshold": 0.35,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -271,7 +289,8 @@
           "threshold": 0.5,
           "inferenceTimeout": 30000,
           "testTimeout": 30000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -288,7 +307,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -302,7 +322,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -316,7 +337,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 60000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -330,7 +352,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -344,7 +367,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -358,7 +382,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -372,7 +397,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 49000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -386,7 +412,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 50000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -400,7 +427,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 60000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -417,7 +445,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 60000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -434,7 +463,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 50000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -448,7 +478,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 5000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -461,7 +492,8 @@
           "threshold": 0.95,
           "inferenceTimeout": 50000,
           "testTimeout": 60000,
-          "strict": true
+          "strict": true,
+          "measure": false
         },
         "groups": [{ "runs": 5, "inferenceTimeout": 40000 }, { "threshold": 0.5 }],
         "test": { "strict": false }
@@ -472,7 +504,8 @@
           "threshold": 0.5,
           "inferenceTimeout": 40000,
           "testTimeout": 60000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -486,7 +519,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -500,7 +534,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -514,7 +549,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -528,7 +564,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
         }
       }
     },
@@ -542,7 +579,8 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": true
+          "strict": true,
+          "measure": false
         }
       }
     },
@@ -560,7 +598,242 @@
           "threshold": 0.9,
           "inferenceTimeout": 30000,
           "testTimeout": 39000,
-          "strict": false
+          "strict": false,
+          "measure": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-from-test",
+      "description": "A test's own measure true makes it a measured test; with no CRUCIBLE_MEASURE_RUNS it executes its own runs.",
+      "input": { "test": { "measure": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 10
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-from-config",
+      "description": "measure in testDefaults applies to every test that does not set it.",
+      "input": { "testDefaults": { "measure": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 10
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-group-inherited",
+      "description": "A group's measure true reaches the test inside it.",
+      "input": { "groups": [{ "measure": true }], "test": { "runs": 5 } },
+      "expect": {
+        "value": {
+          "runs": 5,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 34000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 5
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-test-over-group",
+      "description": "The test's measure false wins over its group's measure true.",
+      "input": { "groups": [{ "measure": true }], "test": { "measure": false } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-unset-keeps-group",
+      "description": "A test's measure set to undefined keeps the group's value.",
+      "input": {
+        "groups": [{ "measure": true }],
+        "test": { "measure": { "$special": "undefined" } }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 10
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-mode-measure-overrides-false",
+      "description": "CRUCIBLE_MODE=measure measures a test even when every layer sets measure false.",
+      "input": {
+        "testDefaults": { "measure": false },
+        "test": { "measure": false },
+        "invocation": { "mode": "measure" }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 10
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-runs-executed",
+      "description": "CRUCIBLE_MEASURE_RUNS sets the runs a measured test executes; runs stays the gate the suggestions are for, and the test timeout formula uses the measured runs.",
+      "input": { "invocation": { "mode": "measure", "measureRuns": 50 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 79000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 50
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-runs-with-option",
+      "description": "CRUCIBLE_MEASURE_RUNS applies to a test measured through its own option.",
+      "input": { "test": { "runs": 20, "measure": true }, "invocation": { "measureRuns": 50 } },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 79000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 50
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-runs-ignored-when-gating",
+      "description": "CRUCIBLE_MEASURE_RUNS changes nothing for a test that is not measured.",
+      "input": { "invocation": { "measureRuns": 50 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": false,
+          "measure": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-runs-default-own-runs",
+      "description": "Without CRUCIBLE_MEASURE_RUNS a measured test executes its own runs, and the formula uses them.",
+      "input": { "test": { "runs": 20 }, "invocation": { "mode": "measure" } },
+      "expect": {
+        "value": {
+          "runs": 20,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 49000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 20
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-declared-timeout-raised",
+      "description": "A declared testTimeout below the formula for the measured runs is raised to the formula, so measuring more runs does not trip a timeout sized for the gate.",
+      "input": {
+        "test": { "testTimeout": 60000 },
+        "invocation": { "mode": "measure", "measureRuns": 50 }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 79000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 50
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-declared-timeout-kept",
+      "description": "A declared testTimeout above the formula for the measured runs is kept.",
+      "input": {
+        "testDefaults": { "testTimeout": 120000 },
+        "invocation": { "mode": "measure", "measureRuns": 50 }
+      },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 120000,
+          "strict": false,
+          "measure": true,
+          "measureRuns": 50
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-declared-timeout-gating-unchanged",
+      "description": "When not measured, a declared testTimeout applies as declared even with CRUCIBLE_MEASURE_RUNS set.",
+      "input": { "test": { "testTimeout": 5000 }, "invocation": { "measureRuns": 50 } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 5000,
+          "strict": false,
+          "measure": false
+        }
+      }
+    },
+    {
+      "id": "run-options-resolve-measure-call-strict-unaffected",
+      "description": "measure does not change an extract call's strict.",
+      "input": { "test": { "measure": true }, "call": { "strict": true } },
+      "expect": {
+        "value": {
+          "runs": 10,
+          "threshold": 0.9,
+          "inferenceTimeout": 30000,
+          "testTimeout": 39000,
+          "strict": true,
+          "measure": true,
+          "measureRuns": 10
         }
       }
     }

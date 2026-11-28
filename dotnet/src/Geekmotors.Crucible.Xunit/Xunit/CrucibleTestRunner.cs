@@ -69,6 +69,7 @@ internal sealed class CrucibleTestRunner : XunitTestRunnerBase<XunitTestRunnerCo
                 plan.Declared,
                 _ => instances.CreateAsync(),
                 plan.Sequential,
+                ctxt.Test.TestDisplayName,
                 TestContext.Current.CancellationToken)).ConfigureAwait(false);
         }
         catch (CrucibleVerdictException) when (instances.Skip is not null)

@@ -4,7 +4,7 @@ import { GroupSettings } from '../group-settings.js';
 import type { GroupCallback } from '../group-settings.js';
 import type { GroupPath } from '../runner-spec.js';
 import { RunOptionsResolver } from '../run-options-resolver.util.js';
-import type { ResolvedRunOptions, RunOptions } from '../run-options.js';
+import type { Invocation, ResolvedRunOptions, RunOptions } from '../run-options.js';
 import { Capture } from './capture.util.js';
 import { DeclarationSubject } from './declaration-subject.enum.js';
 
@@ -24,8 +24,12 @@ class GroupSettingsHarness {
     this.declare(options, body)();
   }
 
-  resolve(own: RunOptions = {}, defaults: RunOptions = {}): ResolvedRunOptions {
-    return this.resolver.resolve(this.groups.inherit(own), defaults);
+  resolve(
+    own: RunOptions = {},
+    defaults: RunOptions = {},
+    invocation: Invocation = {},
+  ): ResolvedRunOptions {
+    return this.resolver.resolve(this.groups.inherit(own), defaults, invocation);
   }
 
   static errorFrom(fn: () => unknown): CrucibleError {

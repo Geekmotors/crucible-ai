@@ -15,6 +15,7 @@ import { OverlapProbe } from './test/overlap-probe.util.js';
 import { TestStatus } from './test/test-status.enum.js';
 import { UnlinkedSuiteRunnerFake } from './test/unlinked-suite-runner.fake.js';
 import { VitestBindingHarness } from './test/vitest-harness.util.js';
+import { VitestBinding } from './vitest.js';
 import { VitestProperty } from './test/vitest-property.enum.js';
 import { VitestRunnerFake } from './test/vitest-runner.fake.js';
 
@@ -444,5 +445,15 @@ describe('VitestBinding — blocked and unknown variants', () => {
     expect(
       VitestBindingHarness.errorFrom(() => variants.it(TestName.Plain, async () => {})).kind,
     ).toBe('usage');
+  });
+});
+
+describe('VitestBinding — test name', () => {
+  it("reads the running test's name from the source Vitest gives it", () => {
+    const binding = new VitestBinding({
+      currentGroup: () => undefined,
+      currentTestName: () => TestName.Inside,
+    });
+    expect(binding.spec().currentTestName?.()).toBe(TestName.Inside);
   });
 });

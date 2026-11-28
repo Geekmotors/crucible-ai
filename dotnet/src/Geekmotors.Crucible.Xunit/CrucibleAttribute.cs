@@ -30,6 +30,13 @@ public sealed class CrucibleAttribute : Attribute, ICrucibleSettings
     /// <summary>Whether extract calls use the strict mode unless the call says otherwise. Reads false when not set here (inherited).</summary>
     public bool Strict { get => _settings.Strict ?? false; set => _settings.Strict = value; }
 
+    /// <summary>
+    /// Whether the test is measured instead of gated: it never fails on its pass rate and writes its pass rate, likely range
+    /// and a suggested gate to standard output. <c>CRUCIBLE_MODE=measure</c> measures every test. Reads false when not set
+    /// here (inherited).
+    /// </summary>
+    public bool Measure { get => _settings.Measure ?? false; set => _settings.Measure = value; }
+
     /// <summary>Whether the runs execute one after another instead of all at once. Reads false when not set here (inherited).</summary>
     public bool Sequential { get => _settings.Sequential ?? false; set => _settings.Sequential = value; }
 

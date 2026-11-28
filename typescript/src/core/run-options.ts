@@ -4,6 +4,12 @@ type RunOptions = {
   readonly inferenceTimeout?: number;
   readonly testTimeout?: number;
   readonly strict?: boolean;
+  readonly measure?: boolean;
+};
+
+type Invocation = {
+  readonly mode?: 'measure';
+  readonly measureRuns?: number;
 };
 
 type RunGate = {
@@ -15,6 +21,8 @@ type ResolvedRunOptions = RunGate & {
   readonly inferenceTimeout: number;
   readonly testTimeout: number;
   readonly strict: boolean;
+  readonly measure: boolean;
+  readonly measureRuns?: number;
 };
 
-export type { ResolvedRunOptions, RunGate, RunOptions };
+export type { Invocation, ResolvedRunOptions, RunGate, RunOptions };

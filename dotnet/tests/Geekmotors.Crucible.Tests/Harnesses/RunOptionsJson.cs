@@ -28,15 +28,28 @@ internal static class RunOptionsJson
         {
             json["strict"] = strict;
         }
+        if (options.Measure is { } measure)
+        {
+            json["measure"] = measure;
+        }
         return json;
     }
 
-    public static JsonObject Of(ResolvedRunOptions options) => new()
+    public static JsonObject Of(ResolvedRunOptions options)
     {
-        ["runs"] = options.Runs,
-        ["threshold"] = options.Threshold,
-        ["inferenceTimeout"] = options.InferenceTimeout,
-        ["testTimeout"] = options.TestTimeout,
-        ["strict"] = options.Strict,
-    };
+        var json = new JsonObject
+        {
+            ["runs"] = options.Runs,
+            ["threshold"] = options.Threshold,
+            ["inferenceTimeout"] = options.InferenceTimeout,
+            ["testTimeout"] = options.TestTimeout,
+            ["strict"] = options.Strict,
+            ["measure"] = options.Measure,
+        };
+        if (options.MeasureRuns is { } measureRuns)
+        {
+            json["measureRuns"] = measureRuns;
+        }
+        return json;
+    }
 }

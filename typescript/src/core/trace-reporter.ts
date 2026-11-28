@@ -58,6 +58,10 @@ class TraceReporter {
     private readonly write: OutputWriter = TraceReporter.stdout,
   ) {}
 
+  reportMeasured(report: string): void {
+    this.deliver(`${report}\n`);
+  }
+
   reportPassed(render: () => string): void {
     if (this.settings().verbosity !== 'default') {
       this.deliver(`${render()}\n`);

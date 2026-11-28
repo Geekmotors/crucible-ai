@@ -2149,6 +2149,296 @@
           "kind": "usage"
         }
       }
+    },
+    {
+      "id": "config-load-mode-measure",
+      "description": "CRUCIBLE_MODE=measure is returned as the mode.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "measure" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500,
+          "mode": "measure"
+        }
+      }
+    },
+    {
+      "id": "config-load-mode-empty-ignored",
+      "description": "An empty CRUCIBLE_MODE is ignored: tests gate as usual.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-mode-invalid-is-usage",
+      "description": "An unknown CRUCIBLE_MODE is a usage error.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "gauge" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-mode-case-sensitive",
+      "description": "CRUCIBLE_MODE is case-sensitive: \"Measure\" is a usage error.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "Measure" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-mode-not-trimmed",
+      "description": "CRUCIBLE_MODE is not trimmed: \"measure \" is a usage error.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "measure " }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs",
+      "description": "CRUCIBLE_MEASURE_RUNS is returned as an integer.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MODE": "measure", "CRUCIBLE_MEASURE_RUNS": "50" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500,
+          "mode": "measure",
+          "measureRuns": 50
+        }
+      }
+    },
+    {
+      "id": "config-load-measure-runs-without-mode",
+      "description": "CRUCIBLE_MEASURE_RUNS is returned without CRUCIBLE_MODE: it applies to tests measured through their own option.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "30" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500,
+          "measureRuns": 30
+        }
+      }
+    },
+    {
+      "id": "config-load-measure-runs-one",
+      "description": "CRUCIBLE_MEASURE_RUNS of 1 is the lowest valid value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "1" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500,
+          "measureRuns": 1
+        }
+      }
+    },
+    {
+      "id": "config-load-measure-runs-thousand",
+      "description": "CRUCIBLE_MEASURE_RUNS of 1000 is the highest valid value.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "1000" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500,
+          "measureRuns": 1000
+        }
+      }
+    },
+    {
+      "id": "config-load-measure-runs-empty-ignored",
+      "description": "An empty CRUCIBLE_MEASURE_RUNS is ignored.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "" }
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": {},
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-measure-runs-zero",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"0\" is a usage error: 0 is below the minimum.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "0" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-above-thousand",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"1001\" is a usage error: 1001 is above the maximum.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "1001" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-leading-zero",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"050\" is a usage error: a leading zero is not allowed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "050" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-fraction",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"5.0\" is a usage error: only decimal digits are allowed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "5.0" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-not-trimmed",
+      "description": "CRUCIBLE_MEASURE_RUNS of \" 50\" is a usage error: the value is not trimmed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": " 50" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-negative",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"-5\" is a usage error: a sign is not allowed.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "-5" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-measure-runs-word",
+      "description": "CRUCIBLE_MEASURE_RUNS of \"fifty\" is a usage error: it must be decimal digits.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\"}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "fifty" }
+      },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "config-load-test-defaults-measure",
+      "description": "testDefaults may set measure.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": {\"measure\": true}}"
+        },
+        "env": {}
+      },
+      "expect": {
+        "value": {
+          "provider": "openrouter",
+          "model": "judge-model",
+          "verbosity": "default",
+          "testDefaults": { "measure": true },
+          "excerptChars": 500
+        }
+      }
+    },
+    {
+      "id": "config-load-precedence-test-defaults-before-mode",
+      "description": "Invalid testDefaults fail as config before an invalid CRUCIBLE_MODE is checked.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"testDefaults\": {\"runs\": 0}}"
+        },
+        "env": { "CRUCIBLE_MODE": "gauge" }
+      },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "config-load-precedence-excerpt-chars-before-measure-runs",
+      "description": "An invalid excerptChars fails as config before an invalid CRUCIBLE_MEASURE_RUNS is checked.",
+      "input": {
+        "files": {
+          "crucible.config.json": "{\"provider\": \"openrouter\", \"model\": \"judge-model\", \"excerptChars\": 0}"
+        },
+        "env": { "CRUCIBLE_MEASURE_RUNS": "0" }
+      },
+      "expect": { "error": { "kind": "config" } }
     }
   ]
 }

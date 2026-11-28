@@ -375,4 +375,83 @@ public sealed class GateEngineTests
 
         Assert.Equal(CrucibleErrorKind.Usage, error.Kind);
     }
+
+    [Fact]
+    public async Task AMeasuredTestBelowItsThresholdPassesAndWritesItsReportAtDefault()
+    {
+        var harness = new EngineHarness();
+        var runs = 0;
+
+        await harness.RunAsync(EngineRuns.MeasuredPair, _ => Interlocked.Increment(ref runs) == 1
+            ? Task.CompletedTask
+            : throw new InvalidOperationException(EngineTexts.Problem));
+
+        Assert.Contains(EngineTexts.MeasuredHeadline, harness.Output.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CrucibleModeMeasuresATestThatDoesNotAskToBe()
+    {
+        var harness = new EngineHarness(invocation: new Dictionary<string, string> { [EngineTexts.ModeVariable] = EngineTexts.Measure });
+
+        await harness.RunAsync(EngineRuns.Smoke, _ => throw new InvalidOperationException(EngineTexts.Problem));
+
+        Assert.Contains(EngineTexts.MeasuredHeadline, harness.Output.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AMeasuredTestExecutesCrucibleMeasureRunsRuns()
+    {
+        var harness = new EngineHarness(invocation: new Dictionary<string, string>
+        {
+            [EngineTexts.ModeVariable] = EngineTexts.Measure,
+            [EngineTexts.MeasureRunsVariable] = EngineTexts.TwentyRuns,
+        });
+        var runs = 0;
+
+        await harness.RunAsync(EngineRuns.AllOfFew, _ =>
+        {
+            Interlocked.Increment(ref runs);
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(EngineRuns.Measured, runs);
+    }
+
+    [Fact]
+    public async Task AGatedTestIgnoresCrucibleMeasureRuns()
+    {
+        var harness = new EngineHarness(invocation: new Dictionary<string, string> { [EngineTexts.MeasureRunsVariable] = EngineTexts.TwentyRuns });
+        var runs = 0;
+
+        await harness.RunAsync(EngineRuns.AllOfFew, _ =>
+        {
+            Interlocked.Increment(ref runs);
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(EngineRuns.Few, runs);
+    }
+
+    [Fact]
+    public async Task AMeasuredTestWhoseEveryRunErroredFailsAsErrored()
+    {
+        var harness = new EngineHarness();
+
+        var error = await Assert.ThrowsAsync<CrucibleVerdictException>(() => harness.RunAsync(
+            EngineRuns.MeasuredSmoke, _ => throw CrucibleException.Infra(EngineTexts.Problem, true)));
+
+        Assert.Equal(VerdictOutcome.Errored, error.Outcome);
+    }
+
+    [Fact]
+    public async Task AMeasuredReportNamesTheTest()
+    {
+        var harness = new EngineHarness();
+
+        await harness.RunAsync(new GateRequest(
+            [], EngineRuns.MeasuredSmoke, _ => Task.FromResult(RunBody.Of(_ => Task.CompletedTask)), false, EngineTexts.MeasuredTestName));
+
+        Assert.Contains(EngineTexts.MeasuredHeadline + EngineTexts.MeasuredTestName + ": ", harness.Output.Text, StringComparison.Ordinal);
+    }
 }
