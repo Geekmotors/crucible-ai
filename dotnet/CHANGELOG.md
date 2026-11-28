@@ -6,7 +6,7 @@ of `Geekmotors.Crucible`. The project follows [Semantic Versioning](https://semv
 may contain breaking changes, and they are marked **Breaking** below. The TypeScript package `crucible-ai` has its own
 [changelog](https://github.com/Geekmotors/crucible-ai/blob/main/typescript/CHANGELOG.md).
 
-## Unreleased
+## 0.3.0
 
 ### Added
 
