@@ -115,6 +115,50 @@
     {
       "properties": {
         "area": {
+          "enum": ["verdict"]
+        },
+        "operation": {
+          "enum": ["measure"]
+        },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": {
+                "$ref": "#/definitions/verdictMeasureInput"
+              },
+              "expect": {
+                "$ref": "#/definitions/valueOutcome"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": {
+          "enum": ["verdict"]
+        },
+        "operation": {
+          "enum": ["by-assertion"]
+        },
+        "cases": {
+          "items": {
+            "properties": {
+              "input": {
+                "$ref": "#/definitions/verdictByAssertionInput"
+              },
+              "expect": {
+                "$ref": "#/definitions/valueOutcome"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "area": {
           "enum": ["payload"]
         },
         "operation": {
@@ -587,7 +631,8 @@
         "threshold": {},
         "inferenceTimeout": {},
         "testTimeout": {},
-        "strict": {}
+        "strict": {},
+        "measure": {}
       }
     },
     "runOptionsResolveInput": {
@@ -611,6 +656,18 @@
           "additionalProperties": false,
           "properties": {
             "strict": {}
+          }
+        },
+        "invocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": ["measure"]
+            },
+            "measureRuns": {
+              "$ref": "#/definitions/positiveInteger"
+            }
           }
         }
       }
@@ -649,6 +706,73 @@
             },
             "discarded": {
               "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "verdictMeasureInput": {
+      "type": "object",
+      "required": ["threshold", "gateRuns", "statuses"],
+      "additionalProperties": false,
+      "properties": {
+        "threshold": {
+          "type": "number"
+        },
+        "gateRuns": {
+          "$ref": "#/definitions/positiveInteger"
+        },
+        "statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "passed": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "errored": {
+              "type": "integer"
+            },
+            "discarded": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "verdictByAssertionInput": {
+      "type": "object",
+      "required": ["results"],
+      "additionalProperties": false,
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["status"],
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "$ref": "#/definitions/runStatus"
+              },
+              "verdicts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["claim", "verdict"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "claim": {
+                      "type": "string"
+                    },
+                    "verdict": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -956,6 +1080,19 @@
         },
         "stamp": {
           "$ref": "#/definitions/judgeStamp"
+        },
+        "measure": {
+          "type": "object",
+          "required": ["gateRuns"],
+          "additionalProperties": false,
+          "properties": {
+            "gateRuns": {
+              "$ref": "#/definitions/positiveInteger"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
         }
       }
     },

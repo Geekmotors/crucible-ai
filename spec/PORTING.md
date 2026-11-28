@@ -97,6 +97,7 @@ built-in → `testDefaults` → outer group → … → inner group → test →
 | `inferenceTimeout` | 30000 ms | integer 1 to 2147483647 | `usage` | `config` |
 | `testTimeout` | `30000 + 1000 × (runs − 1)` from the resolved `runs`, at most 2147483647, unless any layer declares one | integer 1 to 2147483647 | `usage` | `config` |
 | `strict` | `false` | `true` or `false` | `usage` | `config` |
+| `measure` | `false` | `true` or `false`; `CRUCIBLE_MODE=measure` makes it `true` for every test | `usage` | `config` |
 
 An unknown key, or options that are not an object, are the same errors.
 `need = max(1, ceil(threshold × runs − 1e-9))`: 0.9 of fewer than 10 runs
@@ -151,6 +152,8 @@ Contracts: [`provider/request`](README.md#provider--request),
 | --- | --- |
 | `CRUCIBLE_JUDGE_KEY` | the judge key when the config sets no `apiKeyEnv` (else the variable it names); trimmed, printable ASCII only; missing where required is a `config` error. No provider-native variable (`OPENAI_API_KEY`) is ever read. |
 | `CRUCIBLE_VERBOSE` | overrides `verbosity` when set and not empty; an invalid value is a `usage` error |
+| `CRUCIBLE_MODE` | `measure` measures every Crucible test instead of gating it; empty is ignored; any other value is a `usage` error |
+| `CRUCIBLE_MEASURE_RUNS` | the runs a measured test executes, 1 to 1000; empty is ignored; any other value is a `usage` error |
 
 ### Errors
 
@@ -333,6 +336,7 @@ current Microsoft docs):
 | --- | --- |
 | `run-options/resolve`, `run-options/validate` | option precedence, defaults, the test timeout formula, every validation rule and its kind |
 | `verdict/compute` | `need`, the three zones, discarded runs |
+| `verdict/measure`, `verdict/by-assertion` | the measured pass rate, its likely range, the suggested gates, per-claim counts |
 | `assertion/call` | assertion and `facts` arguments, call options reaching the payload |
 | `payload/coherent`, `payload/extract` | the exact user message, fencing and injection safety, every conformance case |
 | `judge/reply` | reply unwrapping, strict JSON plus trailing-comma repair, shapes, the re-ask |
@@ -454,7 +458,8 @@ the one before and leaves the runner for last.
    file against `fixture.schema.json`, check id prefixes and uniqueness.
    Port the surface check next to it.
 2. **Run options and verdict**: `run-options/resolve`,
-   `run-options/validate`, `verdict/compute`.
+   `run-options/validate`, `verdict/compute`, `verdict/measure`,
+   `verdict/by-assertion`.
 3. **Payload**: `payload/coherent`, `payload/extract` (fencing included),
    then `assertion/call`.
 4. **Judge reply**: `judge/reply`.

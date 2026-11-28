@@ -1,0 +1,283 @@
+{
+  "area": "verdict",
+  "operation": "by-assertion",
+  "description": "Count, for each coherent claim, how many of its verdicts in settled runs were true.",
+  "cases": [
+    {
+      "id": "verdict-by-assertion-two-claims",
+      "description": "Each claim gets its own count, in the order first seen.",
+      "input": {
+        "results": [
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              },
+              {
+                "claim": "voice",
+                "verdict": true
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              },
+              {
+                "claim": "voice",
+                "verdict": false
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              },
+              {
+                "claim": "voice",
+                "verdict": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "secret",
+            "passed": 3,
+            "evaluated": 3
+          },
+          {
+            "claim": "voice",
+            "passed": 2,
+            "evaluated": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-stopped-early",
+      "description": "A run that threw before a later assertion does not count for that assertion.",
+      "input": {
+        "results": [
+          {
+            "status": "failed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": false
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              },
+              {
+                "claim": "voice",
+                "verdict": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "secret",
+            "passed": 1,
+            "evaluated": 2
+          },
+          {
+            "claim": "voice",
+            "passed": 1,
+            "evaluated": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-first-seen-order",
+      "description": "Claims are listed in the order first seen across runs, not by count.",
+      "input": {
+        "results": [
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "b",
+                "verdict": true
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "a",
+                "verdict": true
+              },
+              {
+                "claim": "b",
+                "verdict": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "b",
+            "passed": 2,
+            "evaluated": 2
+          },
+          {
+            "claim": "a",
+            "passed": 1,
+            "evaluated": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-errored-and-discarded-excluded",
+      "description": "Verdicts recorded in errored or discarded runs are not counted.",
+      "input": {
+        "results": [
+          {
+            "status": "errored",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": false
+              }
+            ]
+          },
+          {
+            "status": "discarded",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "secret",
+                "verdict": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "secret",
+            "passed": 1,
+            "evaluated": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-repeated-claim-counts-each-call",
+      "description": "A claim judged twice in one run counts each call.",
+      "input": {
+        "results": [
+          {
+            "status": "failed",
+            "verdicts": [
+              {
+                "claim": "polite",
+                "verdict": true
+              },
+              {
+                "claim": "polite",
+                "verdict": false
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "polite",
+            "passed": 1,
+            "evaluated": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-exact-text",
+      "description": "Claims are grouped by exact text: a different line break is a different claim.",
+      "input": {
+        "results": [
+          {
+            "status": "passed",
+            "verdicts": [
+              {
+                "claim": "a\nb",
+                "verdict": true
+              },
+              {
+                "claim": "a\r\nb",
+                "verdict": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "value": [
+          {
+            "claim": "a\nb",
+            "passed": 1,
+            "evaluated": 1
+          },
+          {
+            "claim": "a\r\nb",
+            "passed": 1,
+            "evaluated": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdict-by-assertion-no-verdicts",
+      "description": "Runs without verdict calls give an empty list.",
+      "input": {
+        "results": [
+          {
+            "status": "passed"
+          },
+          {
+            "status": "failed",
+            "verdicts": []
+          }
+        ]
+      },
+      "expect": {
+        "value": []
+      }
+    }
+  ]
+}

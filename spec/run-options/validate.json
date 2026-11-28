@@ -1100,6 +1100,102 @@
       "description": "A config without testDefaults has no defaults: the accepted value is an empty object.",
       "input": { "source": "config", "options": { "$special": "undefined" } },
       "expect": { "value": {} }
+    },
+    {
+      "id": "run-options-validate-test-measure-true",
+      "description": "measure true is valid test options.",
+      "input": { "source": "test", "options": { "measure": true } },
+      "expect": { "value": { "measure": true } }
+    },
+    {
+      "id": "run-options-validate-test-measure-false",
+      "description": "measure false is valid test options.",
+      "input": { "source": "test", "options": { "measure": false } },
+      "expect": { "value": { "measure": false } }
+    },
+    {
+      "id": "run-options-validate-test-measure-string",
+      "description": "measure of \"true\" (a string) is a usage error in test options.",
+      "input": { "source": "test", "options": { "measure": "true" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-measure-number",
+      "description": "measure of 1 is a usage error in test options.",
+      "input": { "source": "test", "options": { "measure": 1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-test-measure-null",
+      "description": "measure of null is a usage error in test options.",
+      "input": { "source": "test", "options": { "measure": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-measure-true",
+      "description": "measure true is valid group options.",
+      "input": { "source": "group", "options": { "measure": true } },
+      "expect": { "value": { "measure": true } }
+    },
+    {
+      "id": "run-options-validate-group-measure-false",
+      "description": "measure false is valid group options.",
+      "input": { "source": "group", "options": { "measure": false } },
+      "expect": { "value": { "measure": false } }
+    },
+    {
+      "id": "run-options-validate-group-measure-string",
+      "description": "measure of \"true\" (a string) is a usage error in group options.",
+      "input": { "source": "group", "options": { "measure": "true" } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-measure-number",
+      "description": "measure of 1 is a usage error in group options.",
+      "input": { "source": "group", "options": { "measure": 1 } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-group-measure-null",
+      "description": "measure of null is a usage error in group options.",
+      "input": { "source": "group", "options": { "measure": null } },
+      "expect": { "error": { "kind": "usage" } }
+    },
+    {
+      "id": "run-options-validate-config-measure-true",
+      "description": "measure true is valid config options.",
+      "input": { "source": "config", "options": { "measure": true } },
+      "expect": { "value": { "measure": true } }
+    },
+    {
+      "id": "run-options-validate-config-measure-false",
+      "description": "measure false is valid config options.",
+      "input": { "source": "config", "options": { "measure": false } },
+      "expect": { "value": { "measure": false } }
+    },
+    {
+      "id": "run-options-validate-config-measure-string",
+      "description": "measure of \"true\" (a string) is a config error in config options.",
+      "input": { "source": "config", "options": { "measure": "true" } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-measure-number",
+      "description": "measure of 1 is a config error in config options.",
+      "input": { "source": "config", "options": { "measure": 1 } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-config-measure-null",
+      "description": "measure of null is a config error in config options.",
+      "input": { "source": "config", "options": { "measure": null } },
+      "expect": { "error": { "kind": "config" } }
+    },
+    {
+      "id": "run-options-validate-test-measure-unset",
+      "description": "measure set to undefined counts as missing, so the test options are valid.",
+      "input": { "source": "test", "options": { "measure": { "$special": "undefined" } } },
+      "expect": { "value": {} }
     }
   ]
 }

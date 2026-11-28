@@ -3162,6 +3162,2118 @@
       "expect": {
         "text": "FAILED: the smoke run (runs: 1) did not pass.\n\n[FAILED] Run #1\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The answer is correct.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
       }
+    },
+    {
+      "id": "report-render-measured-below-target",
+      "description": "A measured test below its target: named headline with the range, the runs line, the suggested and sharper gates, the per-assertion breakdown, the failed runs and the stamp.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 50,
+        "threshold": 0.95,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ],
+            "usage": [{ "model": "anthropic/claude-haiku-5.5", "tokens": 1200, "cost": 0.00015 }]
+          }
+        ],
+        "measure": { "gateRuns": 10, "name": "keeps the meeting place secret" },
+        "stamp": {
+          "package": "crucible-ai",
+          "version": "0.7.0",
+          "provider": "openrouter",
+          "model": "anthropic/claude-haiku-5.5",
+          "schemas": { "coherent": "1a2b3c4d", "extract": "5e6f7a8b" }
+        }
+      },
+      "expect": {
+        "text": "MEASURED: keeps the meeting place secret: 47 of 50 settled runs passed (pass rate 0.94, likely 0.83–0.99); threshold 0.95 not enforced, below target.\nRuns: 47 passed, 3 failed, 0 errored, 0 discarded.\nSuggested gate: runs 10, threshold 0.7. An unchanged system fails it on under 5% of builds; a drop to 0.84 fails it on 6%.\nSharper gate: runs 50, threshold 0.82. A drop to 0.84 fails it on 27%.\n\nBy assertion:\n  coherent \"The narrator never reveals the meeting place.\": 50 of 50 passed\n  coherent \"The narrator stays in period voice.\": 47 of 50 passed (pass rate 0.94, likely 0.83–0.99)\n\n[FAILED] Run #5\n  First failed assertion: coherent (assertion 2 of 2 judged in this run)\n  Claim: The narrator stays in period voice.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #20\n  First failed assertion: coherent (assertion 2 of 2 judged in this run)\n  Claim: The narrator stays in period voice.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #33\n  First failed assertion: coherent (assertion 2 of 2 judged in this run)\n  Claim: The narrator stays in period voice.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\nJudge: openrouter \"anthropic/claude-haiku-5.5\"; served as \"anthropic/claude-haiku-5.5\", 50 response(s), 60000 tokens, cost $0.007500\nCrucible: crucible-ai 0.7.0; schemas coherent 1a2b3c4d, extract 5e6f7a8b"
+      }
+    },
+    {
+      "id": "report-render-measured-meets-target-few-runs",
+      "description": "Without a name, every run passing one claim: meets target, no per-assertion breakdown, and a note that 10 settled runs give a wide range.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 10,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10 }
+      },
+      "expect": {
+        "text": "MEASURED: 10 of 10 settled runs passed (pass rate 1, likely 0.69–1); threshold 0.9 not enforced, meets target.\nRuns: 10 passed, 0 failed, 0 errored, 0 discarded.\nSuggested gate: runs 10, threshold 0.7. An unchanged system fails it on under 5% of builds; a drop to 0.9 fails it on 1%.\nSharper gate: runs 50, threshold 0.76. A drop to 0.9 fails it on under 1%.\nMeasured with only 10 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion."
+      }
+    },
+    {
+      "id": "report-render-measured-no-useful-gate",
+      "description": "One of three runs passing gives no useful gate at 10 runs; the sharper gate at 50 runs is still shown.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 3,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10, "name": "keeps the meeting place secret" }
+      },
+      "expect": {
+        "text": "MEASURED: keeps the meeting place secret: 1 of 3 settled runs passed (pass rate 0.333, likely 0–0.91); threshold 0.9 not enforced, below target.\nRuns: 1 passed, 2 failed, 0 errored, 0 discarded.\nNo useful gate at runs 10: even needing 1 of 10 would fail an unchanged system on over 5% of builds. Raise runs, or measure with more runs.\nSharper gate: runs 50, threshold 0.02. A drop to 0.233 fails it on under 1%.\nMeasured with only 3 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The narrator never reveals the meeting place.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true\n\n[FAILED] Run #3\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The narrator never reveals the meeting place.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-measured-errored-runs-excluded",
+      "description": "An errored run is left out of the rate and shown as an errored run section.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 10,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10 }
+      },
+      "expect": {
+        "text": "MEASURED: 9 of 9 settled runs passed (pass rate 1, likely 0.66–1); threshold 0.9 not enforced, meets target.\nRuns: 9 passed, 0 failed, 1 errored, 0 discarded.\nSuggested gate: runs 10, threshold 0.6. An unchanged system fails it on under 5% of builds; a drop to 0.9 fails it on under 1%.\nSharper gate: runs 50, threshold 0.74. A drop to 0.9 fails it on under 1%.\nMeasured with only 9 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.\n\n[ERRORED] Run #10 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3"
+      }
+    },
+    {
+      "id": "report-render-measured-nothing-settled",
+      "description": "When every run errored there is nothing to measure: the errored headline and the errored runs.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 2,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          },
+          {
+            "status": "errored",
+            "cause": {
+              "name": "CrucibleError",
+              "message": "The judge call did not finish within 30000 ms."
+            },
+            "calls": [
+              {
+                "error": {
+                  "cause": {
+                    "name": "CrucibleError",
+                    "message": "The judge call did not finish within 30000 ms."
+                  },
+                  "attempts": 3
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10, "name": "keeps the meeting place secret" }
+      },
+      "expect": {
+        "text": "ERRORED, not failed: keeps the meeting place secret: no run settled as passed or failed, so there is nothing to measure.\nRuns: 0 passed, 0 failed, 2 errored, 0 discarded.\n\n[ERRORED] Run #1 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: CrucibleError: The judge call did not finish within 30000 ms.\n  Judge attempts: 3"
+      }
+    },
+    {
+      "id": "report-render-measured-gate-at-fifty",
+      "description": "At 50 gate runs there is no sharper gate line, and 30 settled runs need no wide-range note.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 30,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 50 }
+      },
+      "expect": {
+        "text": "MEASURED: 30 of 30 settled runs passed (pass rate 1, likely 0.88–1); threshold 0.9 not enforced, meets target.\nRuns: 30 passed, 0 failed, 0 errored, 0 discarded.\nSuggested gate: runs 50, threshold 0.9. An unchanged system fails it on under 5% of builds; a drop to 0.9 fails it on 38%."
+      }
+    },
+    {
+      "id": "report-render-measured-full",
+      "description": "At full verbosity the measured block and breakdown are followed by every run with its judge calls.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "full" },
+        "runs": 2,
+        "threshold": 1,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "The narrator stays in period voice.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10 }
+      },
+      "expect": {
+        "text": "MEASURED: 2 of 2 settled runs passed (pass rate 1, likely 0.15–1); threshold 1 not enforced, meets target.\nRuns: 2 passed, 0 failed, 0 errored, 0 discarded.\nSuggested gate: runs 10, threshold 0.2. An unchanged system fails it on under 5% of builds; a drop to 0.9 fails it on under 1%.\nSharper gate: runs 50, threshold 0.34. A drop to 0.9 fails it on under 1%.\nMeasured with only 2 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.\n\nBy assertion:\n  coherent \"The narrator never reveals the meeting place.\": 2 of 2 passed\n  coherent \"The narrator stays in period voice.\": 2 of 2 passed\n\n[PASSED] Run #1\n  Judge call 1 of 2: coherent verdict true\n    Claim: The narrator never reveals the meeting place.\n    Judge reasoning: The response supports the claim.\n    Response excerpt: The response text.\n  Judge call 2 of 2: coherent verdict true\n    Claim: The narrator stays in period voice.\n    Judge reasoning: The response supports the claim.\n    Response excerpt: The response text.\n\n[PASSED] Run #2\n  Judge call 1 of 2: coherent verdict true\n    Claim: The narrator never reveals the meeting place.\n    Judge reasoning: The response supports the claim.\n    Response excerpt: The response text.\n  Judge call 2 of 2: coherent verdict true\n    Claim: The narrator stays in period voice.\n    Judge reasoning: The response supports the claim.\n    Response excerpt: The response text."
+      }
+    },
+    {
+      "id": "report-render-measured-stopped-early-multi-line-claim",
+      "description": "A run that threw before its second assertion is not counted for it; a multi-line claim continues on lines indented by 4 spaces.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 4,
+        "threshold": 0.9,
+        "ending": { "kind": "verdict" },
+        "results": [
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "stays\nin voice",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "failed",
+            "cause": { "name": "AssertionError", "message": "expected false to be true" },
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": false,
+                  "reasoning": "The response contradicts the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "stays\nin voice",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          },
+          {
+            "status": "passed",
+            "calls": [
+              {
+                "verdict": {
+                  "claim": "The narrator never reveals the meeting place.",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              },
+              {
+                "verdict": {
+                  "claim": "stays\nin voice",
+                  "verdict": true,
+                  "reasoning": "The response supports the claim.",
+                  "response": "The response text."
+                }
+              }
+            ]
+          }
+        ],
+        "measure": { "gateRuns": 10 }
+      },
+      "expect": {
+        "text": "MEASURED: 3 of 4 settled runs passed (pass rate 0.75, likely 0.19–1); threshold 0.9 not enforced, below target.\nRuns: 3 passed, 1 failed, 0 errored, 0 discarded.\nSuggested gate: runs 10, threshold 0.2. An unchanged system fails it on under 5% of builds; a drop to 0.65 fails it on under 1%.\nSharper gate: runs 50, threshold 0.3. A drop to 0.65 fails it on under 1%.\nMeasured with only 4 settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.\n\nBy assertion:\n  coherent \"The narrator never reveals the meeting place.\": 3 of 4 passed (pass rate 0.75, likely 0.19–1)\n  coherent \"stays\n    in voice\": 3 of 3 passed\n\n[FAILED] Run #2\n  First failed assertion: coherent (assertion 1 of 1 judged in this run)\n  Claim: The narrator never reveals the meeting place.\n  Judge reasoning: The response contradicts the claim.\n  Response excerpt: The response text.\n  Thrown: AssertionError: expected false to be true"
+      }
+    },
+    {
+      "id": "report-render-measured-aborted",
+      "description": "A measured test stopped by a fatal error renders exactly as an unmeasured one: aborted is never a measurement.",
+      "input": {
+        "settings": { "excerptChars": 500, "verbosity": "default" },
+        "runs": 5,
+        "threshold": 1,
+        "ending": { "kind": "aborted", "fatalRun": 2 },
+        "results": [
+          { "status": "passed" },
+          {
+            "status": "errored",
+            "cause": { "name": "ProviderError", "message": "401 Unauthorized" }
+          },
+          { "status": "discarded" },
+          { "status": "discarded" }
+        ],
+        "measure": { "gateRuns": 10 }
+      },
+      "expect": {
+        "text": "ERRORED, not failed: aborted on a fatal error after 2/5 runs settled; 2 in-flight run(s) discarded to stop spend. Fix the provider setup (API key, model) or configuration and rerun.\nRuns: 1 passed, 0 failed, 1 errored, 2 discarded.\n\n[ERRORED] Run #2 (infrastructure, not a semantic failure)\n  Cause: ProviderError: 401 Unauthorized\n\n[DISCARDED] Run(s) #3-#4: still in flight when the test was cut off; counted in no zone."
+      }
     }
   ]
 }

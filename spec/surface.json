@@ -5,6 +5,8 @@
     { "name": "run-options/resolve", "docs": "spec/README.md#run-options--resolve" },
     { "name": "run-options/validate", "docs": "spec/README.md#run-options--validate" },
     { "name": "verdict/compute", "docs": "spec/README.md#verdict--compute" },
+    { "name": "verdict/measure", "docs": "spec/README.md#verdict--measure" },
+    { "name": "verdict/by-assertion", "docs": "spec/README.md#verdict--by-assertion" },
     { "name": "payload/coherent", "docs": "spec/README.md#payload--coherent" },
     { "name": "payload/extract", "docs": "spec/README.md#payload--extract" },
     { "name": "report/render", "docs": "spec/README.md#report--render" },
@@ -173,6 +175,17 @@
         "run-options-resolve-test-strict-over-group",
         "run-options-resolve-call-strict-over-lenient-run",
         "run-options-validate-test-strict-string"
+      ]
+    },
+    {
+      "name": "measure",
+      "docs": "docs/runs-and-threshold.md#measure-mode",
+      "default": false,
+      "valid": "true or false; CRUCIBLE_MODE=measure sets it for every test",
+      "fixtures": [
+        "run-options-resolve-measure-from-test",
+        "run-options-resolve-measure-test-over-group",
+        "run-options-validate-test-measure-string"
       ]
     }
   ],
@@ -382,6 +395,26 @@
         "config-load-override-wins",
         "config-load-override-invalid-is-usage",
         "config-load-override-empty-ignored"
+      ]
+    },
+    {
+      "name": "CRUCIBLE_MODE",
+      "docs": "docs/runs-and-threshold.md#measure-mode",
+      "meaning": "When set to measure, every Crucible test in the invocation is measured instead of gated; empty is ignored; any other value is a usage error.",
+      "fixtures": [
+        "config-load-mode-measure",
+        "config-load-mode-invalid-is-usage",
+        "config-load-mode-case-sensitive"
+      ]
+    },
+    {
+      "name": "CRUCIBLE_MEASURE_RUNS",
+      "docs": "docs/runs-and-threshold.md#measure-mode",
+      "meaning": "The number of runs a measured test executes, from 1 to 1000; empty is ignored; any other value is a usage error.",
+      "fixtures": [
+        "config-load-measure-runs",
+        "config-load-measure-runs-zero",
+        "config-load-measure-runs-thousand"
       ]
     }
   ],
@@ -911,6 +944,60 @@
       "operation": "report/trace",
       "text": "judge call errored after ",
       "fixtures": ["report-trace-judge-recorded-error"]
+    },
+    {
+      "name": "measured headline",
+      "operation": "report/render",
+      "text": "MEASURED: ",
+      "fixtures": [
+        "report-render-measured-below-target",
+        "report-render-measured-meets-target-few-runs"
+      ]
+    },
+    {
+      "name": "measured: nothing settled",
+      "operation": "report/render",
+      "text": "no run settled as passed or failed, so there is nothing to measure.",
+      "fixtures": ["report-render-measured-nothing-settled"]
+    },
+    {
+      "name": "measured: suggested gate",
+      "operation": "report/render",
+      "text": "Suggested gate: runs ",
+      "fixtures": ["report-render-measured-below-target"]
+    },
+    {
+      "name": "measured: no useful gate",
+      "operation": "report/render",
+      "text": "No useful gate at runs ",
+      "fixtures": ["report-render-measured-no-useful-gate"]
+    },
+    {
+      "name": "measured: sharper gate",
+      "operation": "report/render",
+      "text": "Sharper gate: runs 50, threshold ",
+      "fixtures": ["report-render-measured-below-target"]
+    },
+    {
+      "name": "measured: caught under 1%",
+      "operation": "report/render",
+      "text": "fails it on under 1%.",
+      "fixtures": ["report-render-measured-meets-target-few-runs"]
+    },
+    {
+      "name": "measured: wide range",
+      "operation": "report/render",
+      "text": "settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.",
+      "fixtures": ["report-render-measured-meets-target-few-runs"]
+    },
+    {
+      "name": "measured: by assertion",
+      "operation": "report/render",
+      "text": "By assertion:\n",
+      "fixtures": [
+        "report-render-measured-below-target",
+        "report-render-measured-stopped-early-multi-line-claim"
+      ]
     }
   ]
 }

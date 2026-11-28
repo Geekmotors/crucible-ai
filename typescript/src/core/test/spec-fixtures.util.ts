@@ -13,6 +13,8 @@ import trace from '../../../../spec/report/trace.json' with { type: 'json' };
 import resolve from '../../../../spec/run-options/resolve.json' with { type: 'json' };
 import validate from '../../../../spec/run-options/validate.json' with { type: 'json' };
 import compute from '../../../../spec/verdict/compute.json' with { type: 'json' };
+import measure from '../../../../spec/verdict/measure.json' with { type: 'json' };
+import byAssertion from '../../../../spec/verdict/by-assertion.json' with { type: 'json' };
 import configLoad from '../../../../spec/config/load.json' with { type: 'json' };
 import judgeReply from '../../../../spec/judge/reply.json' with { type: 'json' };
 import jsoncParse from '../../../../spec/jsonc/parse.json' with { type: 'json' };
@@ -37,6 +39,8 @@ class SpecFixtures {
   static resolve: FixtureFile = resolve;
   static validate: FixtureFile = validate;
   static compute: FixtureFile = compute;
+  static measure: FixtureFile = measure;
+  static byAssertion: FixtureFile = byAssertion;
   static coherent: FixtureFile = coherent;
   static coherentConformance: FixtureFile = coherentConformance;
   static extract: FixtureFile = extract;
@@ -58,6 +62,8 @@ class SpecFixtures {
       SpecFixtures.resolve,
       SpecFixtures.validate,
       SpecFixtures.compute,
+      SpecFixtures.measure,
+      SpecFixtures.byAssertion,
       SpecFixtures.coherent,
       SpecFixtures.coherentConformance,
       SpecFixtures.extract,

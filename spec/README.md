@@ -35,6 +35,8 @@ spec/
     validate.json               operation "validate"
   verdict/
     compute.json                operation "compute"
+    measure.json                operation "measure"
+    by-assertion.json           operation "by-assertion"
   payload/
     coherent.json               operation "coherent"
     coherent-conformance.json   operation "coherent", generated (see below)
@@ -265,11 +267,13 @@ it.
 | `groups`       | the options of each enclosing group (`crucible.describe`), outermost first                                                                  |
 | `test`         | the test's own options (`crucible.it` / `crucible.gate`)                                                                                    |
 | `call`         | the options of one `crucible.extract` call inside the test. It holds `strict` at most; no other key appears. When `call` is present, the output's `strict` is that call's mode. |
+| `invocation`   | what the invocation set, as `config` / `load` returns it: `mode` (`"measure"`) and `measureRuns` (an integer from 1 to 1000), both optional |
 
 Every layer in the input is valid (validity is the `validate` operation's
 job).
 
-**Output.** `{ "runs", "threshold", "inferenceTimeout", "testTimeout", "strict" }`.
+**Output.** `{ "runs", "threshold", "inferenceTimeout", "testTimeout", "strict", "measure" }`,
+plus `"measureRuns"` when `measure` is `true`.
 
 **Rules.**
 
@@ -287,6 +291,18 @@ job).
    longer applies, even when a nearer layer changes `runs`.
 4. `strict` for an extract call is the call's own `strict` if it gives one.
    Otherwise it is the test's resolved `strict`.
+5. `measure` resolves like the other fields (built-in `false`), then
+   `invocation.mode: "measure"` makes it `true` whatever the layers say.
+   Nothing makes it `false` over a layer's `true`.
+6. A measured test (`measure: true`) executes `measureRuns` runs:
+   `invocation.measureRuns` when given, else the resolved `runs`. `runs`
+   stays the test's own: it is the gate the suggestions are for
+   (`verdict` / `measure`). Its `testTimeout` uses
+   `formula = min(2147483647, 30000 + (measureRuns − 1) × 1000)`: with no
+   declared `testTimeout` it is `formula`; with one it is the larger of the
+   declared value and `formula`, so measuring more runs never trips a timeout
+   sized for the gate. A test that is not measured ignores
+   `invocation.measureRuns` and has no `measureRuns` in the output.
 
 ### `run-options` / `validate`
 
@@ -311,13 +327,13 @@ Each of these is an error:
   boolean). For `test` and `group`, an unset value (`$special: undefined`) is
   an error too.
 - a key other than `runs`, `threshold`, `inferenceTimeout`, `testTimeout`,
-  `strict`, even when its value is unset
+  `strict`, `measure`, even when its value is unset
 - `runs` that is not an integer ≥ 1 (`null`, strings, fractions, `NaN`, ±∞
   included)
 - `threshold` that is not a number in (0, 1]
 - `inferenceTimeout` or `testTimeout` that is not an integer from 1 to
   2147483647
-- `strict` that is not `true` or `false`
+- `strict` or `measure` that is not `true` or `false`
 
 "Integer" means a number with no fractional part. A boolean is never a
 number: `runs: true` is an error even where a language treats `true` as 1.
@@ -355,6 +371,73 @@ any order: the outcome does not depend on order.
     run had passed, the test could not meet its threshold
   - otherwise `"errored"`: errored runs decide the verdict, so it says
     nothing about the system under test.
+
+### `verdict` / `measure`
+
+Measures a test instead of gating it: how often it passes, how sure that
+number is, and which gate its own runs could hold.
+
+**Input.** `{ "threshold": <number in (0, 1]>, "gateRuns": <integer ≥ 1>, "statuses": { <status>: <count>, … } }`.
+`statuses` as in `verdict` / `compute`. `gateRuns` is the test's resolved
+`runs` (`run-options` / `resolve`), not the number of runs measured.
+
+**Output.** With `n = passed + failed` (settled runs) and `x = passed`:
+
+- `n = 0`: `{ "outcome": "errored", "passed", "failed", "errored", "settled": 0 }`.
+  Every run errored, so there is nothing to measure.
+- Otherwise `{ "outcome": "measured", "passed", "failed", "errored", "settled", "rate", "low", "high", "need", "meetsTarget", "suggestion", "sharper" }`:
+  - `settled`: `n`. Errored and discarded runs are left out of every number
+    below.
+  - `rate`: `floor(x / n × 1000 + 1e-9) / 1000`, computed as the headline's
+    pass rate in `report` / `render`.
+  - `low`, `high`: the 95% two-sided Clopper-Pearson interval for `x` of
+    `n`. `low` solves `P(X ≥ x | n, low) = 0.025` (0 when `x = 0`), `high`
+    solves `P(X ≤ x | n, high) = 0.025` (1 when `x = n`), `X` binomial.
+    `low` is `floor(L × 100) / 100` and `high` is `ceil(U × 100) / 100` of
+    the solved values.
+  - `need`: `max(1, ceil(threshold × n − 1e-9))`, as in `verdict` /
+    `compute` but over settled runs. `meetsTarget`: `x ≥ need`.
+  - `suggestion`: `gate(gateRuns)`. `sharper`: `gate(50)` when
+    `gateRuns < 50`, else `null`.
+
+`gate(g)` is based on the **planning rate** `p`, the one-sided 80% lower
+bound: `p` solves `P(X ≥ x | n, p) = 0.20` (0 when `x = 0`). The gate needs
+`k` of `g` runs, the largest `k` in `1..g` with `P(X < k | g, p) ≤ 0.05`: an
+unchanged system fails it on at most 5% of builds. With no such `k`, `gate(g)`
+is `null`. Otherwise it is `{ "runs": g, "need": k, "threshold", "drop", "caught" }`:
+
+- `threshold`: `floor(k / g × 10^m + 1e-9) / 10^m` for the smallest `m ≥ 2`
+  whose threshold gives `need` `k` at `g` runs (`verdict` / `compute`). Two
+  decimals up to 100 runs; `133 / 150` gives `0.886`.
+- `drop`: `floor((x / n − 0.1) × 1000 + 1e-9) / 1000`, the measured rate
+  less 0.1. `caught`: `P(X < k | g, drop) × 100` rounded to the nearest
+  integer, the percentage of builds the gate fails after that drop. Both are
+  left out when `drop ≤ 0`.
+
+**Numbers.** Compute the binomial terms in log space (`lgamma`, or a sum of
+logs) so `n` up to 1000 neither overflows nor underflows. Find `low`, `high`
+and `p` by bisection on `[0, 1]` (the tails are monotonic in the rate) or any
+method accurate to 1e-9. Fixtures avoid values that a change of 1e-6 in any
+solved rate, or in any tail probability, would move across a rounding or
+comparison boundary, so ports agree without matching each other's floating
+point.
+
+### `verdict` / `by-assertion`
+
+Counts, for each `coherent` claim of a measured test, how many of its
+verdicts were true.
+
+**Input.** `{ "results": [ { "status": <status>, "verdicts"?: [ { "claim": <string>, "verdict": <boolean> } ] } ] }`:
+each run's status and its `coherent` verdicts in the order recorded (a
+missing `verdicts` is empty).
+
+**Output.** `[ { "claim", "passed", "evaluated" } ]`: one entry per distinct
+claim, in the order first seen (runs in order, then each run's verdicts in
+order). Only `passed` and `failed` runs count. `evaluated` is the number of
+verdicts for the claim, `passed` the number that were `true`. Claims are the
+same only when their text is equal code unit for code unit. A claim judged
+twice in one run counts twice; a run that threw before reaching a claim does
+not count for it.
 
 ### Text rules
 
@@ -554,6 +637,10 @@ test, which is written followed by one `\n`.
   [Judge stamp](#judge-stamp)).
 - `stamp` (optional): who judged the test and with what. Absent, the report
   is rendered without a stamp and `usage` changes nothing.
+- `measure` (optional): `{ "gateRuns", "name"? }` for a measured test (see
+  [Measured report](#measured-report)). `runs` is then the number of runs
+  measured and `gateRuns` the test's resolved `runs`. `name` is the test's
+  full name when the port knows it.
 
 **Verdict.** For `ending.kind: "verdict"`, `need`, `passed`, `failed`,
 `errored` and the zone come from `verdict` / `compute` over the statuses of
@@ -669,6 +756,57 @@ none, else for each call `i` of `t`, in order:
   then nested facts field, `Judge reasoning`, excerpt field;
 - error: `field("Judge call <i> of <t>", "errored after <attempts> attempt(s)")`,
   then nested `field("Judge error", describe(cause))`.
+
+#### Measured report
+
+With `measure` present and `ending.kind: "verdict"`, the report is the
+measured report below. With an `aborted` or `expired` ending, `measure`
+changes nothing: a test stopped early is never a measurement.
+
+Let `m` be `verdict` / `measure` over the statuses of `results` with
+`threshold` and `gateRuns`, and `<pre>` be `name + ": "` when `name` is given,
+else empty. `name` is written as is; fixtures hold no line break in it.
+
+The **headline block** is these lines, joined by `\n`:
+
+1. `m.outcome` `errored`:
+   `ERRORED, not failed: <pre>no run settled as passed or failed, so there is nothing to measure.`
+   and the runs line (below), and nothing else in this block.
+2. Otherwise:
+   `MEASURED: <pre><passed> of <settled> settled runs passed (pass rate <rate>, likely <low>–<high>); threshold <threshold> not enforced, <meets|below> target.`
+   (`meets` when `meetsTarget`; `–` is U+2013 EN DASH).
+3. The runs line, `Runs: <p> passed, <f> failed, <e> errored, <d> discarded.`
+   (counts of `results`).
+4. With a `suggestion`:
+   `Suggested gate: runs <gateRuns>, threshold <threshold>. An unchanged system fails it on under 5% of builds; a drop to <drop> fails it on <caught>.`,
+   ending `… under 5% of builds.` when the suggestion has no `drop`. Without
+   one: `No useful gate at runs <gateRuns>: even needing 1 of <gateRuns> would fail an unchanged system on over 5% of builds. Raise runs, or measure with more runs.`
+5. With a `sharper` gate: `Sharper gate: runs 50, threshold <threshold>.`,
+   then ` A drop to <drop> fails it on <caught>.` when it has a `drop`.
+6. When `settled < 30`:
+   `Measured with only <settled> settled run(s); the range is wide. Set CRUCIBLE_MEASURE_RUNS=50 for a firmer suggestion.`
+
+`<caught>` prints `under 1%` for 0, `over 99%` for 100, else `<caught>%`.
+Numbers print as Text rules say (`1`, `0.75`, `0.886`).
+
+**By assertion.** When `m.outcome` is `measured` and `verdict` /
+`by-assertion` over the run's `verdict` calls gives two or more claims, a
+section `By assertion:` follows, one line per claim:
+`  coherent "<claim>": <passed> of <evaluated> passed`, plus
+` (pass rate <rate>, likely <low>–<high>)` when `passed < evaluated`, with
+`rate`, `low` and `high` computed as in `verdict` / `measure` for that claim's
+counts. A multi-line claim continues on later lines prefixed with 4 spaces
+unless blank, as in the claim tally. With one claim the section is left out:
+it would repeat the headline.
+
+**Report.** The headline block, the by-assertion section, then the sections
+of `default` or `full` verbosity exactly as for a verdict (failed, errored
+and discarded runs at `default`; every run with its judge calls at `full`),
+then the stamp, all joined by `\n\n`. No trailing newline.
+
+**Ports.** A measured test prints this report at every verbosity, on the
+channel a passing report uses. Outcome `measured` passes; outcome `errored`
+fails the test with this report as its message, like an errored verdict.
 
 #### Judge stamp
 
@@ -846,16 +984,20 @@ it and resolves defaults and `CRUCIBLE_VERBOSE`.
 **Input.** `{ "files": { "crucible.config.json"?: <file>, "crucible.config.jsonc"?: <file> }, "env"?: { <name>: <string> } }`.
 A `<file>` is its text, or `{ "$special": "unreadable" }`. A missing name is
 a file that does not exist. `env` holds the environment variables that are
-set (default none); only `CRUCIBLE_VERBOSE` matters here.
+set (default none); only `CRUCIBLE_VERBOSE`, `CRUCIBLE_MODE` and
+`CRUCIBLE_MEASURE_RUNS` matter here.
 
-**Output.** `{ "provider", "model", "meta"?, "verbosity", "testDefaults", "excerptChars" }`:
+**Output.** `{ "provider", "model", "meta"?, "verbosity", "testDefaults", "excerptChars", "mode"?, "measureRuns"? }`:
 the provider's name, the model as written, `meta` only when the file sets it,
-the effective verbosity, the `testDefaults` object (`{}` when absent) and
-`excerptChars` (500 when absent).
+the effective verbosity, the `testDefaults` object (`{}` when absent),
+`excerptChars` (500 when absent), and `mode` and `measureRuns` only when
+their variables set them. `mode` and `measureRuns` are the `invocation` of
+`run-options` / `resolve`.
 
 **Rules, in this order.** The first rule that fails decides the error. Every
-error is kind `config` except an invalid `CRUCIBLE_VERBOSE`, which is
-`usage` (the invocation set it, not the file); the order only matters
+error is kind `config` except an invalid `CRUCIBLE_VERBOSE`,
+`CRUCIBLE_MODE` or `CRUCIBLE_MEASURE_RUNS`, which is `usage` (the invocation
+set it, not the file); the order only matters
 between those two kinds, and is pinned by the `precedence-*` cases.
 
 1. **Files.** If either file is unreadable: error. If neither exists: error.
@@ -915,6 +1057,15 @@ between those two kinds, and is pinned by the `precedence-*` cases.
 15. **`excerptChars`** (optional): a number with no fractional part, at least
     1 (`2.0` is 2; a string, boolean or null is an error). A port accepts
     integers up to at least 2147483647; behaviour above 2^53 is unspecified.
+16. **`CRUCIBLE_MODE`**: when set and not empty, it must be exactly `measure`
+    (not trimmed, case-sensitive); otherwise error kind `usage`. An empty
+    value is ignored.
+17. **`CRUCIBLE_MEASURE_RUNS`**: when set and not empty, it must be decimal
+    digits `0`–`9` only, with no leading zero (no sign, point, space or
+    exponent), from 1 to 1000; otherwise error kind `usage`. An empty value
+    is ignored. It is returned without `CRUCIBLE_MODE` too: it applies to
+    every measured test, including those measured through their own
+    `measure` option.
 
 An optional field set to `null` is an error, never the same as leaving it
 out (except `$schema`, which is ignored whatever its value).
