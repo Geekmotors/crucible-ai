@@ -8,6 +8,17 @@ contain breaking changes, and they are marked **Breaking** below.
 
 ### Added
 
+- Measure mode: `CRUCIBLE_MODE=measure` runs tests without gating them and
+  prints each test's pass rate, its likely range (95% Clopper-Pearson), a
+  suggested gate for the test's own `runs` and a sharper one at 50 runs,
+  and a per-claim breakdown. `CRUCIBLE_MEASURE_RUNS` (1 to 1000) sets how
+  many runs a measured test executes. The `measure` run option (on
+  `crucible.it`, `crucible.describe`, `crucible.gate` and in
+  `testDefaults`) measures a test on every run. A measured test still fails
+  as errored when no run settled, on a fatal provider error and at its
+  deadline. See
+  [Measure mode](https://github.com/Geekmotors/crucible-ai/blob/main/docs/runs-and-threshold.md#measure-mode).
+
 - `npx crucible-ai init --provider <name>` (or `--provider=<name>`) writes
   the config for `openrouter` (the default when the flag is left out),
   `openai` or `openai-compatible`. For `openai` and `openai-compatible` it

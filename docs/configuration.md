@@ -137,7 +137,7 @@ a wrong path only loses the editor hints.
 | `apiKeyEnv` | no; every provider | environment variable **name**: letters, digits and `_`, not starting with a digit | `CRUCIBLE_JUDGE_KEY` | The variable that holds the judge's API key ([Judge key](#judge-key)) |
 | `meta` | no | JSON object | none | Extra provider request parameters, passed through unmodified ([below](#meta)) |
 | `verbosity` | no | `"default"`, `"full"` or `"debug"` (exact, lowercase) | `"default"` | Output detail ([Verbosity](runs-and-threshold.md#verbosity)) |
-| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647), and `strict` (`true` or `false`) | `{}` (built-ins: `runs` 10, `threshold` 0.9, `strict` false) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)); a [`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe) group or the test itself overrides them per field. With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass; `"strict": true` makes every `crucible.extract()` treat a hedged reply as `null` ([extract](typescript/api.md#crucibleextract)) |
+| `testDefaults` | no | object with optional `runs` (integer ≥ 1), `threshold` (number in (0, 1]), `inferenceTimeout` and `testTimeout` (integer ms, 1 to 2147483647), `strict` and `measure` (`true` or `false`) | `{}` (built-ins: `runs` 10, `threshold` 0.9, `strict` false) | Project-wide run options ([testDefaults](runs-and-threshold.md#project-wide-defaults-testdefaults)); a [`crucible.describe`](runs-and-threshold.md#group-settings-crucibledescribe) group or the test itself overrides them per field. With the built-ins, every test runs your system 10 times and makes 10 judge calls per assertion; `{ "runs": 1, "threshold": 1 }` makes every test a single run that must pass; `"strict": true` makes every `crucible.extract()` treat a hedged reply as `null` ([extract](typescript/api.md#crucibleextract)) |
 | `excerptChars` | no | integer ≥ 1 | `500` | Length of the response excerpt, and of the `Facts` field, in failure reports ([report](runs-and-threshold.md#reading-the-failure-report)) |
 
 No other top-level field is accepted.
@@ -190,7 +190,8 @@ the first problem:
 | `meta` present but not an object (`null`, an array, a string…) | `config` |
 | `verbosity` not one of the three levels — checked even when `CRUCIBLE_VERBOSE` is set | `config` |
 | `CRUCIBLE_VERBOSE` set to anything other than the three levels (an empty value is ignored) | `usage` |
-| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout`/`strict` | `config` |
+| `CRUCIBLE_MODE` set to anything other than `measure`, or `CRUCIBLE_MEASURE_RUNS` not a whole number from 1 to 1000 (an empty value is ignored) | `usage` |
+| `testDefaults` not an object, an unknown key in it, or an invalid `runs`/`threshold`/`inferenceTimeout`/`testTimeout`/`strict`/`measure` | `config` |
 | `excerptChars` not an integer ≥ 1 | `config` |
 | The key variable (`CRUCIBLE_JUDGE_KEY`, or the one `apiKeyEnv` names) missing or blank when a judge call is made — always for `openrouter` and `openai`; for `openai-compatible` only when `apiKeyEnv` is set | `config` |
 | The key variable holding a character no API key carries (inner whitespace, a control character, non-ASCII) when a judge call is made; the value is never echoed | `config` |
@@ -208,6 +209,8 @@ is tolerated.
 | `CRUCIBLE_JUDGE_KEY` | every provider, on every judge call, unless `apiKeyEnv` names another variable | The judge provider's API key. Optional for `openai-compatible`. |
 | the variable `apiKeyEnv` names | every provider, on every judge call, in place of `CRUCIBLE_JUDGE_KEY` | The judge provider's API key. |
 | `CRUCIBLE_VERBOSE` | config load | Overrides `verbosity` for one invocation: `default`, `full` or `debug`. Matched exactly (case-sensitive, no trimming). Empty means "not set". |
+| `CRUCIBLE_MODE` | config load | `measure` measures every Crucible test in the invocation instead of gating it ([measure mode](runs-and-threshold.md#measure-mode)). Matched exactly. Empty means "not set". |
+| `CRUCIBLE_MEASURE_RUNS` | config load | How many runs a measured test executes: digits only, 1 to 1000. Unset, a measured test executes its own `runs`. Empty means "not set". |
 
 Key values have surrounding whitespace trimmed, and are needed only by tests
 that call `coherent()` or `extract()`. Variables prefixed `CRUCIBLE_` are

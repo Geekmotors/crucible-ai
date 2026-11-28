@@ -231,6 +231,7 @@ built-in checker, so it needs no schema library.
 
 TypeScript runners: `typescript/src/core/run-options.spec-fixtures.test.ts`,
 `typescript/src/core/aggregator.util.spec-fixtures.test.ts`,
+`typescript/src/core/measurer.util.spec-fixtures.test.ts`,
 `typescript/src/core/payload-assembler.util.spec-fixtures.test.ts`,
 `typescript/src/core/reporter.util.spec-fixtures.test.ts`,
 `typescript/src/core/trace-reporter.spec-fixtures.test.ts`,
