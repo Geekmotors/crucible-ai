@@ -340,7 +340,7 @@ Failing claims (first failure of each of the 5 failed runs):
   Judge attempts: 3
 
 Judge: openrouter "anthropic/claude-haiku-5.5"; served as "anthropic/claude-haiku-5.5", 41 response(s), 33292 tokens, cost $0.010250
-Crucible: crucible-ai 0.6.0; schemas coherent 2ecbb5d8, extract 1e09070c
+Crucible: crucible-ai 0.7.0; schemas coherent 2ecbb5d8, extract 1e09070c
 ```
 
 - **Headline.** `FAILED:` is a semantic failure; `ERRORED, not failed:` means
