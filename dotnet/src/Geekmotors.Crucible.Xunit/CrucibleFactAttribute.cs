@@ -44,7 +44,7 @@ public sealed class CrucibleFactAttribute(
 
     /// <summary>
     /// Whether the test is measured instead of gated: it never fails on its pass rate and writes its pass rate, likely range
-    /// and a suggested gate to the test output. <c>CRUCIBLE_MODE=measure</c> measures every test. Reads false when not set
+    /// and a suggested gate to standard output. <c>CRUCIBLE_MODE=measure</c> measures every test. Reads false when not set
     /// here (inherited).
     /// </summary>
     public bool Measure { get => _settings.Measure ?? false; set => _settings.Measure = value; }

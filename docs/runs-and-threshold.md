@@ -693,10 +693,13 @@ invocation, with no change to the tests:
 CRUCIBLE_MODE=measure CRUCIBLE_MEASURE_RUNS=50 npx jest tests/story
 ```
 
-The runner's own filters (a path, `-t`, Vitest's name filter) choose which
-tests are measured. Or mark a test, a group or the project as always
-measured with the `measure` option (`{ measure: true }`, `testDefaults.measure`),
-for a check you want to watch but never block on.
+The runner's own filters (a path, `-t`, Vitest's name filter,
+`dotnet test --filter`) choose which tests are measured. Or mark a test, a
+group or the project as always measured with the `measure` option
+(`{ measure: true }`, `testDefaults.measure`; in C#
+`[CrucibleFact(Measure = true)]`, `[Crucible(Measure = true)]` or
+`RunOptions.Measure`), for a check you want to watch but never block on. In
+C# the report is written to standard output, as a passing report is.
 
 - `CRUCIBLE_MODE`: `measure`, or empty for normal gating. Anything else is a
   `usage` error.
